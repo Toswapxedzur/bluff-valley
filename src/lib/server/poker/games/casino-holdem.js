@@ -91,6 +91,7 @@ export const casinoHoldem = {
   family: "banked",
   usesBanker: true,
   minPlayers: 1,
+  maxPayoutMultiple: 40, // ante + 2×ante call + 100:1 royal ante-bonus ≈ 34× the stake
   deck: () => shoe(1),
 
   startRound(ctx) {
