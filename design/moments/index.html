@@ -1,0 +1,174 @@
+<meta charset="utf-8">
+<title>Table Moments</title>
+<meta name="description" content="Bluffing Valley — the full-screen table moments, for review">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,800&family=Hanken+Grotesk:wght@400;600;700;800&display=swap">
+<style>
+  /* the app's dark navy system (src/app.css), one deliberate theme */
+  :root {
+    color-scheme: dark;
+    --bg: #0f172a; --well: #0b1220; --surface: #182541; --surface-2: #20305a;
+    --text: #eef2ff; --muted: #9db0d6; --faint: #6c80a8; --accent: #4d7cff; --accent-soft: rgba(77,124,255,.18);
+    --gold: #fbe08a; --gold-ink: #f4c94b;
+    --f-display: "Fraunces", Georgia, "Times New Roman", serif;
+    --f-body: "Hanken Grotesk", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  body { background: var(--bg); color: var(--text); font-family: var(--f-body); }
+  .page { max-width: 1160px; margin: 0 auto; padding-inline: 16px; padding-block: 28px 48px; display: flex; flex-direction: column; gap: 18px; }
+  header h1 { font-family: var(--f-display); font-weight: 800; font-size: clamp(28px, 4vw, 40px); margin: 0 0 6px; text-wrap: balance; }
+  header p { margin: 0; color: var(--muted); max-width: 70ch; line-height: 1.5; }
+
+  .controls { display: flex; flex-direction: column; gap: 10px; }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  button { font: inherit; cursor: pointer; border: 0; }
+  .mbtn, .vbtn, .tool { padding: 8px 14px; border-radius: 999px; background: var(--surface); color: var(--text); font-weight: 700; font-size: 14px; }
+  .mbtn:hover, .vbtn:hover, .tool:hover { background: var(--surface-2); }
+  .mbtn.on { background: var(--accent); color: #fff; }
+  .vbtn { font-size: 13px; padding: 6px 12px; background: var(--well); color: var(--muted); }
+  .vbtn.on { background: var(--accent-soft); color: var(--text); box-shadow: 0 0 0 2px var(--accent); }
+  .tools { margin-left: auto; display: flex; gap: 8px; }
+  #variants:empty { display: none; }
+
+  #screenwrap { position: relative; width: 100%; border-radius: 18px; overflow: hidden; box-shadow: 0 18px 50px rgba(0,0,0,.45); }
+  #screen { position: absolute; left: 0; top: 0; width: 1120px; height: 700px; transform-origin: 0 0; overflow: hidden;
+    background: var(--bg) radial-gradient(rgba(148,178,255,.05) 1.2px, transparent 1.4px) 0 0 / 22px 22px; }
+
+  /* ---- the table underneath ---- */
+  #table { position: absolute; inset: 0; }
+  .hud { position: absolute; top: 12px; left: 14px; display: flex; align-items: center; gap: 12px; }
+  .hud .back { width: 34px; height: 34px; border-radius: 50%; background: var(--surface); display: grid; place-items: center; font-size: 22px; }
+  .hud-t { display: flex; flex-direction: column; line-height: 1.15; }
+  .hud-t b { font-family: var(--f-display); font-size: 17px; }
+  .hud-t span { font-size: 12px; color: var(--muted); }
+  .plate.seat { position: absolute; transform: translate(-50%, -50%); }
+  .seat-hand { position: absolute; transform: translateX(-50%); display: flex; gap: 3px; }
+  .board { position: absolute; left: 50%; top: 300px; transform: translate(-50%, -50%); display: flex; gap: 8px; }
+  .potpill { position: absolute; left: 50%; top: 372px; transform: translateX(-50%); display: flex; gap: 6px; align-items: baseline; padding: 4px 13px; border-radius: 999px; background: var(--surface); }
+  .potpill span { font-size: 10px; font-weight: 700; letter-spacing: .8px; color: var(--muted); }
+  .potpill b { color: var(--gold-ink); font-weight: 800; }
+  .tablenote { position: absolute; left: 50%; top: 330px; transform: translate(-50%, -50%); color: var(--faint); font-family: var(--f-display); font-size: 22px; }
+
+  /* ---- plates (SeatBadge) ---- */
+  .plate { position: relative; display: flex; align-items: center; padding: 4px 10px 4px 6px; border-radius: 999px; box-sizing: border-box; box-shadow: 0 6px 16px rgba(0,0,0,.28); }
+  .plate .av { position: relative; flex: none; }
+  .plate .ring { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); line-height: 0; }
+  .plate .face { position: absolute; inset: 0; border-radius: 50%; display: grid; place-items: center; color: #fff; font-weight: 700; }
+  .plate .txt { display: flex; flex-direction: column; min-width: 0; line-height: 1.12; }
+  .plate .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .plate .stack { font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .plate.glow { box-shadow: 0 0 0 4px rgba(255,255,255,.75), 0 0 34px rgba(255,255,255,.55); }
+  .cardel { line-height: 0; display: inline-block; }
+  .card-wrap { display: inline-block; line-height: 0; border-radius: 7px; filter: drop-shadow(0 2px 4px rgba(0,0,0,.35)); }
+  .card-wrap svg { display: block; border-radius: 6px; }
+
+  /* ---- the moment frame ---- */
+  #overlay { position: absolute; inset: 0; pointer-events: none; }
+  #overlay .band button { pointer-events: auto; }
+  .veil { position: absolute; inset: 0; background: rgba(6, 10, 22, .66); backdrop-filter: blur(3px); }
+  .veil.light { background: rgba(6, 10, 22, .45); }
+  .band { position: absolute; left: 0; width: 1120px; box-shadow: 0 30px 80px rgba(0,0,0,.45); overflow: hidden; }
+  .kicker { position: absolute; left: 30px; top: 20px; display: flex; align-items: center; gap: 10px; font-size: 13px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; color: var(--sub); }
+  .pausebar { position: absolute; left: 30px; right: 30px; bottom: 18px; display: flex; align-items: center; gap: 12px; }
+  .pausebar .lbl { font-size: 11px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; color: var(--sub); opacity: .8; }
+  .pausebar .track { flex: 1; height: 8px; border-radius: 8px; background: color-mix(in srgb, var(--ink) 14%, transparent); overflow: hidden; }
+  .pausebar .fill { display: block; height: 100%; border-radius: 8px; background: color-mix(in srgb, var(--ink) 55%, transparent); transform-origin: left center; }
+  .content { position: absolute; inset: 56px 30px 44px; display: flex; align-items: center; justify-content: center; gap: 48px; }
+  .content > *, .m1-row > *, .m1-side > * { flex-shrink: 0; }
+  .title { font-family: var(--f-display); font-weight: 800; font-size: 60px; line-height: 1; letter-spacing: -.5px; text-wrap: balance; }
+  .title.small { font-size: 36px; }
+  .caption { font-size: 17px; font-weight: 600; color: var(--sub); }
+  .bignum { font-family: var(--f-display); font-weight: 800; font-size: 84px; line-height: 1; font-variant-numeric: tabular-nums; letter-spacing: -1px; }
+  .sheen { position: absolute; top: -20%; left: 0; width: 22%; height: 140%; background: rgba(255,255,255,.42); pointer-events: none; mix-blend-mode: soft-light; }
+  .fxback { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+  .fx { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+  .coin { position: absolute; left: 0; top: 0; line-height: 0; will-change: transform; }
+
+  /* M1 */
+  .m1 { flex-direction: column; gap: 14px; }
+  .m1-row { display: flex; align-items: center; gap: 40px; }
+  .m1-side { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+  .m1-hand { display: flex; gap: 8px; }
+  .pct { font-family: var(--f-display); font-weight: 800; font-size: 34px; font-variant-numeric: tabular-nums; }
+  .m1-board { display: flex; gap: 10px; }
+  .slot { width: 76px; height: 99px; border-radius: 8px; background: color-mix(in srgb, var(--ink) 16%, transparent); position: relative; }
+  .slot .cardel { position: absolute; inset: 0; }
+  .m1 .caption { min-height: 22px; }
+  /* M2 */
+  .m2 { gap: 56px; }
+  .m2-mid { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+  .m2-pile { display: flex; gap: 6px; align-items: flex-end; height: 120px; }
+  .m2-pile .col { position: relative; width: 46px; height: 120px; }
+  .m2-pile .pc { position: absolute; left: 0; line-height: 0; }
+  /* M3 */
+  .m3 { flex-direction: column; gap: 12px; }
+  .m3-row { position: relative; display: flex; gap: 14px; padding: 6px; overflow: hidden; border-radius: 12px; }
+  /* M4 */
+  .m4 { gap: 60px; }
+  .m4-stage { position: relative; display: flex; gap: 14px; align-items: center; justify-content: center; min-width: 420px; height: 300px; }
+  .m4-right { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
+  .mult { font-family: var(--f-display); font-weight: 800; font-size: 110px; line-height: .9; }
+  .reel { position: relative; width: 120px; height: 128px; border-radius: 18px; background: #FBF8EF; overflow: hidden; box-shadow: inset 0 10px 18px rgba(0,0,0,.18); }
+  .reel .strip { position: absolute; left: 0; top: 0; width: 100%; }
+  .reel .sym { height: 128px; display: grid; place-items: center; }
+  .reel .sym svg { width: 88px; height: 88px; }
+  .reel.hit { box-shadow: 0 0 0 5px #fff, 0 0 30px rgba(255,255,255,.8); }
+  .wheelbox { position: relative; width: 300px; height: 300px; }
+  .wheel { position: absolute; inset: 0; line-height: 0; }
+  .ballarm { position: absolute; left: 150px; top: 150px; width: 0; height: 0; }
+  .ball { position: absolute; left: 0; top: 0; width: 18px; height: 18px; margin-top: -9px; border-radius: 50%; background: #FBF8EF; box-shadow: inset -3px -3px 0 #E1D3AD, 0 2px 4px rgba(0,0,0,.4); }
+  .pocket { width: 108px; height: 108px; border-radius: 50%; display: grid; place-items: center; color: #FBF8EF; font-family: var(--f-display); font-weight: 800; font-size: 52px; box-shadow: 0 0 0 6px #FBF8EF, 0 10px 24px rgba(0,0,0,.35); }
+  .die { width: 96px; height: 96px; line-height: 0; filter: drop-shadow(0 8px 10px rgba(0,0,0,.3)); }
+  .die.hit { filter: drop-shadow(0 0 16px rgba(255,255,255,.9)); }
+  /* M5 */
+  .m5 { gap: 30px; padding-left: 26px; }
+  .m5-left { display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
+  .m5-combo { display: flex; gap: 6px; }
+  .m5-opp { display: flex; flex-direction: column; gap: 14px; }
+  .opp { display: flex; align-items: center; gap: 12px; }
+  .opp .plate { width: 214px !important; }
+  .fanmini { display: flex; }
+  .fanmini .card-wrap { margin-left: -12px; }
+  /* M6 */
+  .m6-mid { display: flex; flex-direction: column; gap: 12px; align-items: flex-start; max-width: 460px; }
+  .m6-icon { line-height: 0; }
+  .count { width: 170px; height: 170px; display: grid; place-items: center; font-family: var(--f-display); font-weight: 800; font-size: 130px; line-height: 1; }
+  .count .go { font-size: 96px; }
+  .m6b .plate, .m6c .plate { flex: none; }
+  /* E4 */
+  .e4-left { position: relative; }
+  .e4-coin { position: absolute; left: 38px; top: 50%; margin: -75px 0 0 -75px; line-height: 0; }   /* over the avatar: it shrinks into the ring */
+  .e4-mid { max-width: 580px; }
+  .e4-mid .title { font-size: 52px; }
+  .btns { display: flex; gap: 10px; margin-top: 6px; }
+  .btns button { padding: 11px 20px; border-radius: 12px; font-weight: 800; font-size: 15px; }
+  .btns .wear { background: var(--ink); color: #fff; }
+  .btns .later { background: color-mix(in srgb, var(--ink) 14%, transparent); color: var(--ink); }
+
+  /* ---- the spec ---- */
+  #spec { background: var(--surface); border-radius: 16px; padding: 18px 22px; }
+  #spec h2 { font-family: var(--f-display); margin: 0 0 10px; font-size: 22px; }
+  #spec dl { display: grid; grid-template-columns: max-content 1fr; gap: 8px 18px; margin: 0; }
+  #spec dt { color: var(--faint); font-size: 12px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; padding-top: 2px; }
+  #spec dd { margin: 0; line-height: 1.5; color: var(--text); max-width: 75ch; }
+  .rules { color: var(--muted); font-size: 14px; line-height: 1.6; margin: 0; padding-left: 18px; }
+  @media (max-width: 640px) { #spec dl { grid-template-columns: 1fr; } .tools { margin-left: 0; } }
+</style>
+
+<div class="page">
+  <header>
+    <h1>Table moments</h1>
+    <p>The full-screen animations for big events. Each one dims the table, runs a band in the logo's three tilted steps across it, and pauses play for everyone until the bar along the band's foot runs out. Pick a moment to play it; “Slow” helps to inspect the timing.</p>
+  </header>
+  <div class="controls">
+    <div class="row" id="moments"></div>
+    <div class="row"><div class="row" id="variants"></div><div class="tools"><button class="tool" id="replay">↻ Replay</button><button class="tool" id="speed">Speed 1×</button></div></div>
+  </div>
+  <div id="screenwrap"><div id="screen"><div id="table"></div><div id="overlay"></div></div></div>
+  <section id="spec"></section>
+  <ul class="rules">
+    <li>The same frame every time: veil → band wipes in along the logo's slant → the moment → band wipes out. The table under it never moves.</li>
+    <li>The band's material says how big the event is: logo blue for most, silver / gold as it gets rarer, charcoal for a knockout, your new metal for an unlock.</li>
+    <li>Not shown here yet: sounds, and the reduced-motion version (the band simply fades in with the result, no flights).</li>
+  </ul>
+</div>
+<script src="demo.bundle.js"></script>
