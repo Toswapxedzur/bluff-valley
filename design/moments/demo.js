@@ -213,9 +213,12 @@ function arc(value, size, a, b, delay, dur = 640, lift = 90, sink = true) {
   for (let i = 0; i <= 12; i++) {
     const t = i / 12, x = a.x + (b.x - a.x) * t, y = a.y + (b.y - a.y) * t - lift * 4 * t * (1 - t) - dy;
     const k = sink ? Math.max(0, (t - 0.72) / 0.28) : 0;                 // the last stretch: shrink into the badge
-    kf.push({ transform: `translate(${x - size / 2}px, ${y - size / 2}px) scale(${1 - 0.78 * k})`, opacity: sink ? 1 - k * 0.9 : t < 0.97 ? 1 : 0, offset: t });
+    kf.push({ transform: `translate(${x - size / 2}px, ${y - size / 2}px) scale(${1 - 0.78 * k})`, opacity: sink ? 1 - k * 0.9 : 1, offset: t });
   }
   A(c, kf, { duration: dur, delay, easing: "cubic-bezier(.45,.05,.55,.95)" });
+  // landing on a pile: fully visible to the last frame, then handed over — the caller adds it to the
+  // pile at exactly delay + dur (no fade, so no dim "ghost" coin just before it lands)
+  if (!sink) at(delay + dur, () => c.remove());
 }
 /** Coins thrown up from a point, falling off the bottom of the screen. */
 function fountain(from, n, delay, spread = 1) {
@@ -891,8 +894,14 @@ function nHousePay() {
   // the House pays each winner into their own pile, coin by coin (1:1 here) …
   ["You", "Milo"].forEach((n, k) => {
     const an = seatAnchor(S[n]), coins = breakdown(bets[n]).flatMap(([d, c]) => Array(Math.min(c, 12)).fill(d));
-    coins.forEach((d, j) => arc(d, COIN, house, { x: an.x0, y: an.base }, 300 + k * 220 + j * 80, 520, 70, false));
-    at(300 + k * 220 + coins.length * 80 + 520, () => { piles[n].remove(); piles[n] = pileOf(under, bets[n] * 2, an); });
+    let paid = 0;
+    coins.forEach((d, j) => {
+      const col = breakdown(bets[n]).findIndex(([v]) => v === d), x = an.x0 + an.s * col * PITCH, y = an.base - (col % 2 ? RAISE : 0);
+      const start = 300 + k * 220 + j * 80;
+      arc(d, COIN, house, { x, y }, start, 520, 70, false);
+      // each coin joins the pile the moment it lands
+      at(start + 520, () => { paid += d; piles[n].remove(); piles[n] = pileOf(under, bets[n] + paid, an); });
+    });
   });
   // … takes the losers' piles …
   columnTo(piles.Ivy, house, 1300); columnTo(piles.Theo, house, 1400);
@@ -904,10 +913,13 @@ function nHousePay() {
 function nAntes() {
   const seats = [[P.you, 90], [P.milo, 180], [P.ivy, 270], [P.theo, 0]];
   const { S, under, potEl } = scene("big-two", { seats, pot: 0 });
-  const potAn = potAt(potEl, 400);
-  seats.forEach(([p], k) => arc(100, COIN, avOf(S[p.name]), { x: potAn.x0, y: potAn.base }, 300 + k * 70, 560, 50, false));
-  at(300 + 3 * 70 + 560, () => pileOf(under, 400, potAn));
-  counter(potEl.querySelector("b"), 0, 400, 800, 350);
+  // each ante joins the pot's pile the moment it lands (the coin never blinks out in between)
+  let pot = null, total = 0;
+  seats.forEach(([p], k) => {
+    const an = potAt(potEl, 100 * (k + 1)), land = 300 + k * 70 + 560;
+    arc(100, COIN, avOf(S[p.name]), { x: an.x0, y: an.base - k * RISE }, 300 + k * 70, 560, 50, false);
+    at(land, () => { pot?.remove(); total += 100; pot = pileOf(under, total, potAt(potEl, total)); potEl.querySelector("b").textContent = fmt(total); });
+  });
 }
 
 // ---------------------------------------------------------------- cards
