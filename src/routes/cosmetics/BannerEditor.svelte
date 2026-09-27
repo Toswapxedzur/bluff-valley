@@ -14,7 +14,10 @@
 
   // onShow(banner): what the page's seat preview should draw now — this unsaved picture while editing,
   // else the live banner (the preview itself lives on the page, beside the rings and badges)
-  let { initial: initialIn, onLive = () => {}, onShow = () => {} } = $props();
+  // It opens from the Custom badge tile's Edit and closes itself after a save (which also wears the
+  // banner) or a delete. onLive(banner, snapshot): the saved banner changed — snapshot = the state to
+  // reopen the editor from ({ live, fileId, settings, uploadsLeft, banned, removed }).
+  let { initial: initialIn, onLive = () => {}, onShow = () => {}, onClose = () => {} } = $props();
   const initial = untrack(() => initialIn);   // the page's load: the editor's starting point, read once
 
   const MAX_BYTES = 5 * 1024 * 1024;
@@ -114,19 +117,20 @@
       const j = await r.json().catch(() => ({ error: "Couldn't save. Try again." }));
       if (!r.ok || j.error) { error = j.error || "Couldn't save. Try again."; return; }
       live = j.banner; saved = JSON.stringify({ fileId, s: normalize(s) });
-      onLive(live);
-      note = "Saved. It's on your seat now.";
+      onLive(live, snapshot());
+      onClose();
     } catch { error = "Couldn't save. Check your connection."; }
     finally { busy = ""; }
   }
+  const snapshot = () => ({ live, fileId: live ? fileId : null, settings: live ? normalize(s) : null, uploadsLeft, banned, removed: false });
   async function remove() {
     if (busy) return;
     busy = "remove"; error = null; note = null;
     try {
       const r = await fetch("/api/banner", { method: "DELETE" });
       if (!r.ok) { error = "Couldn't remove it. Try again."; return; }
-      live = null; saved = null; onLive(null);
-      note = "Banner off. Your plate shows its metal again.";
+      live = null; saved = null; onLive(null, snapshot());
+      onClose();
     } finally { busy = ""; }
   }
 
@@ -170,8 +174,8 @@
 
 <section class="be">
   <div class="be-head">
-    <h2>Banner</h2>
-    <span class="muted small">Your own picture on your seat plate. It goes live the moment you save.</span>
+    <h2>Custom badge</h2>
+    <span class="muted small">Your own picture on your seat plate. Saving puts it on.</span>
   </div>
 
   {#if banned}
@@ -228,8 +232,9 @@
         {#if img && !banned}
           <button type="button" class="btn" disabled={!dirty || !!busy} onclick={save}>{busy === "save" ? "Saving…" : live ? "Save changes" : "Save banner"}</button>
         {/if}
+        <button type="button" class="btn btn-secondary" disabled={!!busy} onclick={onClose}>{dirty ? "Cancel" : "Close"}</button>
         {#if live}
-          <button type="button" class="btn btn-secondary" disabled={!!busy} onclick={remove}>{busy === "remove" ? "Removing…" : "Remove banner"}</button>
+          <button type="button" class="btn btn-secondary del" disabled={!!busy} onclick={remove}>{busy === "remove" ? "Deleting…" : "Delete banner"}</button>
         {/if}
       </div>
   </div>
@@ -268,6 +273,7 @@
   .ink.on { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--accent); }
 
   .acts { display: flex; gap: 10px; flex-wrap: wrap; }
+  .acts .del { margin-left: auto; color: var(--danger); }
   .err { color: var(--danger); margin: 0; font-weight: 600; }
   .ok { color: var(--ok); margin: 0; font-weight: 600; }
   .warn { color: var(--danger); font-weight: 600; margin: 0 0 10px; }

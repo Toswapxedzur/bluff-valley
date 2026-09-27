@@ -5,7 +5,7 @@ import { redirect, fail } from "@sveltejs/kit";
 import { queryOne } from "$lib/server/db.js";
 import { cosmeticsFor, equip } from "$lib/server/cosmetics.js";
 import { bannerState } from "$lib/server/banners.js";
-import { hub } from "$lib/server/poker/hub.js";
+import { pushLooks } from "$lib/server/poker/looks-push.js";
 
 export async function load({ locals }) {
   if (!locals.user) throw redirect(303, "/account/login");
@@ -25,8 +25,8 @@ export const actions = {
     const fd = await request.formData();
     const res = await equip(locals.user.id, String(fd.get("slot") || ""), String(fd.get("look") || ""));
     if (res.error) return fail(400, { error: res.error });
-    // seats and the lobby pick it up at once
-    try { hub.setLooks(locals.user.id, { ring: res.ring, badge: res.badge }); } catch { /* next sit carries it */ }
+    // seats and the lobby pick it up at once (a metal badge takes a worn banner off them)
+    await pushLooks(locals.user.id);
     return { ring: res.ring, badge: res.badge };
   }
 };

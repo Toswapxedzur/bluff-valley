@@ -6,8 +6,8 @@
 // wallet credit, a cash-out (a staked bot's winnings reach its funder), a received transfer, and each
 // hand's stack sync — and once more whenever the Cosmetics page loads, as a catch-all.
 import { query, execute } from "./db.js";
-import { LOOKS, isLook, ownedLooks, ownsLook, METALS } from "../cosmetics.js";
-import { bannersFor } from "./banners.js";
+import { LOOKS, isLook, ownedLooks, ownsLook, METALS, CUSTOM } from "../cosmetics.js";
+import { bannersFor, hasSavedBanner } from "./banners.js";
 
 // Who hears about a new metal (the hub registers: the player's personal "new look" banner).
 let lookNotifier = null;
@@ -52,12 +52,21 @@ export async function cosmeticsFor(userId) {
   if (!r) return null;
   const peak = Number(r.peak_wealth), owned = ownedLooks(peak);
   const wearing = (slot, k) => (ownsLook(slot, k, peak) ? k : "default");
-  return { wealth: Number(r.chips) + Number(r.on_tables), peak, owned, ring: wearing("ring", r.ring), badge: wearing("badge", r.badge) };
+  // the custom badge counts only while a saved banner exists
+  const badge = r.badge === CUSTOM ? ((await hasSavedBanner(userId)) ? CUSTOM : "default") : wearing("badge", r.badge);
+  return { wealth: Number(r.chips) + Number(r.on_tables), peak, owned, ring: wearing("ring", r.ring), badge };
 }
 
-/** Equip `look` in `slot` ("ring" | "badge"). Refuses a look the player hasn't unlocked. */
+/** Equip `look` in `slot` ("ring" | "badge"). Refuses a look the player hasn't unlocked, and the
+ *  custom badge until they have saved a banner. */
 export async function equip(userId, slot, look) {
   if (!SLOTS.includes(slot)) return { error: "Unknown cosmetic slot." };
+  if (slot === "badge" && look === CUSTOM) {
+    if (!(await hasSavedBanner(userId))) return { error: "Make a banner first." };
+    await execute("UPDATE user SET badge = ? WHERE id = ?", [CUSTOM, userId]);
+    const c = await cosmeticsFor(userId);
+    return { ...c, badge: CUSTOM };
+  }
   if (!isLook(look)) return { error: "Unknown look." };
   const c = await cosmeticsFor(userId);
   if (!c) return { error: "No such player." };
@@ -70,7 +79,7 @@ export async function equip(userId, slot, look) {
 }
 
 /** Equipped looks for many users at once (for seats, the lobby, the leaderboard): id → { ring, badge,
- *  banner } (banner = their live picture, or null). */
+ *  banner } (banner = the picture they WEAR — badge CUSTOM — or null). */
 export async function looksFor(userIds) {
   const ids = [...new Set((userIds || []).filter(Boolean))];
   if (!ids.length) return new Map();
@@ -79,6 +88,8 @@ export async function looksFor(userIds) {
   try { banners = await bannersFor(ids); } catch { /* banners optional */ }
   return new Map(rows.map((r) => {
     const peak = Number(r.peak_wealth);
-    return [r.id, { ring: ownsLook("ring", r.ring, peak) ? r.ring : "default", badge: ownsLook("badge", r.badge, peak) ? r.badge : "default", banner: banners.get(r.id) ?? null }];
+    const banner = banners.get(r.id) ?? null;   // bannersFor returns worn banners only
+    const badge = r.badge === CUSTOM ? (banner ? CUSTOM : "default") : ownsLook("badge", r.badge, peak) ? r.badge : "default";
+    return [r.id, { ring: ownsLook("ring", r.ring, peak) ? r.ring : "default", badge, banner }];
   }));
 }

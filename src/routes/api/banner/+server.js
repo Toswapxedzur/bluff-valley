@@ -1,11 +1,9 @@
 // The banner editor's calls (/cosmetics): upload a picture, save a banner from it, take it off.
-// A saved banner is live at once — every seat the player holds redraws (hub.setLooks); the owner
+// Saving also WEARS it (the custom badge), so it is live at once — every seat the player holds redraws (hub.setLooks); the owner
 // reviews afterwards on /cosmetics/review.
 import { json, error } from "@sveltejs/kit";
 import { ingest, saveBanner, clearBanner, MAX_UPLOAD_BYTES } from "$lib/server/banners.js";
-import { hub } from "$lib/server/poker/hub.js";
-
-const live = (userId, banner) => { try { hub.setLooks(userId, { banner }); } catch { /* the next sit carries it */ } };
+import { pushLooks } from "$lib/server/poker/looks-push.js";
 
 /** Upload: multipart `file` → { file: { id, w, h } } */
 export async function POST({ request, locals }) {
@@ -28,14 +26,14 @@ export async function PUT({ request, locals }) {
   const body = await request.json().catch(() => ({}));
   const res = await saveBanner(locals.user.id, String(body.fileId || ""), body.settings || {});
   if (res.error) return json(res, { status: 400 });
-  live(locals.user.id, res.banner);
-  return json(res);
+  await pushLooks(locals.user.id);
+  return json({ ...res, badge: "custom" });
 }
 
 /** Take it off. */
 export async function DELETE({ locals }) {
   if (!locals.user) throw error(401, "Sign in first.");
   await clearBanner(locals.user.id);
-  live(locals.user.id, null);
+  await pushLooks(locals.user.id);
   return json({ ok: true });
 }

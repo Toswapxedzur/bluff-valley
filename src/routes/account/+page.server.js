@@ -3,7 +3,7 @@ import { query, queryOne } from "$lib/server/db.js";
 import { updateProfile } from "$lib/server/profiles.js";
 import { openReports, resolveReport } from "$lib/server/moderation.js";
 import { adminRemove } from "$lib/server/banners.js";
-import { hub } from "$lib/server/poker/hub.js";
+import { pushLooks } from "$lib/server/poker/looks-push.js";
 import {
   invalidateSession,
   promoteToAdmin,
@@ -193,7 +193,7 @@ export const actions = {
     const userId = String(fd.get("userId") || ""), id = String(fd.get("id") || "");
     if (userId) {
       await adminRemove(userId, { ban: fd.get("ban") === "1" });
-      try { hub.setLooks(userId, { banner: null }); } catch { /* next sit */ }
+      await pushLooks(userId);
     }
     if (id) await resolveReport(id);
     return { reportResolved: true };

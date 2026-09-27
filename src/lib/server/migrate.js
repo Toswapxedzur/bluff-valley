@@ -160,15 +160,28 @@ export async function ensureMigrated() {
   await migrateToV25();
   // v26 (banners): the `banner_file` and `banner` tables are created by schema.sql's
   // CREATE TABLE IF NOT EXISTS (applied above) — no ALTERs, so no migrateToV26.
+  await migrateToV27();
 
   // Stamp the version row (idempotent — schema.sql also INSERT IGNOREs
   // it, but we want to be defensive).
   await execute(
-    "INSERT INTO meta(meta_key, meta_value) VALUES ('schema_version', '26') "
+    "INSERT INTO meta(meta_key, meta_value) VALUES ('schema_version', '27') "
     + "ON DUPLICATE KEY UPDATE meta_value = VALUES(meta_value)"
   );
 
   _migrated = true;
+}
+
+// v26 -> v27 (the banner becomes a badge you wear, 2026-09-27): a banner now shows only while the
+// player's badge is 'custom'. Everyone whose banner was live before keeps it on: their badge becomes
+// 'custom', once (gated on the stored version, so a player who later wears a metal is never flipped back).
+async function migrateToV27() {
+  const v = await query("SELECT meta_value FROM meta WHERE meta_key = 'schema_version'");
+  if (v.length && Number(v[0].meta_value) >= 27) return;
+  await execute(
+    "UPDATE user u JOIN banner b ON b.user_id = u.id AND b.status = 'live' AND b.layout = 'plate' AND b.src IS NOT NULL "
+    + "SET u.badge = 'custom'"
+  );
 }
 
 // v24 -> v25 (cosmetics): peak wealth + the equipped ring / badge on `user`, and every existing

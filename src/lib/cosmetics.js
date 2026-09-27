@@ -37,6 +37,9 @@ export const ownedLooks = (peak) => LOOKS.filter((l) => (peak ?? 0) >= l.at).map
 /** Slots whose every look is free for everyone (owner, 2026-09-27: players can put any picture of
  *  their own on the seat plate, so the plate's colours — the badges — aren't worth locking). */
 export const FREE_SLOTS = new Set(["badge"]);
+/** The badge slot's last choice: the player's own banner (owner, 2026-09-27). Worn like a metal; a
+ *  banner shows on a seat only while the player's badge is CUSTOM. */
+export const CUSTOM = "custom";
 /** Does a player with this peak wealth own `look` in `slot`? */
 export const ownsLook = (slot, look, peak) => isLook(look) && (FREE_SLOTS.has(slot) || ownedLooks(peak).includes(look));
 
