@@ -1,13 +1,13 @@
 # Deployment runbook
 
-How **Bluffing Valley** (repo dir `statisticasino/`) actually runs in production
+How **Bluff Valley** (repo dir `statisticasino/`) actually runs in production
 today, and the steps to get it back up from a blank Linux box. The generic
 "Production" section in [`README.md`](./README.md#production) covers the
 framework-level recipe; this file is the concrete, "what we shipped", warts-and-all
 record.
 
-> **Naming (renamed 2026-09-05: Riverside → Bluffing Valley).** Live host
-> `bluffingvalley.blopybox.net` (any old host 301-redirects). App dir
+> **Naming (Riverside → Bluffing Valley 2026-09-05 → Bluff Valley 2026-09-27; internal names — service, dir, log prefix, bot emails, DB locks — still say bluffing-valley).** Live host
+> `bluffvalley.blopybox.net` (renamed from Bluffing Valley 2026-09-27; `bluffingvalley.` and `riverside.` 301-redirect to it). App dir
 > `/opt/bluffing-valley`, systemd unit `bluffing-valley.service`, log identifier
 > `[bluffing-valley]`. **Unchanged on purpose:** OSS bucket `riverside-media`
 > (buckets can't be renamed), MySQL user `riverside`, and the mini2 archive names
@@ -41,7 +41,7 @@ If you're picking this up cold, read **§1 (architecture)** first, and **§5
                      └──────────┘        └──────────────────────────┘
                             ▲                        ▲
                             │                        │
-                  bluffingvalley.blopybox.net   47.243.163.51  (ssh hk)
+                  bluffvalley.blopybox.net   47.243.163.51  (ssh hk)
 ```
 
 - **Origin**: Aliyun HK **SWAS** (Simple Application Server, **not** classic ECS —
@@ -55,7 +55,7 @@ If you're picking this up cold, read **§1 (architecture)** first, and **§5
   proxies WebSockets natively — no per-location upgrade config needed. The site
   block is just:
   ```
-  bluffingvalley.blopybox.net {
+  bluffvalley.blopybox.net {
       reverse_proxy 127.0.0.1:3000
   }
   ```
@@ -157,7 +157,7 @@ MYSQL_SSL=0
 # journalctl instead of being mailed). See §7 for setup.
 GMAIL_USER=
 GMAIL_APP_PASSWORD=
-GMAIL_FROM_NAME=Bluffing Valley
+GMAIL_FROM_NAME=Bluff Valley
 
 # Voice (optional — see §Voice): coturn on this box
 # TURN_URL=turn:47.243.163.51:3479?transport=udp
@@ -169,7 +169,7 @@ GMAIL_FROM_NAME=Bluffing Valley
 
 PORT=3000
 HOST=127.0.0.1
-ORIGIN=https://bluffingvalley.blopybox.net
+ORIGIN=https://bluffvalley.blopybox.net
 EOF
 chmod 600 /opt/bluffing-valley/.env
 
@@ -287,7 +287,7 @@ Add one block to `/etc/caddy/Caddyfile` (the box already has other sites' blocks
 append, don't replace):
 
 ```
-bluffingvalley.blopybox.net {
+bluffvalley.blopybox.net {
     reverse_proxy 127.0.0.1:3000
 }
 ```
@@ -309,17 +309,17 @@ Cloudflare → zone `blopybox.net` → DNS → Records:
 
 ```bash
 # DNS
-dig +short bluffingvalley.blopybox.net          # 47.243.163.51
+dig +short bluffvalley.blopybox.net          # 47.243.163.51
 # HTTPS (Caddy-issued cert)
-curl -sS -o /dev/null -w 'HTTP %{http_code}\n' https://bluffingvalley.blopybox.net/   # 200
+curl -sS -o /dev/null -w 'HTTP %{http_code}\n' https://bluffvalley.blopybox.net/   # 200
 # WS upgrade through the public edge
 curl -sS -o /dev/null -w '%{http_code}\n' --http1.1 \
   -H 'Connection: Upgrade' -H 'Upgrade: websocket' \
   -H 'Sec-WebSocket-Key: x' -H 'Sec-WebSocket-Version: 13' \
-  https://bluffingvalley.blopybox.net/ws       # 101
+  https://bluffvalley.blopybox.net/ws       # 101
 # /api/flush wired up (400 with JSON body == ok, 5xx == bad)
 curl -sS -X POST -H 'Content-Type: application/json' --data '{"_probe":true}' \
-  https://bluffingvalley.blopybox.net/api/flush
+  https://bluffvalley.blopybox.net/api/flush
 ```
 
 ---
@@ -344,7 +344,7 @@ ssh hk 'cd /opt/bluffing-valley && npm ci --omit=dev && sudo systemctl restart b
 Dry-run with `--dry-run --itemize-changes` first; `--delete` is safe because the
 excludes protect `node_modules`/`.env`/`.venv` (box-only). Migrations are idempotent
 and run at every boot via `hooks.server.js#ensureMigrated`, so you rarely invoke
-`migrate.js` by hand. Verify: `curl https://bluffingvalley.blopybox.net/` = 200.
+`migrate.js` by hand. Verify: `curl https://bluffvalley.blopybox.net/` = 200.
 
 ### 3.2 Inspecting
 
@@ -420,20 +420,20 @@ MYSQL_DATABASE=statisticasino
 MYSQL_SSL=0
 GMAIL_USER=…                      # blank -> stub mode (see §7)
 GMAIL_APP_PASSWORD=…              # 16-char app password
-GMAIL_FROM_NAME=Bluffing Valley
+GMAIL_FROM_NAME=Bluff Valley
 OSS_ACCESS_KEY_ID / OSS_ACCESS_KEY_SECRET / OSS_BUCKET / OSS_ENDPOINT   # media (§Social/OSS)
 TURN_URL / TURN_SECRET / TURN_TTL # voice (§Voice)
 REPLAY_ARCHIVE_URL=http://127.0.0.1:8790   # replay archive tunnel (§Replay archive)
 PORT=3000
 HOST=127.0.0.1                    # adapter-node binds loopback only; Caddy is the only reacher
-ORIGIN=https://bluffingvalley.blopybox.net
+ORIGIN=https://bluffvalley.blopybox.net
 ```
 
 `ORIGIN` is the one most likely to bite you: SvelteKit uses it both to construct
 canonical URLs **and** to validate the `Origin` header on cross-site form POSTs. If
 browsers visit over `https://` but `ORIGIN` says `http://`, every form submit is
 rejected 403 by SvelteKit's CSRF guard. With Caddy terminating TLS and the site
-served over `https://bluffingvalley.blopybox.net`, keep `ORIGIN` on `https://`.
+served over `https://bluffvalley.blopybox.net`, keep `ORIGIN` on `https://`.
 
 The `/api/flush` endpoint is exempt — `svelte.config.js` sets
 `csrf.checkOrigin: false` because the Chrome extension posts from a
@@ -559,7 +559,7 @@ ssh hk 'journalctl -u bluffing-valley -n 200 --no-pager | grep "email:stub" | ta
 | Reverse proxy | Caddy, `/etc/caddy/Caddyfile` (reload, never restart) |
 | Database | **local** MySQL `127.0.0.1:3306`, db `statisticasino`, user `riverside` |
 | DNS / TLS | Cloudflare zone `blopybox.net` (`bluffingvalley` A, DNS-only); Caddy issues certs |
-| Public site | <https://bluffingvalley.blopybox.net/> |
+| Public site | <https://bluffvalley.blopybox.net/> |
 | Chrome extension repo | `casinoMalwareExtension/` (sibling dir) |
 
 ---
@@ -664,7 +664,7 @@ check the tunnel from the VPS with
 
 The rented Aliyun HK SWAS box **expires `2026-09-20T16:00Z`** with **auto-renew
 OFF**. **Owner's decision (2026-09-15): let it lapse** — no renew, no migrate. On the
-20th `bluffingvalley.blopybox.net`, voice/coturn, and the replay-archive tunnel stop.
+20th `bluffvalley.blopybox.net`, voice/coturn, and the replay-archive tunnel stop.
 
 **Before the 20th — the one thing to confirm:** with the box gone, the *only*
 surviving copy of the data is the nightly DB backup mirrored to **mini2**

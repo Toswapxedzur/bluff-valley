@@ -39,7 +39,7 @@
   }
 </script>
 
-<svelte:head><title>River Sprint — Bluffing Valley</title></svelte:head>
+<svelte:head><title>River Sprint — Bluff Valley</title></svelte:head>
 
 <div class="wrap">
   <div class="head">

@@ -27,7 +27,7 @@
 //   GMAIL_APP_PASSWORD     – 16-char app password generated at the
 //                            URL above. Spaces are accepted (we strip
 //                            them). NOT the regular Gmail password.
-//   GMAIL_FROM_NAME        – display name; default "Statisticasino"
+//   GMAIL_FROM_NAME        – display name; default "Bluff Valley"
 //
 // If either GMAIL_USER or GMAIL_APP_PASSWORD is missing we fall
 // through to a console.log stub so signup is still testable on a
@@ -101,7 +101,7 @@ export async function sendEmail({ to, subject, text, html }) {
   }
 
   const fromAddr = (env.GMAIL_USER || "").trim();
-  const fromName = (env.GMAIL_FROM_NAME || "Statisticasino").trim();
+  const fromName = (env.GMAIL_FROM_NAME || "Bluff Valley").trim();
   // Quoting the display name handles whitespace + non-ASCII; the
   // `<addr>` form is RFC-2822 compliant.
   const from = `"${fromName.replace(/"/g, "")}" <${fromAddr}>`;
