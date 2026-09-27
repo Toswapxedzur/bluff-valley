@@ -55,6 +55,17 @@ export const COIN = {
   sink: 220,        // a landed win shrinks into the badge
   count: 520,       // the stack / pot number counting up
   arc: 0.16,        // lift at mid-flight, as a share of the distance (capped by the renderer)
+  // a pile going to a badge leaves COIN BY COIN FROM THE TOP DOWN (owner, 2026-09-27): the coin
+  // nothing rests on first, this far apart — but a big pile never takes longer than leaveSpan
+  leaveEvery: 45,
+  leaveSpan: 1100,
+  // the all-in (owner, 2026-09-27): the bet goes out like any bet but holds HIGH, then the whole pile
+  // drops at once — a hard landing, a jolt, a shock ring and sparks
+  hold: 420,        // hovering after the last column lands
+  drop: 150,        // the fall
+  squash: 240,      // the landing squash
+  hover: 2.6,       // how high it holds, in coin sizes
+  burst: 620,       // the shock ring + sparks
 };
 
 /** Sound cues, each at the exact moment of its motion, announced as the motion STARTS (so a sound
@@ -83,19 +94,28 @@ export class Money {
     this._queue = [];              // [{ t, fn, bet?, seq?, norm? }] timed actions
     this._id = 0;
     this._seq = 0;
+    this.held = new Map();         // "pile|denom" → coins still sitting on a pile, already promised to a badge
+    this.hover = new Map();        // pile → { rise, drop } an all-in pile holding high, then dropping
+    this.drops = [];               // { pile, seat, t } an all-in pile's landing (the shock + sparks)
   }
 
   // ------------------------------------------------------------------ actions
   /** `amount` onto `seat`'s pile, paid from `payer`'s badge (the seat itself, or "house"). */
   bet(seat, amount, t, payer = seat) {
-    const pile = `bet:${seat}`;
+    const pile = `bet:${seat}`, cols = breakdown(amount);
     let allIn = false;
-    breakdown(amount).forEach((c, i) => {
+    cols.forEach((c, i) => {
       this._at(t + i * COIN.every, (now) => {
         const value = c.denom * c.count;
-        // a player's own bet that takes their whole stack: the all-in push (its own sound, no coin clicks)
+        // a player's own bet that takes their whole stack: the all-in. Its columns land on a pile held
+        // high; after the last one lands the whole pile drops (its own sound, on the landing — no clicks)
         if (i === 0 && payer === seat && typeof seat === "number" && (this.stack.get(seat) ?? 0) - amount <= 0) {
-          allIn = true; this.cues.push({ t: now, name: "allIn", at: { kind: "stack", seat } });
+          allIn = true;
+          const drop = now + (cols.length - 1) * COIN.every + COIN.flight + COIN.hold, land = drop + COIN.drop;
+          this.hover.set(pile, { rise: now, drop });
+          this.drops.push({ pile, seat, t: land });
+          this.cues.push({ t: land, name: "allIn", at: { kind: "stack", seat } });
+          this._at(land + COIN.squash, () => this.hover.delete(pile), { norm: true });   // nothing sweeps it mid-air
         }
         this._setStack(payer, (this.stack.get(payer) ?? 0) - value, null);   // leaves the badge at once
         this._fly({ kind: "column", denom: c.denom, count: c.count, amount: value, from: { kind: "stack", seat: payer }, to: { kind: "slot", pile, denom: c.denom }, dur: COIN.flight }, now, (tl) => {
@@ -153,6 +173,7 @@ export class Money {
   snap(stacks, piles) {
     this.stack = new Map(Object.entries(stacks).map(([k, v]) => [k === "house" ? "house" : +k, v]));
     this.piles = new Map();
+    this.held = new Map(); this.hover = new Map(); this.drops = [];
     for (const [key, amount] of Object.entries(piles)) {
       if (!(amount > 0)) continue;
       this.piles.set(key, new Map(breakdown(amount).map((c) => [c.denom, c.count])));
@@ -204,12 +225,32 @@ export class Money {
   }
 
   // ------------------------------------------------------------------ what to draw
+  /** The columns a pile SHOWS: landed coins plus the ones still waiting their turn to leave. */
+  shownColumnsOf(pile) {
+    const m = new Map(this.columnsOf(pile));
+    for (const [key, n] of this.held) { const [pl, d] = key.split("|"); if (pl === pile && n > 0) m.set(+d, (m.get(+d) || 0) + n); }
+    return [...m].sort((a, b) => b[0] - a[0]);
+  }
+  /** Every pile that shows coins (landed or waiting to leave). */
+  shownPiles() { const s = new Set(this.piles.keys()); for (const [key, n] of this.held) if (n > 0) s.add(key.split("|")[0]); return [...s]; }
+  heldOf(pile) { let v = 0; for (const [key, n] of this.held) { const [pl, d] = key.split("|"); if (pl === pile) v += +d * n; } return v; }
+  _hold(pile, d, n) { const key = `${pile}|${d}`, v = (this.held.get(key) || 0) + n; if (v > 0) this.held.set(key, v); else this.held.delete(key); }
+  /** How high an all-in pile holds at `t` (0 = on the table, 1 = full height): it rises with its
+   *  first column, holds, then drops (ease-in, a fall). */
+  hoverAt(pile, t) {
+    const h = this.hover.get(pile);
+    if (!h) return 0;
+    if (t < h.rise + COIN.flight) return Math.max(0, (t - h.rise) / COIN.flight);
+    if (t < h.drop) return 1;
+    const u = (t - h.drop) / COIN.drop;
+    return u >= 1 ? 0 : 1 - u * u;
+  }
   /** A pile's landed columns, highest first: [[denom, count]]. */
   columnsOf(pile) { return [...(this.piles.get(pile) || [])].filter(([, n]) => n > 0).sort((a, b) => b[0] - a[0]); }
   amountOf(pile) { let s = 0; for (const [d, n] of this.piles.get(pile) || []) s += d * n; return s; }
   /** Coin values a pile's layout must hold a place for: landed, arriving, or just leaving. */
   slotsOf(pile) {
-    const ds = new Set(this.columnsOf(pile).map(([d]) => d));
+    const ds = new Set(this.shownColumnsOf(pile).map(([d]) => d));
     for (const f of this.flights) {
       if (f.landed) continue;
       if (f.to.kind === "slot" && f.to.pile === pile) ds.add(f.to.denom);
@@ -220,9 +261,9 @@ export class Money {
   /** The number a badge shows at `t` (counts up after a win lands). */
   stackAt(seat, t) { return this._shown(`stack:${seat}`, this.stack.get(seat) ?? 0, t); }
   /** Every pile's amount including its own merges / breaks in the air. */
-  pileAt(pile) { return this.amountOf(pile) + this._inPile(pile); }
+  pileAt(pile) { return this.amountOf(pile) + this._inPile(pile) + this.heldOf(pile); }
   /** The pot number at `t` (counts up as the sweep lands). */
-  potAt(t) { return this._shown("pot", this.amountOf("pot") + this._inPile("pot"), t); }
+  potAt(t) { return this._shown("pot", this.amountOf("pot") + this._inPile("pot") + this.heldOf("pot"), t); }
   /** A flight's state at `t`: progress u (0..1), eased s, lift (0..1 of the arc), sink (0..1). */
   flightAt(f, t) {
     const u = Math.min(1, Math.max(0, (t - f.t0) / f.dur));
@@ -308,16 +349,36 @@ export class Money {
     };
     step(now);
   }
-  /** Columns leave a pile for a badge together; they sink into it and the stack counts up. */
+  /** A pile's coins leave for a badge COIN BY COIN FROM THE TOP DOWN (owner, 2026-09-27): always the
+   *  coin nothing rests on — the highest, and at the same height the front row's before the raised
+   *  back row's — each sinking into the badge as the stack counts up. Until its turn a coin stays on
+   *  the pile (held), so nothing blinks out. */
   _flyHome(pile, cols, seat, t, dur, cue) {
     if (pile === "pot") this.cues.push({ t, name: "collect", at: { kind: "pot" } });
-    if (cols.length) this.cues.push({ t: t + dur + COIN.sink, name: "sink", count: coinsIn(cols), at: { kind: "stack", seat } });
-    cols.forEach(([d, n], i) => {
-      this._fly({ kind: "column", denom: d, count: n, amount: d * n, from: { kind: "slot", pile, denom: d }, to: { kind: "stack", seat }, dur, sink: COIN.sink }, t, (tl) => {
-        this._setStack(seat, (this.stack.get(seat) ?? 0) + d * n, tl);
-        if (cue && i === 0) this.cues.push({ t: tl, name: cue });
+    if (!cols.length) return;
+    const p = this.piles.get(pile) || new Map();
+    const here = new Map(this.shownColumnsOf(pile));
+    for (const [d, n] of cols) here.set(d, (here.get(d) || 0) + n);
+    const order = [...here.keys()].filter((d) => here.get(d) > 0).sort((a, b) => b - a);   // the layout: highest first
+    const coins = [];
+    for (const [d, n] of cols) {
+      const i = order.indexOf(d), under = (p.get(d) || 0) + (this.held.get(`${pile}|${d}`) || 0);
+      for (let k = under; k < under + n; k++) {
+        const level = Math.min(k, 11);                        // the renderer shows up to 12 per column
+        coins.push({ d, level, h: (i % 2 ? 0.6 : 0) + level * 0.14, back: i % 2 === 1 });
+      }
+      this._hold(pile, d, n);
+    }
+    coins.sort((a, b) => (Math.abs(a.h - b.h) < 0.14 ? a.back - b.back : b.h - a.h));
+    const gap = Math.min(COIN.leaveEvery, COIN.leaveSpan / coins.length);
+    this.cues.push({ t: t + dur + COIN.sink, name: "sink", count: coins.length, at: { kind: "stack", seat } });
+    coins.forEach((c, j) => this._at(t + j * gap, (now) => {
+      this._hold(pile, c.d, -1);
+      this._fly({ kind: "column", denom: c.d, count: 1, level: c.level, amount: c.d, from: { kind: "slot", pile, denom: c.d }, to: { kind: "stack", seat }, dur, sink: COIN.sink }, now, (tl) => {
+        this._setStack(seat, (this.stack.get(seat) ?? 0) + c.d, tl);
+        if (cue && j === 0) this.cues.push({ t: tl, name: cue });
       });
-    });
+    }));
   }
   /** Value inside a pile's own merges / breaks (still the pile's money while it moves). */
   _inPile(pile) {

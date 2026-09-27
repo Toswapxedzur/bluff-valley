@@ -4,9 +4,9 @@
   import CoinStack from "./CoinStack.svelte";
   import HandFan from "./HandFan.svelte";
   import { scale, fade, fly } from "svelte/transition";
-  import { d, DUR } from "$lib/motion.js";
-  import { getContext } from "svelte";
-  import { plateStyle } from "$lib/cosmetics.js";
+  import { d, DUR, NORM, tween } from "$lib/motion.js";
+  import { getContext, untrack } from "svelte";
+  import { plateStyle, ringBox } from "$lib/cosmetics.js";
 
   // The one seat badge every game uses: avatar · name · stack · status line, with
   // the player's cards fanned underneath. Layout is the same for every game; games
@@ -26,7 +26,7 @@
   //   hideCards  — the hand is on the dealer's canvas (in the air / collected): keep its place, hide it.
   //   house      — render as the House (dealer) badge: label + bankroll, no ring.
   let {
-    seat = null, isMine = false, me = null,
+    seat: seatIn = null, isMine = false, me = null,
     cards = null, cardCount = 0, reveal = true, hideCards = false,
     line = null, lineKind = "",
     deadline = null, winner = false, won = 0,
@@ -40,6 +40,42 @@
   // The table's bank (coin motion, every game mode): while coins move, the stack number is the
   // bank's (it drops as a bet leaves, counts up as winnings sink in) and the coins themselves
   // replace the bet / winnings pills. Absent under reduced motion → the pills and the view's stack.
+  // Arriving / leaving (the norm: ring draw 600 ms). Someone sitting down while we watch: the plate
+  // fades in and the ring draws on round the avatar, gem by gem. Someone leaving: the ring un-draws,
+  // then the plate fades — the last seat stays on screen (`leaving`) until then, so nothing jumps.
+  let ringDraw = $state(1), leaving = $state(null), gone = $state(false);
+  let seat = $derived(seatIn && seatIn.userId != null ? seatIn : leaving);
+  let lastSeat = null, lastUid = untrack(() => seatIn?.userId ?? null), stopDraw = () => {};
+  $effect(() => {
+    const s = seatIn, uid = s?.userId ?? null;
+    untrack(() => {
+      if (uid != null) lastSeat = s;
+      if (uid === lastUid) return;
+      const was = lastUid;
+      lastUid = uid;
+      stopDraw();
+      if (house) return;
+      if (uid != null) {                                       // arrived
+        leaving = null; gone = false; ringDraw = 0;
+        stopDraw = tween(NORM.ringDraw, (k) => { ringDraw = k; });
+      } else if (was != null && lastSeat) {                    // left
+        leaving = lastSeat; gone = false;
+        stopDraw = tween(NORM.ringDraw, (k) => {
+          ringDraw = 1 - k;
+          if (k >= 1) { gone = true; setTimeout(() => { if (lastUid == null) { leaving = null; gone = false; ringDraw = 1; } }, 220); }
+        });
+      }
+    });
+  });
+  $effect(() => () => stopDraw());
+
+  // My turn starts: one glow laps my ring (then its gems count the clock down)
+  let glowKey = $state(0), wasToAct = false;
+  $effect(() => {
+    const on = !!(seat?.isToAct && isMine);
+    untrack(() => { if (on && !wasToAct) glowKey += 1; wasToAct = on; });
+  });
+
   const bankCtx = getContext("bank");
   let bank = $derived(bankCtx?.current ?? null);
   let stackShown = $derived(bank && seat ? bank.stackFor(house ? "house" : seatNo) : null);
@@ -58,7 +94,8 @@
   let urgent = $derived(seat?.isToAct && remainMs > 0 && remainMs <= 6000);
 
   let folded = $derived(seat?.status === "folded");
-  let allin = $derived(seat?.status === "allin");
+  // the all-in shows when its pile LANDS (the stamp + red pulse ride the drop), not when the bet leaves
+  let allin = $derived(seat?.status === "allin" && !(bank?.airborne ?? []).includes(seatNo));
   let sittingOut = $derived(!!seat?.sittingOut);
   let badge = $derived(seat?.isButton ? "D" : seat?.isSB ? "SB" : seat?.isBB ? "BB" : null);
   // Default status line: all-in / sitting out / last action; games may override via `line`.
@@ -93,10 +130,10 @@
   let look = $derived(!house && seat ? plateStyle(seat.badge || "default") : null);
   let plateVars = $derived(look ? `background:${look.bg};--plate-ink:${look.ink};--plate-sub:${look.sub};--plate-money:${look.money}` : undefined);
   // the turn clock IS the ring: its gems vanish one by one as the time runs down (no separate circle)
-  let ringRemain = $derived(seat?.isToAct && deadline ? frac : 1);
+  let ringRemain = $derived(Math.min(ringDraw, seat?.isToAct && deadline ? frac : 1));
 </script>
 
-<div class="seat" style="--hang:{hang}px" data-seat={house ? undefined : seatNo} data-house={house ? "" : undefined} class:mine={isMine} class:folded class:sitting-out={sittingOut} class:winner class:allin class:house class:toact={!!seat?.isToAct}>
+<div class="seat" style="--hang:{hang}px" data-seat={house ? undefined : seatNo} data-house={house ? "" : undefined} class:mine={isMine} class:folded class:sitting-out={sittingOut} class:winner class:allin class:house class:toact={!!seat?.isToAct} class:leaving={!!leaving} class:gone>
   {#if seat && seat.userId != null}
     {#if winner && won > 0 && !bank}
       <div class="won" in:fly={{ y: d(10), duration: d(DUR.slow) }} out:fade={{ duration: d(DUR.base) }}>
@@ -110,6 +147,7 @@
     <div class="plate" style={plateVars} in:fade={{ duration: d(DUR.base) }}>   <!-- fades in: no size change -->
       <div class="av">
         <Avatar id={seat.userId} name={house ? "House" : seat.name} mediaId={seat.avatar ?? null} userId={isMine || house ? null : seat.userId} size={avSize} ring={house ? null : seat.ring || "default"} {ringRemain} ringFloat />
+        {#key glowKey}{#if glowKey}<span class="turnglow" style="--box:{ringBox(avSize)}px;--in:{avSize / 2}px" aria-hidden="true"></span>{/if}{/key}
       </div>
       <div class="txt">
         <!-- owner, 2026-09-26: the name with the D / SB / BB marker right of it (a long name gives way with
@@ -214,10 +252,34 @@
   .hand.dealt-away { visibility: hidden; }
   .extra { display: flex; justify-content: center; }
   .hand:not(.has) { display: none; }
+  .plate, .hand { transition: opacity 0.4s var(--ease), filter 0.4s var(--ease), box-shadow var(--dur) var(--ease); }
   .seat.folded .plate, .seat.folded .hand { opacity: 0.42; filter: grayscale(0.4); }
   .seat.sitting-out .plate { opacity: 0.7; }
+  .seat.gone .plate { opacity: 0; }
+  .seat.leaving .below { visibility: hidden; }
+  /* the your-turn glow: a bright arc once round the ring band (masked to the band) */
+  .turnglow {
+    position: absolute; left: 50%; top: 50%; width: var(--box); height: var(--box); margin: calc(var(--box) / -2) 0 0 calc(var(--box) / -2);
+    border-radius: 50%; pointer-events: none; z-index: 2;
+    background: conic-gradient(from 0deg, transparent 0 62%, rgba(255,255,255,0.95) 88%, transparent 100%);
+    -webkit-mask: radial-gradient(circle, transparent calc(var(--in) - 1px), #000 var(--in), #000 calc(var(--box) / 2 - 1px), transparent calc(var(--box) / 2));
+    mask: radial-gradient(circle, transparent calc(var(--in) - 1px), #000 var(--in), #000 calc(var(--box) / 2 - 1px), transparent calc(var(--box) / 2));
+    animation: turnglow 0.9s cubic-bezier(.4,0,.3,1) 1 forwards;
+  }
+  @keyframes turnglow {
+    0% { transform: rotate(0deg); opacity: 0; }
+    15%, 80% { opacity: 1; }
+    100% { transform: rotate(360deg); opacity: 0; }
+  }
   .seat.winner .plate { box-shadow: 0 0 0 2px rgba(74,222,128,0.65), 0 0 18px rgba(74,222,128,0.4); animation: winpulse 1.1s ease-in-out 2; }
-  .seat.allin .plate { box-shadow: 0 0 0 2px color-mix(in srgb, var(--danger) 72%, transparent), 0 0 16px color-mix(in srgb, var(--danger) 32%, transparent); }
+  .seat.allin .plate { box-shadow: 0 0 0 2px color-mix(in srgb, var(--danger) 72%, transparent), 0 0 16px color-mix(in srgb, var(--danger) 32%, transparent); animation: allinpulse 0.7s ease-out 1; }
+  .row3.allin .status { display: inline-block; animation: stamp 0.36s cubic-bezier(.3,1.45,.5,1) 1; transform-origin: left center; }
+  @keyframes allinpulse {
+    0% { box-shadow: 0 0 0 0 rgba(239,68,68,0); }
+    45% { box-shadow: 0 0 0 4px rgba(239,68,68,0.9), 0 0 24px rgba(239,68,68,0.55); }
+    100% { box-shadow: 0 0 0 2px color-mix(in srgb, var(--danger) 72%, transparent), 0 0 16px color-mix(in srgb, var(--danger) 32%, transparent); }
+  }
+  @keyframes stamp { from { transform: scale(1.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
   @keyframes winpulse {
     0%, 100% { box-shadow: 0 0 0 2px rgba(74,222,128,0.5), 0 0 12px rgba(74,222,128,0.3); }
     50% { box-shadow: 0 0 0 3px rgba(74,222,128,0.85), 0 0 24px rgba(74,222,128,0.55); }
@@ -226,5 +288,5 @@
   .sit-btn { font-size: 12px; padding: 6px 12px; }
   .empty-lbl { font-size: 12px; color: var(--muted); }
   .empty-lbl.link { text-decoration: none; }
-  @media (prefers-reduced-motion: reduce) { .seat.winner .plate { animation: none; } }
+  @media (prefers-reduced-motion: reduce) { .seat.winner .plate, .seat.allin .plate, .row3.allin .status { animation: none; } .turnglow { display: none; } }
 </style>

@@ -38,6 +38,7 @@ export class Bank {
   // ---- read by the badges / the pot (reactive) ----
   shown = $state({});       // seat (or "house") → the stack number to show
   pot = $state(null);       // the pot number (poker / shed), null = use the view's
+  airborne = $state([]);    // seats whose all-in pile hasn't landed yet (their ALL-IN stamps on landing)
 
   constructor(kind) {
     this.kind = kind;
@@ -204,6 +205,8 @@ export class Bank {
     if (changed || Object.keys(this.shown).length !== Object.keys(shown).length) this.shown = shown;
     const pot = this.kind === "banked" ? null : m.potAt(t);
     if (pot !== this.pot) this.pot = pot;
+    const air = m.drops.filter((d) => t < d.t).map((d) => d.seat);
+    if (air.join() !== this.airborne.join()) this.airborne = air;
   }
 
   /** The stack a badge shows for `seat` (a seat number, or "house"), or null for the view's own. */
