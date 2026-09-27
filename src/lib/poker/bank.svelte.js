@@ -12,6 +12,7 @@
 // Whenever nothing is moving, the engine is snapped to what the server says, so it can't drift.
 
 import { Money } from "./coin-motion.js";
+import { resolveMs } from "./resolve-anim.js";
 import { isBanked, isShedding } from "./games.js";
 
 const now = () => (typeof performance !== "undefined" ? performance.now() : Date.now());
@@ -121,6 +122,7 @@ export class Bank {
       else if (dw < 0 && !settled) m.giveBack(s.seat, -dw, t);          // a wager pulled back
     }
     if (!settled) return;
+    t += resolveMs(next.game);                    // the wheel / dice / reels land first
     for (const r of next.round?.results || []) {
       if (r.outcome === "banker" || r.seat == null) continue;
       if (r.delta > 0) m.bet(r.seat, r.delta, t, "house");               // the House pays onto the pile

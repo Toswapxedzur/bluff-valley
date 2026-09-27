@@ -11,7 +11,6 @@ const STRIP = [
   ...Array(4).fill("bell"), ...Array(3).fill("bar"),
   ...Array(2).fill("seven"), ...Array(1).fill("diamond")
 ];
-const EMOJI = { cherry: "🍒", lemon: "🍋", bell: "🔔", bar: "⭐", seven: "7️⃣", diamond: "💎" };
 const THREE = { diamond: 100, seven: 50, bar: 20, bell: 10, cherry: 10, lemon: 5 };
 
 function multiplier(reels) {
@@ -35,9 +34,8 @@ function settleBet(bet, outcome) {
 }
 
 function outcomeView(state) {
-  const reels = state.outcome.reels.map((s) => EMOJI[s]).join("  ");
   const m = multiplier(state.outcome.reels);
-  return { headline: `${reels}   ${m > 0 ? `pays ${m}:1` : "no win"}` };
+  return { headline: m > 0 ? `pays ${m}:1` : "no win", reels: [...state.outcome.reels] };
 }
 
 export const slots = bankedBetGame({

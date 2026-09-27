@@ -5,6 +5,9 @@
   import { fade } from "svelte/transition";
   import { d, DUR } from "$lib/motion.js";
   import { tableSeats, outcomeOf, fmt, signed, deltaKind } from "$lib/poker/table-seats.js";
+  import Resolve from "./Resolve.svelte";
+  import { resolveMs } from "$lib/poker/resolve-anim.js";
+  import { reducedMotion } from "$lib/motion.js";
 
   // Bet-selection games (Baccarat, Roulette, Sic Bo, Slots): the
   // round outcome (headline + any labelled card hands) sits in the middle, the
@@ -13,7 +16,19 @@
 
   const round = $derived(view?.round || {});
   const outcome = $derived(round.outcome || null);
-  const results = $derived(round.results || null);
+  // Roulette / Sic Bo / Slots: the wheel, dice or reels play first; the result (headline, lines,
+  // winner marks — and the coins, in the bank) waits until they land (resolve-anim.js)
+  const spins = $derived(!!outcome && resolveMs(view?.game) > 0 && (outcome.pocket != null || outcome.dice || outcome.reels));
+  let landedFor = $state(null);
+  $effect(() => {
+    const key = view?.handNo, o = outcome, ms = spins && !reducedMotion() ? resolveMs(view?.game) : 0;
+    if (!o) return;
+    if (!ms) { landedFor = key; return; }
+    const id = setTimeout(() => { landedFor = key; }, ms);
+    return () => clearTimeout(id);
+  });
+  const landed = $derived(!!outcome && landedFor === view?.handNo);
+  const results = $derived(landed ? round.results || null : null);
   const t = $derived(tableSeats(view, me));
   const betsBySeat = $derived(new Map((round.bets || []).map((b) => [b.seat, b.bets])));
   function lineFor(seatNo) {
@@ -32,7 +47,8 @@
   {#snippet center()}
     <div class="outcome">
       {#if outcome}
-        <div class="headline" transition:fade={{ duration: d(DUR.base) }}>{outcome.headline}</div>
+        {#if spins}{#key view?.handNo}<Resolve game={view.game} {outcome} />{/key}{/if}
+        {#if landed || !spins}<div class="headline" transition:fade={{ duration: d(DUR.base) }}>{outcome.headline}</div>{/if}
         {#if outcome.hands}
           <div class="ohands">
             {#each outcome.hands as h}
