@@ -92,7 +92,7 @@ function setRing(plateEl, look, remain) {
 // ------------------------------------------------------------------ the table underneath
 const SEAT_AT = [90, 150, 210, 270, 330, 30];
 const ORDER = [P.you, P.milo, P.ivy, P.nora, P.theo, P.ada];
-function table(game) {
+function table(game, { between = false } = {}) {
   const t = $("#table");
   t.replaceChildren();
   const hud = h("div", "hud", `<span class="back">‹</span><img src="games/${game}.svg" width="34" height="34" alt=""><span class="hud-t"><b>Riverside ${game === "river-sprint" ? "Sprint" : "Table 3"}</b><span>${GAME_NAME[game]} · 100/200</span></span>`);
@@ -104,13 +104,15 @@ function table(game) {
     pl.classList.add("seat");
     pl.style.left = x + "px"; pl.style.top = y + "px";
     t.append(pl);
-    if (game === "holdem" || game === "river-sprint") {
+    if ((game === "holdem" || game === "river-sprint") && !between) {
       const hand = h("div", "seat-hand", mine ? cardHtml("Jh", 58) + cardHtml("Jc", 58) : backHtml(38) + backHtml(38));
       hand.style.left = x + "px"; hand.style.top = y + (mine ? 30 : 26) + "px";
       t.append(hand);
     }
   });
-  if (game === "holdem" || game === "river-sprint") {
+  if (between) {
+    t.append(h("div", "potpill", `<span>POT</span><b>0</b>`));
+  } else if (game === "holdem" || game === "river-sprint") {
     const board = h("div", "board", ["Kd", "7c", "2h", "5s"].map((c) => cardHtml(c, 62)).join(""));
     t.append(board, h("div", "potpill", `<span>POT</span><b>18,640</b>`));
   } else {
@@ -121,54 +123,59 @@ const GAME_NAME = { holdem: "No-Limit Hold'em", "three-card": "Three Card Poker"
 
 // ------------------------------------------------------------------ the shared frame
 /** Veil + band. Returns the band's content box. len = the pause (ms) the bar drains over. */
-function frame({ material = "blue", bandH = 330, game, kicker, len, personal = false }) {
-  const ov = $("#overlay"), m = MATERIALS[material] || material;
-  const veil = h("div", "veil" + (personal ? " light" : ""));
+/** A moment's frame. Owner's rule (2026-09-27): a BANNER only for proclamations — cosmetics,
+ *  personal news, tournament calls (Sprint go, knockout, champion). Normal gameplay moments
+ *  (a shuffle, an all-in showdown, a big pot…) just blur the table and play over it.
+ *  len = the pause (ms): the band's drain bar runs over it, and the frame closes at its end. */
+function frame({ banner = false, material = "blue", bandH = 330, game, kicker, len, personal = false }) {
+  const ov = $("#overlay");
+  const veil = h("div", "veil" + (banner ? "" : " blur") + (personal ? " light" : ""));
   ov.append(veil);
-  A(veil, [{ opacity: 0 }, { opacity: 1 }], { duration: 260 });
+  A(veil, [{ opacity: 0 }, { opacity: 1 }], { duration: 300 });
 
-  const y = (H - bandH) / 2, s = bandH * SLANT;
-  const band = h("div", "band");
-  Object.assign(band.style, {
-    top: y + "px", height: bandH + "px", color: m.ink,
-    background: `linear-gradient(110deg, ${m.steps[0]} 0 34%, ${m.steps[1]} 34% 67%, ${m.steps[2]} 67% 100%)`
-  });
-  band.style.setProperty("--ink", m.ink); band.style.setProperty("--sub", m.sub);
-  ov.append(band);
-  // wipe in from the left along the logo's slant
-  A(band, [
-    { clipPath: `polygon(0px 0px, ${-s}px 0px, ${-2 * s}px ${bandH}px, 0px ${bandH}px)` },
-    { clipPath: `polygon(0px 0px, ${W + s}px 0px, ${W}px ${bandH}px, 0px ${bandH}px)` }
-  ], { duration: 460, delay: 90, easing: INOUT });
-
-  const kick = h("div", "kicker", `${game ? `<img src="games/${game}.svg" width="26" height="26" alt="">` : ""}<span>${kicker}</span>`);
-  band.append(kick);
-  A(kick, [{ opacity: 0, transform: "translateX(-12px)" }, { opacity: 1, transform: "none" }], { duration: 300, delay: 420 });
-
-  if (!personal) {
-    const bar = h("div", "pausebar", `<span class="lbl">table paused</span><span class="track"><span class="fill"></span></span>`);
-    band.append(bar);
-    A(bar, [{ opacity: 0 }, { opacity: 1 }], { duration: 250, delay: 450 });
-    A(bar.querySelector(".fill"), [{ transform: "scaleX(1)" }, { transform: "scaleX(0)" }], { duration: len - 450, delay: 450, easing: "linear" });
+  let band, y = 0;
+  if (banner) {
+    const m = MATERIALS[material] || material;
+    y = (H - bandH) / 2;
+    band = h("div", "band");
+    Object.assign(band.style, {
+      top: y + "px", height: bandH + "px", color: m.ink,
+      background: `linear-gradient(110deg, ${m.steps[0]} 0 34%, ${m.steps[1]} 34% 67%, ${m.steps[2]} 67% 100%)`
+    });
+    band.style.setProperty("--ink", m.ink); band.style.setProperty("--sub", m.sub); band.style.setProperty("--on-ink", m.steps[2]);
+    // opens smoothly from its centre line to full height (owner: no half-height jump)
+    A(band, [{ clipPath: "inset(50% 0% 50% 0%)" }, { clipPath: "inset(0% 0% 0% 0%)" }], { duration: 520, delay: 80, easing: "cubic-bezier(.16,.84,.3,1)" });
+    const kick = h("div", "kicker", `${game ? `<img src="games/${game}.svg" width="26" height="26" alt="">` : ""}<span>${kicker}</span>`);
+    band.append(kick);
+    A(kick, [{ opacity: 0, transform: "translateX(-12px)" }, { opacity: 1, transform: "none" }], { duration: 300, delay: 420 });
+    if (!personal) {
+      const bar = h("div", "pausebar", `<span class="lbl">table paused</span><span class="track"><span class="fill"></span></span>`);
+      band.append(bar);
+      A(bar, [{ opacity: 0 }, { opacity: 1 }], { duration: 250, delay: 450 });
+      A(bar.querySelector(".fill"), [{ transform: "scaleX(1)" }, { transform: "scaleX(0)" }], { duration: len - 450, delay: 450, easing: "linear" });
+    }
+  } else {
+    band = h("div", "stage");
+    band.style.setProperty("--ink", "#eef2ff"); band.style.setProperty("--sub", "#9db0d6");
   }
-  // celebration coins (rain, fountains) fly BEHIND the band's content, never over the cards / numbers
-  const back = h("div", "fxback");
-  back.dataset.top = y;
-  const content = h("div", "content");
-  band.append(back, content);
+  ov.append(band);
+  // three layers: celebration coins BEHIND the content (never over the cards / numbers), the content,
+  // then coin flights — which still pass UNDER the plates (z-index 3), so won coins sink into a badge
+  const back = h("div", "fxback"), content = h("div", "content"), fly = h("div", "fly");
+  band.append(back, content, fly);
+  cur = { back, fly, dy: y };
 
   const out = (when) => {
     at(when, () => {
-      A(band, [
-        { clipPath: `polygon(${-s}px 0px, ${W + s}px 0px, ${W + s}px ${bandH}px, ${-2 * s}px ${bandH}px)` },
-        { clipPath: `polygon(${W + s}px 0px, ${W + s}px 0px, ${W + s}px ${bandH}px, ${W}px ${bandH}px)` }
-      ], { duration: 420, easing: INOUT });
-      A(veil, [{ opacity: 1 }, { opacity: 0 }], { duration: 300, delay: 250 });
+      if (banner) A(band, [{ clipPath: "inset(0% 0% 0% 0%)" }, { clipPath: "inset(50% 0% 50% 0%)" }], { duration: 400, easing: "cubic-bezier(.5,0,.75,.2)" });
+      else A(band, [{ opacity: 1 }, { opacity: 0 }], { duration: 300 });
+      A(veil, [{ opacity: 1 }, { opacity: 0 }], { duration: 320, delay: 180 });
     });
   };
   if (len) out(len - 450);
-  return { band, content, out, m };
+  return { band, content, out };
 }
+let cur = null;
 
 // ------------------------------------------------------------------ bits of motion
 const appear = (el, delay, from = "translateY(14px)", duration = 340) =>
@@ -198,16 +205,14 @@ function centre(el) {
   const s = $("#screen").getBoundingClientRect(), r = el.getBoundingClientRect(), k = s.width / W;
   return { x: (r.left + r.width / 2 - s.left) / k, y: (r.top + r.height / 2 - s.top) / k };
 }
-function fx() { return $("#overlay .fx") || $("#overlay").appendChild(h("div", "fx")); }
-function coin(value, size, layer = fx()) { const c = h("div", "coin", coinSvg(value, size)); layer.append(c); return c; }
-/** The current band's back layer and its top (to turn screen y into band y). */
-function backLayer() { const b = $("#overlay .fxback"); return { el: b, dy: parseFloat(b.dataset.top) }; }
+function coin(value, size, layer) { const c = h("div", "coin", coinSvg(value, size)); layer.append(c); return c; }
+function backLayer() { return { el: cur.back, dy: cur.dy }; }
 /** A coin arcing from a to b (screen coordinates). */
 function arc(value, size, a, b, delay, dur = 640, lift = 90) {
-  const c = coin(value, size), kf = [];
+  const c = coin(value, size, cur.fly), kf = [], dy = cur.dy;
   for (let i = 0; i <= 12; i++) {
-    const t = i / 12, x = a.x + (b.x - a.x) * t, y = a.y + (b.y - a.y) * t - lift * 4 * t * (1 - t);
-    kf.push({ transform: `translate(${x - size / 2}px, ${y - size / 2}px)`, opacity: t > 0.94 ? 0 : 1, offset: t });
+    const t = i / 12, x = a.x + (b.x - a.x) * t, y = a.y + (b.y - a.y) * t - lift * 4 * t * (1 - t) - dy;
+    kf.push({ transform: `translate(${x - size / 2}px, ${y - size / 2}px)`, offset: t });
   }
   A(c, kf, { duration: dur, delay, easing: "cubic-bezier(.45,.05,.55,.95)" });
 }
@@ -243,7 +248,7 @@ function counter(el, from, to, start, dur, prefix = "", suffix = "") {
 function sheen(el, delay, dur = 720) {
   const s = h("div", "sheen");
   el.append(s);
-  A(s, [{ transform: "translateX(-140%) skewX(-20deg)" }, { transform: "translateX(460%) skewX(-20deg)" }], { duration: dur, delay, easing: INOUT });
+  A(s, [{ transform: "translateX(-140%) skewX(-20deg)", opacity: 0 }, { opacity: 1, offset: 0.2 }, { opacity: 1, offset: 0.8 }, { transform: "translateX(460%) skewX(-20deg)", opacity: 0 }], { duration: dur, delay, easing: INOUT });
 }
 const title = (text, cls = "") => h("div", "title " + cls, text);
 const caption = (text) => h("div", "caption", text);
@@ -315,14 +320,14 @@ function monsterPot() {
   content.classList.add("m2");
   const pl = bigPlate(P.theo);
   const mid = h("div", "m2-mid");
-  const num = h("div", "bignum", "0");
+  const num = h("div", "bignum money", "0");
   mid.append(num, caption("93 big blinds · the biggest pot at this table today"));
   const pile = h("div", "m2-pile");
   const COLS = [[10000, 1], [2500, 3], [500, 2], [100, 4], [25, 5]];
   const coins = [];
   COLS.forEach(([v, n]) => {
     const col = h("div", "col");
-    for (let k = 0; k < n + 3; k++) { const c = h("div", "pc", coinSvg(v, 46)); c.style.bottom = k * 7 + "px"; col.append(c); coins.push(c); }
+    for (let k = 0; k < n + 3; k++) { const c = h("div", "pc", coinSvg(v, 46)); c.style.bottom = k * 7 + "px"; c.dataset.v = v; col.append(c); coins.push(c); }
     pile.append(col);
   });
   content.append(pl, mid, pile);
@@ -332,10 +337,12 @@ function monsterPot() {
   const N = coins.length;
   at(1150, () => {
     const to = centre(pl.querySelector(".av"));
-    [...coins].reverse().forEach((c, k) => {
+    // top coins first, one column after another; each flies as itself and sinks under the plate
+    const order = [...pile.children].flatMap((col) => [...col.children].reverse());
+    order.forEach((c, k) => {
       const from = centre(c);
-      A(c, [{ opacity: 1 }, { opacity: 0 }], { duration: 60, delay: k * 36 });
-      arc(COLS[(k * 3) % COLS.length][0], 40, from, to, k * 36, 620, 110);
+      at(k * 36, () => { c.style.visibility = "hidden"; });
+      arc(+c.dataset.v, 46, from, to, k * 36, 620, 110);
     });
   });
   counter(num, 0, POT, 1150, N * 36 + 500);
@@ -362,7 +369,7 @@ function rareHand(kind = "quads") {
   const pl = plate(r.who, { av: 30, w: 168, hgt: 42 });
   const row = h("div", "m3-row");
   const els = r.cards.map((c) => { const e = cardEl(c, 90); row.append(e); return e; });
-  const t = title(r.name), cap = caption(`${r.who.name} · ${r.odds}`);
+  const t = title(r.name, "tier-" + r.material), cap = caption(`${r.who.name} · ${r.odds}`);
   content.append(pl, row, t, cap);
   appear(pl, 460);
   els.forEach((e, i) => A(e, [{ opacity: 0, transform: "translateY(-36px) scale(1.35)" }, { opacity: 1, transform: "none" }], { duration: 280, delay: 620 + i * 150, easing: SNAP }));
@@ -389,7 +396,7 @@ function jackpot(kind = "slots") {
   const stage = h("div", "m4-stage");
   const right = h("div", "m4-right");
   const mult = h("div", "mult", "×" + j.mult);
-  const pay = h("div", "bignum", "0");
+  const pay = h("div", "bignum money", "0");
   right.append(mult, pay, caption(`${P.theo.name} · ${j.cap} · bet ${fmt(j.bet)}`));
   content.append(stage, right);
   const land = kind === "slots" ? slotsReels(stage) : kind === "roulette" ? wheel(stage) : dice(stage);
@@ -522,7 +529,7 @@ function bigTwo() {
 function sprintLive() {
   table("river-sprint");
   const LEN = 4200;
-  const { content } = frame({ material: "blue", bandH: 340, game: null, kicker: "River Sprint · round 1 of 2", len: LEN });
+  const { content } = frame({ material: "blue", bandH: 340, game: null, kicker: "River Sprint · round 1 of 2", len: LEN, banner: true });
   content.classList.add("m6a");
   const icon = h("div", "m6-icon", `<img src="games/river-sprint.svg" width="190" height="190" alt="">`);
   const mid = h("div", "m6-mid");
@@ -541,7 +548,7 @@ function sprintLive() {
 function knockout() {
   table("river-sprint");
   const LEN = 3900;
-  const { content } = frame({ material: "charcoal", bandH: 320, game: "river-sprint", kicker: "River Sprint · knockout", len: LEN });
+  const { content } = frame({ material: "charcoal", bandH: 320, game: "river-sprint", kicker: "River Sprint · knockout", len: LEN, banner: true });
   content.classList.add("m6b");
   const pl = bigPlate({ ...P.ada, stack: 0 }, { line: "0" });
   const mid = h("div", "m6-mid");
@@ -555,7 +562,7 @@ function knockout() {
 function crowned() {
   table("river-sprint");
   const LEN = 5000;
-  const { content } = frame({ material: "gold", bandH: 380, game: "river-sprint", kicker: "River Sprint · final", len: LEN });
+  const { content } = frame({ material: "gold", bandH: 380, game: "river-sprint", kicker: "River Sprint · final", len: LEN, banner: true });
   content.classList.add("m6c");
   const pl = bigPlate(P.you, { av: 84, w: 330, hgt: 96 });
   setRing(pl, "silver", 0);
@@ -574,49 +581,101 @@ function newLook(key = "silver") {
   table("holdem");
   const m = metal(key);
   const mat = { steps: ramp(m), ink: plateStyle(key).ink === "#ffffff" ? "#ffffff" : mix(m.lo, "#000000", 0.55), sub: plateStyle(key).sub };
-  const { content, out } = frame({ material: mat, bandH: 380, game: null, kicker: "Just for you — nobody waits", len: 0, personal: true });
+  const { content, out } = frame({ material: mat, bandH: 400, game: null, kicker: "Just for you — nobody waits", len: 0, personal: true, banner: true });
   content.classList.add("e4");
-  const left = h("div", "e4-left");
-  const bigCoin = h("div", "e4-coin", coinSvg(25, 150));
-  const pl = bigPlate(P.you, { av: 84, w: 330, hgt: 96, look: "default" });
-  left.append(pl, bigCoin);
+  const AV = 84;
+  const pl = bigPlate(P.you, { av: AV, w: 330, hgt: 96, look: "default" });
   const mid = h("div", "m6-mid e4-mid");
   const btns = h("div", "btns", `<button class="wear">Wear it</button><button class="later">Later</button>`);
   mid.append(title(`${m.name} unlocked`), caption(`You reached ${fmt(m.at)} peak wealth — the ${m.name.toLowerCase()} ring and plate are yours`), btns);
-  content.append(left, mid);
+  content.append(pl, mid);
   appear(pl, 420, "scale(.94)");
-  A(bigCoin, [{ opacity: 0, transform: "scale(.4) rotateY(0deg)" }, { opacity: 1, transform: "scale(1) rotateY(900deg)", offset: 0.75 }, { opacity: 1, transform: "scale(1) rotateY(1080deg)" }],
-    { duration: 1300, delay: 450, easing: "cubic-bezier(.2,.7,.3,1)" });
-  at(1800, () => {
-    const a = centre(bigCoin), b = centre(pl.querySelector(".av"));
-    A(bigCoin, [{ transform: "none", opacity: 1 }, { transform: `translate(${b.x - a.x}px, ${b.y - a.y}px) scale(.35)`, opacity: 0 }], { duration: 480, easing: INOUT });
-  });
   setRing(pl, "default", 1);
-  tween(2250, 1000, (t) => setRing(pl, t < 0.02 ? "default" : key, t < 0.02 ? 1 : t), (t) => t);
-  at(3250, () => {
+  // the new ring, floating above the avatar
+  const ring = h("div", "newring", ringSvg(AV, key));
+  cur.fly.parentNode.append(ring);   // above the plates (the flight layer sits under them)
+  const RISE = 150, box = ringBox(AV);
+  at(0, () => {
+    const c = centre(pl.querySelector(".av"));
+    Object.assign(ring.style, { left: c.x - box / 2 + "px", top: c.y - cur.dy - box / 2 + "px" });
+  });
+  A(ring, [{ opacity: 0, transform: `translateY(${-RISE + 24}px) scale(.6) rotate(-40deg)` }, { opacity: 1, transform: `translateY(${-RISE}px) scale(1) rotate(0deg)` }],
+    { duration: 620, delay: 700, easing: SNAP });
+  at(1320, () => {
+    A(ring, [{ transform: `translateY(${-RISE}px)` }, { transform: `translateY(${-RISE - 8}px)` }, { transform: `translateY(${-RISE}px)` }], { duration: 700, easing: "ease-in-out" });
+  });
+  at(2050, () => {
+    // down onto the old ring, a touch big, then settles exactly over it
+    A(ring, [{ transform: `translateY(${-RISE}px) scale(1)` }, { transform: "translateY(0) scale(1.08)", offset: 0.8 }, { transform: "translateY(0) scale(1)" }],
+      { duration: 560, easing: "cubic-bezier(.55,0,.35,1)" });
+  });
+  at(2610, () => {
+    setRing(pl, key, 1);
+    ring.remove();
+    A(pl.querySelector(".av"), [{ transform: "scale(1)" }, { transform: "scale(1.1)" }, { transform: "scale(1)" }], { duration: 340, fill: "none", easing: SNAP });
+  });
+  at(2900, () => {
     const st = plateStyle(key);
-    A(pl, [{ background: pl.style.background }, { background: st.bg }], { duration: 10 });
     pl.style.background = st.bg; pl.style.color = st.ink;
     pl.querySelector(".stack").style.color = st.money;
     sheen(pl, 0, 650);
   });
-  mid.querySelectorAll(".title, .caption").forEach((e, k) => appear(e, 1500 + k * 220, "translateY(12px)"));
-  appear(btns, 3400, "translateY(10px)");
+  mid.querySelectorAll(".title, .caption").forEach((e, k) => appear(e, 1100 + k * 220, "translateY(12px)"));
+  appear(btns, 3200, "translateY(10px)");
   btns.addEventListener("click", () => out(0));
   out(9000);
 }
 
+// ================================================================== the shuffle (blur only)
+function shuffle() {
+  table("holdem", { between: true });
+  const LEN = 3700, N = 14, CW = 84;
+  const { content } = frame({ len: LEN });
+  content.classList.add("mshuf");
+  const deck = h("div", "deck");
+  const cards = Array.from({ length: N }, (_, i) => {
+    const c = h("div", "dc", backHtml(CW));
+    c.style.zIndex = i;
+    c.style.transform = `translateY(${-i * 0.8}px)`;
+    deck.append(c);
+    return c;
+  });
+  content.append(deck, caption("Shuffling"));
+  appear(deck, 200, "scale(.92)");
+  appear(content.querySelector(".caption"), 400);
+  const half = (i) => (i < N / 2 ? -1 : 1);
+  // cut into two halves
+  at(700, () => cards.forEach((c, i) => A(c, [{ transform: `translateY(${-i * 0.8}px)` },
+    { transform: `translate(${half(i) * 78}px, ${-(i % (N / 2)) * 0.8 + 6}px) rotate(${half(i) * 7}deg)` }], { duration: 360, easing: INOUT })));
+  // riffle: the halves fall back in alternately, bottom cards first
+  const order = [];
+  for (let k = 0; k < N / 2; k++) order.push(k, k + N / 2);
+  at(1150, () => order.forEach((i, n) => at(n * 52, () => {
+    const c = cards[i];
+    c.style.zIndex = 100 + n;
+    A(c, [{ transform: `translate(${half(i) * 78}px, ${-(i % (N / 2)) * 0.8 + 6}px) rotate(${half(i) * 7}deg)` },
+      { transform: `translate(${half(i) * 6}px, ${-n * 0.8}px) rotate(${half(i) * 1.5}deg)` }], { duration: 170, easing: "ease-in" });
+  })));
+  // square up
+  at(1150 + N * 52 + 250, () => order.forEach((i, n) => A(cards[i], [{ transform: `translate(${half(i) * 6}px, ${-n * 0.8}px) rotate(${half(i) * 1.5}deg)` },
+    { transform: `translate(0, ${-n * 0.8}px)` }], { duration: 220, easing: SNAP })));
+  at(1150 + N * 52 + 250, () => shake(deck, 0, 2));
+}
+
 // ================================================================== the page
 const MOMENTS = [
-  { id: "allin", label: "All-in showdown", run: allIn, spec: ["Hold'em, when everyone left in the hand is all-in and cards are still to come.", "≈ 8.5 s — the longest moment; it replaces the normal run-out.", "The whole table. Nobody can act during it anyway.", "Win chances update after each street; the river is turned slowly. After the band leaves, the pot flies to the winner as usual."] },
-  { id: "pot", label: "Monster pot", run: monsterPot, spec: ["Hold'em: a pot of 50+ big blinds, or the table's biggest pot today.", "≈ 4.3 s", "The whole table, between hands.", "The pot pours into the winner's plate while both numbers count up."] },
-  { id: "rare", label: "Rare hand", run: rareHand, variants: [["quads", "Four of a kind"], ["sflush", "Straight flush"], ["royal", "Royal flush"], ["three", "Three Card"]], spec: ["Hold'em: four of a kind or better at showdown. Three Card Poker: straight flush or three of a kind.", "≈ 4.4 s (royal flush 5.2 s)", "The whole table.", "The band's material rises with rarity — blue, silver, gold. Suited blackjack is left out: no special payout, and a plain blackjack comes once in ~21 hands."] },
-  { id: "jackpot", label: "Jackpot", run: jackpot, variants: [["slots", "Slots"], ["roulette", "Roulette"], ["sic-bo", "Sic Bo"]], spec: ["A single payout of 25× the bet or more: Slots three sevens or diamonds (50× / 100×), a straight-up Roulette number (35×), a Sic Bo triple (30×).", "≈ 5.6 s — the spin itself plays inside the band.", "The whole table.", "Slot symbols here are placeholders (plain shapes); the real slot art is still to design."] },
-  { id: "bigtwo", label: "Big Two — out!", run: bigTwo, spec: ["Big Two, when a player plays their last cards.", "≈ 4.4 s", "The whole table.", "The losers' leftover cards are shown with what they pay; the pot flies to the winner."] },
-  { id: "live", label: "Sprint — go", run: sprintLive, spec: ["A River Sprint round (or a Sit-n-Go) going live.", "≈ 4.2 s, ending on the first deal.", "Every table in the round.", "3 · 2 · 1 · Go."] },
-  { id: "ko", label: "Knockout", run: knockout, spec: ["A tournament / Sprint player losing their last chips.", "≈ 3.9 s", "The table they were at.", "Their ring's gems run out like the turn clock, then the plate drops away."] },
-  { id: "champ", label: "Champion", run: crowned, spec: ["A tournament / Sprint winner is decided.", "≈ 5 s", "The final table (and a toast for everyone else in the event).", "The ring lights up gem by gem, then coins rain."] },
-  { id: "look", label: "New look (personal)", run: newLook, variants: [["silver", "Silver"], ["gold", "Gold"], ["ruby", "Ruby"], ["riverstone", "Riverstone"]], spec: ["Your peak wealth crosses a metal (Copper 12.5K … Riverstone 25M).", "Until you tap a button (auto-closes after 9 s).", "Nobody — it's only yours. At a table it waits for the hand to end and shows as a small toast instead; this full version plays off the table.", "The metal's coin spins in, becomes your ring, and your plate takes the metal."] }
+  // gameplay — the table blurs, no banner
+  { id: "shuffle", group: "play", label: "Shuffle", run: shuffle, spec: ["Hold'em: the shuffle before each hand (today's 10.5 s deal pause).", "The shuffle's own length.", "The whole table — nobody can act yet anyway.", "Stand-in cards: in the game the real 3D deck shuffles in the middle while everything behind it blurs."] },
+  { id: "allin", group: "play", label: "All-in showdown", run: allIn, spec: ["Hold'em, when everyone left in the hand is all-in and cards are still to come.", "≈ 8.5 s — the longest moment; it replaces the normal run-out.", "The whole table. Nobody can act during it anyway.", "Win chances update after each street; the river is turned slowly. Afterwards the pot flies to the winner as usual."] },
+  { id: "pot", group: "play", label: "Monster pot", run: monsterPot, spec: ["Hold'em: a pot of 50+ big blinds, or the table's biggest pot today.", "≈ 4.3 s", "The whole table, between hands.", "Each coin leaves the pile as itself, flies to the winner and sinks UNDER the plate while both numbers count up."] },
+  { id: "rare", group: "play", label: "Rare hand", run: rareHand, variants: [["quads", "Four of a kind"], ["sflush", "Straight flush"], ["royal", "Royal flush"], ["three", "Three Card"]], spec: ["Hold'em: four of a kind or better at showdown. Three Card Poker: straight flush or three of a kind.", "≈ 4.4 s (royal flush 5.2 s)", "The whole table.", "Rarity shows in the title's metal — white, silver, gold. Suited blackjack is left out: no special payout, and a plain blackjack comes once in ~21 hands."] },
+  { id: "jackpot", group: "play", label: "Jackpot", run: jackpot, variants: [["slots", "Slots"], ["roulette", "Roulette"], ["sic-bo", "Sic Bo"]], spec: ["A single payout of 25× the bet or more: Slots three sevens or diamonds (50× / 100×), a straight-up Roulette number (35×), a Sic Bo triple (30×).", "≈ 5.6 s — the spin itself plays in the moment.", "The whole table.", "Slot symbols here are placeholders (plain shapes); the real slot art is still to design."] },
+  { id: "bigtwo", group: "play", label: "Big Two — out!", run: bigTwo, spec: ["Big Two, when a player plays their last cards.", "≈ 4.4 s", "The whole table.", "The losers' leftover cards are shown with what they pay; the pot flies to the winner."] },
+  // proclamations — the banner
+  { id: "live", group: "banner", label: "Sprint — go", run: sprintLive, spec: ["A River Sprint round (or a Sit-n-Go) going live.", "≈ 4.2 s, ending on the first deal.", "Every table in the round.", "3 · 2 · 1 · Go."] },
+  { id: "ko", group: "banner", label: "Knockout", run: knockout, spec: ["A tournament / Sprint player losing their last chips.", "≈ 3.9 s", "The table they were at.", "Their ring's gems run out like the turn clock, then the plate drops away."] },
+  { id: "champ", group: "banner", label: "Champion", run: crowned, spec: ["A tournament / Sprint winner is decided.", "≈ 5 s", "The final table (and a toast for everyone else in the event).", "The ring lights up gem by gem, then coins rain."] },
+  { id: "look", group: "banner", label: "New look (personal)", run: newLook, variants: [["silver", "Silver"], ["gold", "Gold"], ["ruby", "Ruby"], ["riverstone", "Riverstone"]], spec: ["Your peak wealth crosses a metal (Copper 12.5K … Riverstone 25M).", "Until you tap a button (auto-closes after 9 s).", "Nobody — it's only yours. At a table it waits for the hand to end and shows as a small toast instead; this full version plays off the table.", "A ring of the new metal appears above your avatar, comes down over your old ring and replaces it; then your plate takes the metal."] }
 ];
 
 let current = MOMENTS[0], variant = {};
@@ -627,11 +686,10 @@ function play() {
 }
 function renderControls() {
   const bar = $("#moments");
-  bar.replaceChildren(...MOMENTS.map((m) => {
-    const b = h("button", "mbtn" + (m === current ? " on" : ""), m.label);
-    b.onclick = () => { current = m; renderControls(); play(); };
-    return b;
-  }));
+  const btn = (m) => { const b = h("button", "mbtn" + (m === current ? " on" : ""), m.label); b.onclick = () => { current = m; renderControls(); play(); }; return b; };
+  bar.replaceChildren(
+    h("span", "grp", "Gameplay · blur"), ...MOMENTS.filter((m) => m.group === "play").map(btn),
+    h("span", "grp", "Proclamations · banner"), ...MOMENTS.filter((m) => m.group === "banner").map(btn));
   const vb = $("#variants");
   vb.replaceChildren();
   if (current.variants) {
