@@ -211,6 +211,7 @@ export function playMoment(root, moment, ctx) {
     at(landed, () => shake(stage, 0, moment.royal ? 7 : 4));
     sheen(row, landed + 150);
     appear(t, landed + 260, "translateY(16px)", 420);
+    snd("revealHit", landed + 300);
     appear(content.lastChild, landed + 520);
     if (moment.royal) { at(landed + 300, () => rain(34, 0, 1700)); for (let i = 0; i < 8; i++) snd("coins", landed + 500 + i * 130, { count: 3, gain: 0.45 }); }
   } else if (moment.kind === "jackpot") {
@@ -252,6 +253,7 @@ export function playMoment(root, moment, ctx) {
         A(strip, [{ transform: "translateY(0)" }, { transform: `translateY(${-(syms.length - 1) * CELL}px)` }], { duration: 1500 + i * 450, delay: 650, easing: "cubic-bezier(.15,.55,.25,1.04)" });
       });
       land = 650 + 1500 + 2 * 450;
+      snd("reelSpin", 650, { noLead: true });
       [0, 1, 2].forEach((i) => sfx("reel", 650 + 1500 + i * 450));
       at(land + 60, () => box.querySelectorAll(".m-reel").forEach((r) => r.classList.add("hit")));
     }
