@@ -41,6 +41,11 @@ export const ACHIEVEMENTS = [
 ];
 
 const BY_KEY = new Map(ACHIEVEMENTS.map((a) => [a.key, a]));
+/** What the unlock toast shows for a key: { key, name, desc, tier, reward } (null if unknown). */
+export function achievementInfo(key) {
+  const a = BY_KEY.get(key);
+  return a ? { key: a.key, name: a.name, desc: a.desc, tier: a.tier || null, reward: a.reward || 0 } : null;
+}
 const KEYS = new Set(ACHIEVEMENTS.map((a) => a.key));
 
 // Milestone badges a given login streak satisfies (cumulative — a 30-day streak

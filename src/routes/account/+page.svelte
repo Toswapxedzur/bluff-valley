@@ -4,6 +4,8 @@
   import Avatar from "$lib/poker/components/Avatar.svelte";
   import Chip from "$lib/poker/components/Chip.svelte";
   import Select from "$lib/components/Select.svelte";
+  import { flyCoinsToWallet } from "$lib/reward-fly.js";
+  import { poker } from "$lib/poker/client.svelte.js";
   import { uploadMedia } from "$lib/media.js";
   let { data, form } = $props();
   $effect(() => { if (form?.bonusOk) play("reward"); });
@@ -78,7 +80,14 @@
           🔥 {form?.streak ?? data.streak}-day streak{#if (form?.bestStreak ?? data.bestStreak) > (form?.streak ?? data.streak)} · best {form?.bestStreak ?? data.bestStreak}{/if}
         </span>
       {/if}
-      <form method="POST" action="?/claimDailyBonus" style="margin:0">
+      <form method="POST" action="?/claimDailyBonus" style="margin:0" use:enhance={({ formElement }) => async ({ result, update }) => {
+        // the bonus flies from the button into the wallet; any new streak badge gets its toast
+        if (result.type === "success" && result.data?.bonusOk) {
+          flyCoinsToWallet(formElement.querySelector("button"), result.data.bonusAmount);
+          if (result.data.badgeInfo?.length) poker.achievementQueue = [...poker.achievementQueue, ...result.data.badgeInfo];
+        }
+        await update({ reset: false });
+      }}>
         <button class="btn" type="submit" disabled={!data.bonusReady}>
           {data.bonusReady ? `Claim daily +${chips(data.dailyBonus)}` : "Daily bonus claimed"}
         </button>

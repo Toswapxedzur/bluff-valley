@@ -42,6 +42,7 @@ class PokerClient {
   // v20 "Notifications" — the topbar bell feed.
   notifications = $state([]);   // [{id,seq,kind,actorId,ref,body,createdAt,readAt}] newest first
   notifUnread = $state(0);
+  achievementQueue = $state([]); // [{ key, name, desc, tier, reward }] waiting for the unlock toast
 
   // Phase E — out-of-game friend voice calls.
   incomingCall = $state(null);  // { callId, fromUserId, fromName } — ringing at me
@@ -259,6 +260,10 @@ class PokerClient {
         this._voice?.signal?.(msg);
         break;
 
+      case S2C.ACHIEVEMENT: {
+        this.achievementQueue = [...this.achievementQueue, { key: msg.key, name: msg.name, desc: msg.desc, tier: msg.tier, reward: msg.reward }];
+        break;
+      }
       case S2C.NOTIF: {
         const n = msg.notification;
         if (n) {

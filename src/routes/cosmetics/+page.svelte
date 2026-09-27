@@ -4,6 +4,7 @@
   import Chip from "$lib/poker/components/Chip.svelte";
   import { LOOKS, plateStyle } from "$lib/cosmetics.js";
   import { SITE_NAME } from "$lib/config.js";
+  import { plateSpread } from "$lib/actions/plate-spread.js";
 
   let { data } = $props();
   let ring = $state(data.ring);
@@ -39,7 +40,7 @@
 
   <!-- how you look at a table -->
   <div class="preview">
-    <div class="plate" style={plateVars(plate)}>
+    <div class="plate" style={plateVars(plate)} use:plateSpread={plate.bg}>
       <Avatar id={data.me.id} name={data.me.name} mediaId={data.me.avatarMediaId} size={36} {ring} />
       <div class="txt">
         <div class="r1"><span class="name">{data.me.name}</span><span class="stack">{fmt(data.wealth)}</span></div>
@@ -92,7 +93,8 @@
   .err { color: var(--danger); margin: 0 0 12px; font-weight: 600; }
 
   .preview { display: flex; justify-content: center; padding: 22px 12px; background: var(--well); border-radius: var(--r-card); margin-bottom: 22px; }
-  .plate { display: flex; align-items: center; gap: 8px; padding: 5px 14px 5px 5px; border-radius: 16px; box-shadow: var(--shadow-card); }
+  .plate { position: relative; display: flex; align-items: center; gap: 8px; padding: 5px 14px 5px 5px; border-radius: 16px; box-shadow: var(--shadow-card); }
+  .plate > :global(*) { position: relative; z-index: 1; }   /* above the plate-spread overlay */
   .plate .r1 { display: flex; gap: 7px; align-items: baseline; }
   .plate .name { font-size: 14px; font-weight: 700; color: var(--ink); }
   .plate .stack { font-size: 15px; font-weight: 700; color: var(--money); font-variant-numeric: tabular-nums; }

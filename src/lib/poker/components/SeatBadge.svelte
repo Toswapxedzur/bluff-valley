@@ -7,6 +7,7 @@
   import { d, DUR, NORM, tween } from "$lib/motion.js";
   import { getContext, untrack } from "svelte";
   import { plateStyle, ringBox } from "$lib/cosmetics.js";
+  import { plateSpread } from "$lib/actions/plate-spread.js";
 
   // The one seat badge every game uses: avatar · name · stack · status line, with
   // the player's cards fanned underneath. Layout is the same for every game; games
@@ -145,7 +146,7 @@
       <div class="bet" in:scale={{ start: 0.6, duration: d(DUR.base) }} out:fade={{ duration: d(DUR.fast) }}><CoinStack value={seat.committed} size={18} /><Num value={seat.committed} /></div>
     {/if}
 
-    <div class="plate" style={plateVars} in:fade={{ duration: d(DUR.base) }}>   <!-- fades in: no size change -->
+    <div class="plate" style={plateVars} use:plateSpread={look?.bg} in:fade={{ duration: d(DUR.base) }}>   <!-- fades in: no size change -->
       <div class="av">
         <Avatar id={seat.userId} name={house ? "House" : seat.name} mediaId={seat.avatar ?? null} userId={isMine || house ? null : seat.userId} size={avSize} ring={house ? null : seat.ring || "default"} {ringRemain} ringFloat />
         {#key glowKey}{#if glowKey}<span class="turnglow" style="--box:{ringBox(avSize)}px;--in:{avSize / 2}px" aria-hidden="true"></span>{/if}{/key}
@@ -221,7 +222,7 @@
   .house .plate { background: color-mix(in srgb, var(--surface) 70%, var(--gold-bg) 30%); }
   .av { position: relative; z-index: 1; line-height: 0; flex: none; margin-right: 9px; }   /* room for the ring's overhang, then a little air before the name */
   .mine .av { margin-right: 11px; }
-  .txt { display: flex; flex-direction: column; min-width: 0; flex: 1; text-align: left; }
+  .txt { position: relative; z-index: 1; display: flex; flex-direction: column; min-width: 0; flex: 1; text-align: left; }
   .row1 { display: flex; align-items: baseline; gap: 6px; }
   .row1 .badge, .row1 .dot { align-self: center; }
   .name { font-size: 13px; font-weight: 700; color: var(--plate-ink, var(--text)); min-width: 0; flex: 0 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
