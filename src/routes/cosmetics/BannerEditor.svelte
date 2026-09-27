@@ -1,12 +1,14 @@
 <script>
   // The banner editor (owner, 2026-09-27): upload a picture, crop it to the plate (or the end tab),
-  // pick the text colour and the wash, and see the real seat plate update as you go. The preview is
-  // drawn here with the same maths the server uses ($lib/banner.js); on Save the server re-cuts it,
-  // re-checks the wash, and the banner is live on every seat at once.
+  // pick the text colour and an optional wash, and see the real seat plate update as you go. The
+  // picture keeps its own brightness: only the player's wash, exactly as set (owner, 2026-09-27).
+  // The preview is instant (owner: "the image feels laggy"): the plates and the crop frame draw the
+  // master itself with CSS, placed by the crop (cropCss) — nothing is encoded while you drag. On Save
+  // the server cuts the same crop ($lib/banner.js) and the banner is live on every seat at once.
   import SeatBadge from "$lib/poker/components/SeatBadge.svelte";
   import {
     normalize, cropBox, inkHex, INKS, PLATE_ASPECT, TAB_ASPECT, PLATE_PX, TAB_PX, MAX_WASH, MAX_ZOOM,
-    regionLums, minWash, inksFor, washRgb, inkOnSteps
+    regionLums, inksFor, washRgb, inkOnSteps, cropCss
   } from "$lib/banner.js";
   import { plateStyle } from "$lib/cosmetics.js";
 
@@ -27,23 +29,37 @@
   let banned = initial.banned;
 
   let img = $state(null);          // the master, loaded
+  let masterUrl = $state(null);    // …as a blob: URL the plates may draw
   let busy = $state("");           // "" | "upload" | "save" | "remove"
   let error = $state(null), note = $state(initial.removed ? "An admin took your last banner down. You can make a new one." : null);
   let dragOver = $state(false);
 
-  // the picture as it will look (crop + wash), as a blob: URL the plates can draw
-  let previewUrl = $state(null), autoWash = $state(0), inks = $state({ ink: inkHex("cream"), sub: null, money: null });
+  let previewUrl = $state(null);   // the end tab's small render (the whole-plate preview needs none)
+  let inks = $state({ ink: inkHex("cream"), sub: null, money: null });
   let work;                         // offscreen canvas
   let frame = $state(null);         // the crop frame element (for drag scale)
 
   const loadMaster = (src) => new Promise((ok, bad) => { const i = new Image(); i.onload = () => ok(i); i.onerror = bad; i.src = src; });
   $effect(() => {
     const id = fileId;
-    if (!id) { img = null; return; }
-    let dead = false;
-    loadMaster(`/banner/master/${id}`).then((i) => { if (!dead) img = i; }).catch(() => { if (!dead) error = "Couldn't load your picture. Upload it again."; });
-    return () => { dead = true; };
+    if (!id) { img = null; masterUrl = null; return; }
+    let dead = false, made = null;
+    fetch(`/banner/master/${id}`)
+      .then((r) => (r.ok ? r.blob() : Promise.reject(new Error("gone"))))
+      .then((b) => { made = URL.createObjectURL(b); return loadMaster(made); })
+      .then((i) => { if (!dead) { img = i; masterUrl = made; } })
+      .catch(() => { if (!dead) error = "Couldn't load your picture. Upload it again."; });
+    return () => { dead = true; if (made) setTimeout(() => URL.revokeObjectURL(made), 1500); };
   });
+
+  // the crop as CSS for the frame and the whole-plate preview, and the wash as a flat layer over it
+  let crop = $derived(img ? cropCss(img.naturalWidth, img.naturalHeight, s.layout === "plate" ? PLATE_ASPECT : TAB_ASPECT, s) : null);
+  let washLayer = $derived.by(() => {
+    if (!(s.wash > 0)) return "";
+    const c = washRgb(inkHex(s.ink)).join(",");
+    return `linear-gradient(rgba(${c},${s.wash}), rgba(${c},${s.wash})), `;
+  });
+  let frameBg = $derived(masterUrl && crop ? `${washLayer}url("${masterUrl}") ${crop.pos} / ${crop.size} no-repeat` : "");
 
   // the metal behind a tab banner (its three steps), for which inks read on it
   const METAL_STEPS = { default: ["#6E685B", "#3E3A31", "#1C1A15"] };
@@ -54,7 +70,9 @@
   }
   const inkReads = (key) => s.layout === "plate" || inkOnSteps(inkHex(key), stepsOf(badge));
 
-  // redraw the preview whenever the picture or a setting changes (one frame at a time)
+  // once a frame: the stack's colour for the whole plate (gold only where gold reads — a sample of
+  // the crop, nothing encoded), and for the end tab its small render (the tab's picture is a separate
+  // shape, so it can't be a CSS crop of the whole plate)
   let raf = 0;
   $effect(() => {
     const deps = [img, s.layout, s.x, s.y, s.z, s.ink, s.wash];
@@ -71,18 +89,12 @@
     work.width = W; work.height = H;
     const ctx = work.getContext("2d", { willReadFrequently: true });
     ctx.imageSmoothingQuality = "high";
-    ctx.fillStyle = "#3e3a31"; ctx.fillRect(0, 0, W, H);
     const box = cropBox(img.naturalWidth, img.naturalHeight, plate ? PLATE_ASPECT : TAB_ASPECT, s);
     ctx.drawImage(img, box.left, box.top, box.width, box.height, 0, 0, W, H);
     const ink = inkHex(s.ink);
-    let wash = s.wash, got = { ink, sub: null, money: null };
-    if (plate) {
-      const px = regionLums(ctx.getImageData(0, 0, W, H).data, W, H, 4);
-      wash = minWash(px, ink, s.wash);
-      got = inksFor(px, ink, wash);
-    }
-    if (wash > 0) { const [r, g, b] = washRgb(ink); ctx.fillStyle = `rgba(${r},${g},${b},${wash})`; ctx.fillRect(0, 0, W, H); }
-    autoWash = wash; inks = got;
+    if (plate) { inks = inksFor(regionLums(ctx.getImageData(0, 0, W, H).data, W, H, 4), ink, s.wash); return; }
+    inks = { ink, sub: null, money: null };
+    if (s.wash > 0) { const [r, g, b] = washRgb(ink); ctx.fillStyle = `rgba(${r},${g},${b},${s.wash})`; ctx.fillRect(0, 0, W, H); }
     const seq = ++drawn;
     work.toBlob((b) => { if (b) show(URL.createObjectURL(b), seq); }, "image/webp", 0.9);
   }
@@ -178,7 +190,11 @@
   }
 
   // the seats in the preview: yours (to act, the clock running) and how others see you
-  let banner = $derived(img && previewUrl ? { l: s.layout, preview: previewUrl, ink: inks.ink, sub: inks.sub, money: inks.money } : live);
+  let banner = $derived(
+    !img ? live
+    : s.layout === "plate" ? (masterUrl && crop ? { l: "plate", preview: masterUrl, size: crop.size, pos: crop.pos, wash: s.wash, ink: inks.ink, sub: inks.sub, money: inks.money } : live)
+    : previewUrl ? { l: "tab", preview: previewUrl, ink: inks.ink } : live
+  );
   let deadline = $state(Date.now() + 25_000);
   $effect(() => { const id = setInterval(() => { deadline = Date.now() + 25_000; }, 25_000); return () => clearInterval(id); });
   const LONG = "Maximilian_the_Great";
@@ -221,10 +237,8 @@
         <div class="row col">
           <span class="lbl">Crop <span class="muted small">— drag to move, scroll or slide to zoom</span></span>
           <!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions -->
-          <div class="frame" class:tab={s.layout === "tab"} bind:this={frame} tabindex="0" role="application" aria-label="Crop: arrow keys move the picture"
+          <div class="frame" class:tab={s.layout === "tab"} style:background={frameBg || null} bind:this={frame} tabindex="0" role="application" aria-label="Crop: arrow keys move the picture"
             onpointerdown={down} onpointermove={move} onpointerup={up} onpointercancel={up} onwheel={wheel} onkeydown={key}>
-            {#if previewUrl}<img src={previewUrl} alt="" draggable="false" />{/if}
-            {#if s.layout === "plate"}<span class="textzone" aria-hidden="true"></span>{/if}
           </div>
           <div class="zoom">
             <span class="muted small">Zoom</span>
@@ -246,12 +260,11 @@
         </div>
 
         <div class="row col">
-          <span class="lbl">Wash <span class="muted small">— fades the picture behind the text</span></span>
+          <span class="lbl">Wash <span class="muted small">— optional: fades the picture behind the text</span></span>
           <div class="zoom">
             <input type="range" min="0" max={MAX_WASH} step="0.05" bind:value={s.wash} aria-label="Wash" />
-            <span class="val">{pct(Math.max(s.wash, autoWash))}</span>
+            <span class="val">{pct(s.wash)}</span>
           </div>
-          {#if s.layout === "plate" && autoWash > s.wash + 1e-9}<span class="muted small">Raised to {pct(autoWash)} so your name stays readable.</span>{/if}
         </div>
       {/if}
 
@@ -314,9 +327,6 @@
   .frame:focus-visible { box-shadow: 0 0 0 2px var(--accent); }
   .frame:active { cursor: grabbing; }
   .frame.tab { width: auto; height: 210px; aspect-ratio: 96 / 140; align-self: flex-start; }
-  .frame img { position: absolute; inset: 0; width: 100%; height: 100%; display: block; pointer-events: none; }
-  /* where the name and stack will sit — a faint guide, so the crop keeps faces out from under the text */
-  .textzone { position: absolute; left: 30%; right: 4%; top: 14%; bottom: 14%; border-radius: 8px; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.35); pointer-events: none; }
   .zoom { display: flex; align-items: center; gap: 10px; }
   .zoom input { flex: 1; accent-color: var(--accent); }
   .val { font-variant-numeric: tabular-nums; font-weight: 700; font-size: 13px; min-width: 3.2em; text-align: right; }
