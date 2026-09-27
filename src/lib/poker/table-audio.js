@@ -21,7 +21,16 @@ export const TABLE_SOUNDS = {
   riffle:   { files: ["riffle"], gain: 0.45 },                 // the shuffle (trimmed to its length)
   coins:    { tiers: { one: coins("one"), few: coins("few"), pile: coins("pile") }, gain: 0.8, onHit: true },
   pot:      { files: coins("pile"), gain: 0.9, onHit: true },  // the piles land in the pot
-  allIn:    { files: ["coin-allin"], gain: 1 }                 // a whole stack pushed (plays instead of its clicks)
+  allIn:    { files: ["allin-slam"], gain: 1, onHit: true },  // the all-in pile slamming down (owner's pick A, 2026-09-27)
+  // the animations' own sounds (owner's picks from design/moment-sounds, 2026-09-27)
+  buttonTap:  { files: ["button-tap"], gain: 0.6, onHit: true },   // D / SB / BB land on their new seats
+  ballRoll:   { files: ["ball-roll"], gain: 0.8 },                 // the roulette ball rolling while the wheel spins
+  ballSettle: { files: ["ball-settle"], gain: 0.9, onHit: true },  // …and dropping into the pocket
+  medalClink: { files: ["medal-clink"], gain: 0.8, onHit: true },  // an achievement toast slides in
+  ringSet:    { files: ["ring-set"], gain: 0.8, onHit: true },     // a new ring lands on an avatar
+  lowThud:    { files: ["low-thud"], gain: 0.9, onHit: true },     // the suck-out's jolt, a knocked-out plate, a banner opening
+  stampHit:   { files: ["stamp-hit"], gain: 1, onHit: true },      // a jackpot's multiplier slamming in
+  coinShower: { files: ["coin-shower"], gain: 0.7 }                // a jackpot's coin fountain
 };
 /** Coin tier by how many coins land: 1 · 2–4 · 5+. */
 export const coinTier = (count) => (count >= 5 ? "pile" : count >= 2 ? "few" : "one");

@@ -12,3 +12,14 @@ Table animation sounds (played by $lib/poker/table-audio.js, built by design/sou
 * riffle: "cards riffle shuffle.wav" by 5ro4 on Freesound (https://freesound.org/s/611107/), CC0;
   its first 2.1 s, time-stretched to 2.6 s without a pitch change.
 Picked by the owner 2026-09-25 in the Sound Lab.
+
+# the animations' own sounds (owner's picks, design/moment-sounds, 2026-09-27) — trimmed / mixed / normalised, no pitch change
+* allin-slam: the clay-chip pile clip (coin-pile-2, credited above) + "Money bag drop" (Mixkit, Mixkit licence (free, no credit))
+* button-tap: (the table knock / check clip, ../LICENSE.txt)
+* ball-roll: "Freesound - Roulette Wheel Spin Loop 1_1 (Joao_Janz)" (Freesound, Creative Commons 0)
+* ball-settle: "Freesound - Casino_RouletteSound_ball-damping (poenia)" (Freesound, Creative Commons 0)
+* medal-clink: "Freesound - Real Coin Drop (Rocotilos)" (Freesound, Creative Commons 0)
+* ring-set: "Gear metallic lock sound" (Mixkit, Mixkit licence (free, no credit))
+* low-thud: "Freesound - Pounding Cards On Table (HogantheLogan)" (Freesound, Creative Commons 0)
+* stamp-hit: "Martial arts fast punch" (Mixkit, Mixkit licence (free, no credit))
+* coin-shower: "Freesound - Coins spill.wav (daddy_z)" (Freesound, Creative Commons 0)

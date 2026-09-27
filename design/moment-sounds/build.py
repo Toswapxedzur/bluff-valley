@@ -8,7 +8,7 @@ Run from statisticasino/:  python3 design/moment-sounds/build.py"""
 import json, os, subprocess, numpy as np
 HERE = os.path.dirname(os.path.abspath(__file__)); LIB = os.path.join(HERE, "..", "sfx-library", "audio")
 STATIC = os.path.join(HERE, "..", "..", "static", "sfx"); SR = 44100
-os.makedirs(os.path.join(HERE, "clips"), exist_ok=True)
+os.makedirs(os.path.join(HERE, "clips"), exist_ok=True); os.makedirs(os.path.join(HERE, "ctx"), exist_ok=True)
 
 def src_path(s):
     if s.startswith("app:"): return os.path.join(STATIC, s[4:] + ".ogg")
@@ -57,68 +57,42 @@ def save(name, y):
     os.remove(wav)
     return {"file": f"clips/{name}.mp3", "lead": round(float(np.argmax(env(y)) / SR * 1000), 1), "dur": round(len(y) / SR * 1000)}
 
-THUD = lambda: hit("mixkit-1989", 0.6)                       # a money bag landing: the low thud family
 S = {}
 def slot(key, label, where, cands):
     S[key] = {"label": label, "where": where, "candidates": [{"name": n, **save(f"{key}-{i}", y)} for i, (n, y) in enumerate(cands)]}
 
-slot("allInSlam", "All-in drop", "the whole pile slams down (replaces the old push sound)", [
-    ("Your clay-chip pile + a money-bag thud", layer([(load("app:table/coin-pile-2"), 0, 1.0), (THUD(), 10, 0.8)])),
-    ("Poker chips dropping — one heavy hit", hit("fs-383870", 0.9, first=False)),
-    ("Chip drop + cards pounded on the table", layer([(hit("fs-540369", 0.6), 0, 1.0), (hit("fs-466789", 0.5), 0, 0.8)]))])
-slot("cardKnock", "Bust", "your own hand busts (the shake)", [
-    ("Card deck hit", hit("mixkit-1994", 0.45)),
-    ("Cards pounded on a table", hit("fs-466789", 0.45)),
-    ("Paper cards, a dull hit", hit("aod-paper-cards-04", 0.35))])
-slot("buttonTap", "Dealer button lands", "D / SB / BB reach their new seats (very quiet)", [
-    ("Your table knock (the check), quiet", hit("app:check", 0.3)),
-    ("A small ball tap", hit("mixkit-2073", 0.3)),
-    ("A card tap", hit("aod-paper-cards-09", 0.25))])
-slot("ballRoll", "Roulette ball rolling", "while the wheel spins (fades as it slows)", [
-    ("Casino roulette ball", seg("mixkit-1987", 0.0, 2.3)),
-    ("Roulette wheel (poenia)", seg("fs-709624", 0.5, 2.3)),
-    ("Roulette wheel spin loop", seg("fs-482663", 0.0, 2.3))])
-slot("ballSettle", "Ball drops into the pocket", "the ball settles (the number pops out)", [
-    ("Ball damping (poenia)", hit("fs-709623", 0.35)),
-    ("End of a spin (poenia)", seg("fs-709621", 2.6, 1.2)),
-    ("Casino roulette ball — its end", seg("mixkit-1987", 2.3, 1.0))])
-slot("reelSpin", "Slot reels spinning", "until the first reel stops (the stops keep their clicks)", [
-    ("Slot machine wheel", seg("mixkit-1932", 0.0, 1.5)),
-    ("Arcade slot machine wheel", seg("mixkit-1933", 0.0, 1.5)),
-    ("Slot machine random wheel", seg("mixkit-1930", 0.0, 1.5))])
-slot("medalClink", "Achievement toast", "the toast slides in", [
-    ("A natural metal coin", hit("fs-400116", 0.8)),
-    ("A coin dropped on a table", hit("fs-510735", 1.0)),
-    ("A real coin drop", hit("fs-343462", 0.3))])
-slot("ringSet", "A ring lands", "equipping a ring; the new-look ring dropping onto your avatar", [
-    ("Metallic lock", hit("mixkit-2858", 0.5)),
-    ("Metal bar hit", hit("mixkit-3138", 0.5)),
-    ("A coin drop + your table knock", layer([(hit("fs-343462", 0.3), 0, 1.0), (hit("app:check", 0.3), 0, 0.5)]))])
-slot("squeeze", "The river squeeze", "the all-in showdown's last card turning slowly (1.1 s)", [
-    ("Card slide, slowed", seg("fs-843344", 0.0, 1.1, tempo=0.5)),
-    ("Your deal slide (Kenney 3), slowed", hit("kenney-casino-card-slide-3", 1.1, tempo=0.5)),
-    ("Index card flips, slowed", hit("fs-319154", 1.1, tempo=0.6))])
-slot("lowThud", "Low thud", "the suck-out's jolt, a knocked-out plate dropping, the banner opening", [
-    ("Money bag drop", hit("mixkit-1989", 0.6)),
-    ("Cards pounded on a table", hit("fs-466789", 0.5)),
-    ("A stomp impact", hit("mixkit-3057", 0.9))])
-slot("revealHit", "A rare hand's name", "four of a kind / straight flush / royal appearing", [
-    ("Thud + clinking coins", layer([(THUD(), 0, 1.0), (hit("mixkit-1993", 0.8), 40, 0.6)])),
-    ("Pounded cards + a light coin shower", layer([(hit("fs-466789", 0.5), 0, 1.0), (seg("fs-728430", 0.4, 0.9), 30, 0.5)])),
-    ("Metal bar hits", hit("mixkit-3138", 1.0))])
-slot("stampHit", "Jackpot multiplier stamp", "the ×35 / ×100 slamming in", [
-    ("Money-bag thud + your table knock", layer([(THUD(), 0, 1.0), (hit("app:check", 0.3), 0, 0.7)])),
-    ("A fast punch", hit("mixkit-2047", 0.5)),
-    ("A heavy thud (slot machine punches)", hit("fs-637820", 0.6))])
-slot("coinShower", "Coin fountain", "the jackpot's coins bursting up and raining down", [
-    ("A light coin shower", seg("fs-728430", 0.2, 1.6)),
-    ("Coins spilling", seg("fs-569073", 0.2, 1.6)),
-    ("Coins falling", seg("fs-621103", 0.2, 1.6))])
+# ---- ROUND 2 (2026-09-27): the owner picked 9 slots (now in the game); the 4 below had no good option
+# in round 1 and get a different direction each. The picked clips join the contexts (ctx/pick_*.mp3).
+S["picked"] = {"allInSlam": "A", "buttonTap": "A", "ballRoll": "C", "ballSettle": "A", "medalClink": "C", "ringSet": "A", "lowThud": "B", "stampHit": "B", "coinShower": "B"}
+PICK = lambda f: load("app:table/" + f)
+def ticks(click, gaps):
+    """A reel spinning: the reel-stop click repeating, slowing (gaps in ms)."""
+    parts, t = [], 0
+    for g in gaps: parts.append((click, t, 1.0)); t += g
+    return layer(parts)
+reel_click = hit("app:reel-1", 0.05)
+slot("cardKnock", "Bust", "your own hand busts (the shake) — round 2: card sounds, not hits", [
+    ("A card shoved away (Kenney)", hit("kenney-casino-card-shove-2", 0.6)),
+    ("A firm card placement", hit("mixkit-2001", 0.6)),
+    ("Your fold tap + your low thud, soft", layer([(PICK("card-pile"), 0, 1.0), (PICK("low-thud"), 0, 0.45)]))])
+slot("reelSpin", "Slot reels spinning", "until the first reel stops — round 2: mechanical, no electronics", [
+    ("A fishing reel, fast", seg("bsb-1435", 0.4, 1.5)),
+    ("A pistol cylinder spinning", seg("fs-675633", 0.5, 1.5)),
+    ("Your reel-stop click, repeating and slowing", ticks(reel_click, [55] * 8 + [65] * 5 + [80] * 4 + [100] * 3 + [125] * 2))])
+slot("squeeze", "The river squeeze", "the all-in showdown's last card turning slowly — round 2: natural speed", [
+    ("A card fanned slowly (Kenney)", seg("kenney-casino-card-fan-2", 0.0, 1.25)),
+    ("An index card turned by hand", seg("fs-339015", 0.3, 1.1)),
+    ("A soft slide, then your flip", layer([(hit("kenney-casino-card-slide-5", 0.6), 0, 0.7), (PICK("card-flip"), 650, 1.0)]))])
+slot("revealHit", "A rare hand's name", "four of a kind / straight flush / royal appearing — round 2: from your own sounds", [
+    ("Your all-in slam", PICK("allin-slam")),
+    ("Your low thud + a card slam", layer([(PICK("low-thud"), 0, 1.0), (PICK("card-play"), 250, 1.0)])),
+    ("A card placed + your clay chips", layer([(hit("kenney-casino-card-place-3", 0.6), 0, 1.0), (PICK("coin-few-1"), 40, 0.8)]))])
 
 # the sounds already in the game that the "in context" sequences play around each candidate
+for f in ["ball-roll", "ball-settle", "low-thud", "stamp-hit", "coin-shower", "allin-slam"]:
+    subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", os.path.join(STATIC, "table", f + ".ogg"), "-q:a", "4", os.path.join(HERE, "ctx", "pick_" + f + ".mp3")], check=True)
 ctx = ["table/coin-few-1", "table/coin-pile-1", "table/card-deal", "table/card-flip", "table/card-pile", "table/card-play", "table/coin-one-1", "reel-1", "fanfare", "check", "coins"]
-os.makedirs(os.path.join(HERE, "ctx"), exist_ok=True)
 for c in ctx:
     subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", os.path.join(STATIC, c + ".ogg"), "-q:a", "4", os.path.join(HERE, "ctx", c.replace("/", "_") + ".mp3")], check=True)
 json.dump(S, open(os.path.join(HERE, "candidates.json"), "w"), indent=1)
-print(len(S), "slots,", sum(len(v["candidates"]) for v in S.values()), "candidates")
+print(len(S) - 1, "open slots,", sum(len(v["candidates"]) for k, v in S.items() if k != "picked"), "candidates")

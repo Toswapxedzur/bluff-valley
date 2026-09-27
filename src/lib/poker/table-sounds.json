@@ -58,5 +58,41 @@
  "coin-allin": {
   "ogg": 685.9,
   "mp3": 685.9
+ },
+ "allin-slam": {
+  "ogg": 45.0,
+  "mp3": 45.0
+ },
+ "button-tap": {
+  "ogg": 1.5,
+  "mp3": 1.7
+ },
+ "ball-roll": {
+  "ogg": 1351.7,
+  "mp3": 1351.7
+ },
+ "ball-settle": {
+  "ogg": 32.3,
+  "mp3": 32.3
+ },
+ "medal-clink": {
+  "ogg": 23.7,
+  "mp3": 23.7
+ },
+ "ring-set": {
+  "ogg": 214.7,
+  "mp3": 214.7
+ },
+ "low-thud": {
+  "ogg": 286.9,
+  "mp3": 286.9
+ },
+ "stamp-hit": {
+  "ogg": 67.4,
+  "mp3": 67.4
+ },
+ "coin-shower": {
+  "ogg": 1225.9,
+  "mp3": 1225.9
  }
 }

@@ -5,6 +5,7 @@
   // marker waits hidden. Page-level overlay, like the MoneyLayer (layer px, measured every time).
   import { untrack } from "svelte";
   import { reducedMotion } from "$lib/motion.js";
+  import { cueAt } from "$lib/poker/table-audio.js";
 
   let { view } = $props();
   let layer;
@@ -69,6 +70,7 @@
           const pull = c ? 0.22 * 4 * t * (1 - t) : 0;            // curve through the table's inside
           kf.push({ transform: `translate(${(x + ((c?.x ?? x) - x) * pull - from.x).toFixed(1)}px, ${(y + ((c?.y ?? y) - y) * pull - from.y).toFixed(1)}px)`, offset: t });
         }
+        if (role === "D") cueAt("buttonTap", performance.now() + GLIDE, { gain: 1 });   // a quiet tap as the button lands
         tok.animate(kf, { duration: GLIDE, easing: "cubic-bezier(.65,0,.35,1)" }).finished
           .catch(() => {})
           .finally(() => { tok.remove(); to.el.style.visibility = ""; gliding -= 1; });

@@ -1,313 +1,108 @@
 {
- "allInSlam": {
-  "label": "All-in drop",
-  "where": "the whole pile slams down (replaces the old push sound)",
-  "candidates": [
-   {
-    "name": "Your clay-chip pile + a money-bag thud",
-    "file": "clips/allInSlam-0.mp3",
-    "lead": 45.1,
-    "dur": 670
-   },
-   {
-    "name": "Poker chips dropping \u2014 one heavy hit",
-    "file": "clips/allInSlam-1.mp3",
-    "lead": 30.0,
-    "dur": 960
-   },
-   {
-    "name": "Chip drop + cards pounded on the table",
-    "file": "clips/allInSlam-2.mp3",
-    "lead": 287.4,
-    "dur": 660
-   }
-  ]
+ "picked": {
+  "allInSlam": "A",
+  "buttonTap": "A",
+  "ballRoll": "C",
+  "ballSettle": "A",
+  "medalClink": "C",
+  "ringSet": "A",
+  "lowThud": "B",
+  "stampHit": "B",
+  "coinShower": "B"
  },
  "cardKnock": {
   "label": "Bust",
-  "where": "your own hand busts (the shake)",
+  "where": "your own hand busts (the shake) \u2014 round 2: card sounds, not hits",
   "candidates": [
    {
-    "name": "Card deck hit",
+    "name": "A card shoved away (Kenney)",
     "file": "clips/cardKnock-0.mp3",
-    "lead": 20.6,
-    "dur": 510
-   },
-   {
-    "name": "Cards pounded on a table",
-    "file": "clips/cardKnock-1.mp3",
-    "lead": 287.4,
-    "dur": 510
-   },
-   {
-    "name": "Paper cards, a dull hit",
-    "file": "clips/cardKnock-2.mp3",
-    "lead": 268.6,
-    "dur": 410
-   }
-  ]
- },
- "buttonTap": {
-  "label": "Dealer button lands",
-  "where": "D / SB / BB reach their new seats (very quiet)",
-  "candidates": [
-   {
-    "name": "Your table knock (the check), quiet",
-    "file": "clips/buttonTap-0.mp3",
-    "lead": 2.0,
-    "dur": 67
-   },
-   {
-    "name": "A small ball tap",
-    "file": "clips/buttonTap-1.mp3",
-    "lead": 6.0,
-    "dur": 352
-   },
-   {
-    "name": "A card tap",
-    "file": "clips/buttonTap-2.mp3",
-    "lead": 31.6,
-    "dur": 189
-   }
-  ]
- },
- "ballRoll": {
-  "label": "Roulette ball rolling",
-  "where": "while the wheel spins (fades as it slows)",
-  "candidates": [
-   {
-    "name": "Casino roulette ball",
-    "file": "clips/ballRoll-0.mp3",
-    "lead": 280.4,
-    "dur": 2360
-   },
-   {
-    "name": "Roulette wheel (poenia)",
-    "file": "clips/ballRoll-1.mp3",
-    "lead": 2055.6,
-    "dur": 2360
-   },
-   {
-    "name": "Roulette wheel spin loop",
-    "file": "clips/ballRoll-2.mp3",
-    "lead": 1352.2,
-    "dur": 2360
-   }
-  ]
- },
- "ballSettle": {
-  "label": "Ball drops into the pocket",
-  "where": "the ball settles (the number pops out)",
-  "candidates": [
-   {
-    "name": "Ball damping (poenia)",
-    "file": "clips/ballSettle-0.mp3",
     "lead": 32.8,
-    "dur": 270
+    "dur": 648
    },
    {
-    "name": "End of a spin (poenia)",
-    "file": "clips/ballSettle-1.mp3",
-    "lead": 69.8,
-    "dur": 1260
+    "name": "A firm card placement",
+    "file": "clips/cardKnock-1.mp3",
+    "lead": 20.2,
+    "dur": 660
    },
    {
-    "name": "Casino roulette ball \u2014 its end",
-    "file": "clips/ballSettle-2.mp3",
-    "lead": 54.2,
-    "dur": 1060
+    "name": "Your fold tap + your low thud, soft",
+    "file": "clips/cardKnock-2.mp3",
+    "lead": 114.9,
+    "dur": 680
    }
   ]
  },
  "reelSpin": {
   "label": "Slot reels spinning",
-  "where": "until the first reel stops (the stops keep their clicks)",
+  "where": "until the first reel stops \u2014 round 2: mechanical, no electronics",
   "candidates": [
    {
-    "name": "Slot machine wheel",
+    "name": "A fishing reel, fast",
     "file": "clips/reelSpin-0.mp3",
-    "lead": 410.8,
+    "lead": 710.0,
     "dur": 1560
    },
    {
-    "name": "Arcade slot machine wheel",
+    "name": "A pistol cylinder spinning",
     "file": "clips/reelSpin-1.mp3",
-    "lead": 826.6,
+    "lead": 1240.5,
     "dur": 1560
    },
    {
-    "name": "Slot machine random wheel",
+    "name": "Your reel-stop click, repeating and slowing",
     "file": "clips/reelSpin-2.mp3",
-    "lead": 1090.4,
-    "dur": 1560
-   }
-  ]
- },
- "medalClink": {
-  "label": "Achievement toast",
-  "where": "the toast slides in",
-  "candidates": [
-   {
-    "name": "A natural metal coin",
-    "file": "clips/medalClink-0.mp3",
-    "lead": 202.3,
-    "dur": 663
-   },
-   {
-    "name": "A coin dropped on a table",
-    "file": "clips/medalClink-1.mp3",
-    "lead": 32.8,
-    "dur": 1060
-   },
-   {
-    "name": "A real coin drop",
-    "file": "clips/medalClink-2.mp3",
-    "lead": 24.4,
-    "dur": 224
-   }
-  ]
- },
- "ringSet": {
-  "label": "A ring lands",
-  "where": "equipping a ring; the new-look ring dropping onto your avatar",
-  "candidates": [
-   {
-    "name": "Metallic lock",
-    "file": "clips/ringSet-0.mp3",
-    "lead": 215.0,
-    "dur": 560
-   },
-   {
-    "name": "Metal bar hit",
-    "file": "clips/ringSet-1.mp3",
-    "lead": 173.7,
-    "dur": 560
-   },
-   {
-    "name": "A coin drop + your table knock",
-    "file": "clips/ringSet-2.mp3",
-    "lead": 24.4,
-    "dur": 224
+    "lead": 1.8,
+    "dur": 1620
    }
   ]
  },
  "squeeze": {
   "label": "The river squeeze",
-  "where": "the all-in showdown's last card turning slowly (1.1 s)",
+  "where": "the all-in showdown's last card turning slowly \u2014 round 2: natural speed",
   "candidates": [
    {
-    "name": "Card slide, slowed",
+    "name": "A card fanned slowly (Kenney)",
     "file": "clips/squeeze-0.mp3",
-    "lead": 679.0,
-    "dur": 1100
+    "lead": 1054.9,
+    "dur": 1310
    },
    {
-    "name": "Your deal slide (Kenney 3), slowed",
+    "name": "An index card turned by hand",
     "file": "clips/squeeze-1.mp3",
-    "lead": 71.7,
-    "dur": 1123
-   },
-   {
-    "name": "Index card flips, slowed",
-    "file": "clips/squeeze-2.mp3",
-    "lead": 707.0,
+    "lead": 924.6,
     "dur": 1160
-   }
-  ]
- },
- "lowThud": {
-  "label": "Low thud",
-  "where": "the suck-out's jolt, a knocked-out plate dropping, the banner opening",
-  "candidates": [
-   {
-    "name": "Money bag drop",
-    "file": "clips/lowThud-0.mp3",
-    "lead": 42.4,
-    "dur": 660
    },
    {
-    "name": "Cards pounded on a table",
-    "file": "clips/lowThud-1.mp3",
-    "lead": 287.4,
-    "dur": 560
-   },
-   {
-    "name": "A stomp impact",
-    "file": "clips/lowThud-2.mp3",
-    "lead": 422.1,
-    "dur": 960
+    "name": "A soft slide, then your flip",
+    "file": "clips/squeeze-2.mp3",
+    "lead": 770.0,
+    "dur": 1082
    }
   ]
  },
  "revealHit": {
   "label": "A rare hand's name",
-  "where": "four of a kind / straight flush / royal appearing",
+  "where": "four of a kind / straight flush / royal appearing \u2014 round 2: from your own sounds",
   "candidates": [
    {
-    "name": "Thud + clinking coins",
+    "name": "Your all-in slam",
     "file": "clips/revealHit-0.mp3",
-    "lead": 42.4,
-    "dur": 900
+    "lead": 45.1,
+    "dur": 790
    },
    {
-    "name": "Pounded cards + a light coin shower",
+    "name": "Your low thud + a card slam",
     "file": "clips/revealHit-1.mp3",
     "lead": 287.4,
-    "dur": 990
+    "dur": 680
    },
    {
-    "name": "Metal bar hits",
+    "name": "A card placed + your clay chips",
     "file": "clips/revealHit-2.mp3",
-    "lead": 544.4,
-    "dur": 1060
-   }
-  ]
- },
- "stampHit": {
-  "label": "Jackpot multiplier stamp",
-  "where": "the \u00d735 / \u00d7100 slamming in",
-  "candidates": [
-   {
-    "name": "Money-bag thud + your table knock",
-    "file": "clips/stampHit-0.mp3",
-    "lead": 42.4,
-    "dur": 660
-   },
-   {
-    "name": "A fast punch",
-    "file": "clips/stampHit-1.mp3",
-    "lead": 67.4,
-    "dur": 560
-   },
-   {
-    "name": "A heavy thud (slot machine punches)",
-    "file": "clips/stampHit-2.mp3",
-    "lead": 33.2,
-    "dur": 660
-   }
-  ]
- },
- "coinShower": {
-  "label": "Coin fountain",
-  "where": "the jackpot's coins bursting up and raining down",
-  "candidates": [
-   {
-    "name": "A light coin shower",
-    "file": "clips/coinShower-0.mp3",
-    "lead": 706.8,
-    "dur": 1660
-   },
-   {
-    "name": "Coins spilling",
-    "file": "clips/coinShower-1.mp3",
-    "lead": 1225.6,
-    "dur": 1660
-   },
-   {
-    "name": "Coins falling",
-    "file": "clips/coinShower-2.mp3",
-    "lead": 110.2,
-    "dur": 1660
+    "lead": 31.9,
+    "dur": 520
    }
   ]
  }

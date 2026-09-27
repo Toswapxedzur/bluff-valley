@@ -81,7 +81,7 @@ test("roulette: chips placed, then a spin and ball drop when the outcome lands",
   const b = { ...base, round: { ...a.round, bets: [{ seat: 1, bets: [{ type: "red", amount: 5 }] }] } };
   assert.deepEqual(names(tableSoundCues(a, b, "u1")), ["bet"]);
   const c = { ...base, round: { ...b.round, outcome: { pocket: 17, color: "black" }, results: [{ seat: 1, delta: -5, outcome: "lose" }] } };
-  assert.deepEqual(names(tableSoundCues(b, c, "u1")), ["shake", "dice", "lose"]);
+  assert.deepEqual(names(tableSoundCues(b, c, "u1")), ["ballRoll", "ballSettle", "lose"]);
 });
 
 test("sic bo rolls dice, slots spin reels", () => {
