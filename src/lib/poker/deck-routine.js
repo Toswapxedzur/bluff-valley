@@ -49,6 +49,10 @@ export const TIMING = {
   beforeReturn: 150,
   flyBack: 800
 };
+// the everyday shuffle (Hold'em every hand, Three Card / Big Two every round): no cuts — just fly in,
+// split, riffle, fly back. The full TIMING (three cuts) is for the rare shoe shuffle, Blackjack /
+// Baccarat, when the cut card comes out (owner, 2026-09-27: "the animation is a little bit long")
+export const QUICK = { ...TIMING, cuts: 0 };
 export const UTURN = 1.5;  // the U-turn's far point, in card widths from the deck (a 50% gap)
 
 /**
@@ -168,7 +172,7 @@ export function buildRoutine({ start, end, centre, seed = 1, zoom = ZOOM, timing
     }
     // the middle-section cuts (and the rests between them)
     const lastCut = cutPhases[cutPhases.length - 1];
-    if (tt < lastCut.t1) {
+    if (lastCut && tt < lastCut.t1) {
       const i = cutPhases.findIndex((p) => tt < p.t1);
       const p = cutPhases[i];
       if (tt < p.t0) {                                 // settle / pause before this pass
@@ -235,7 +239,7 @@ export function buildRoutine({ start, end, centre, seed = 1, zoom = ZOOM, timing
 /** How long the routine takes for n cards (the server holds a table's next turn this long). */
 export function routineMs(n = COUNT, timing = TIMING) {
   const T = timing;
-  return T.flyIn + T.settle + T.cuts * T.cutPass + (T.cuts - 1) * T.cutGap + T.beforeSplit + T.split + T.beforeShuffle
+  return T.flyIn + T.settle + T.cuts * T.cutPass + Math.max(0, T.cuts - 1) * T.cutGap + T.beforeSplit + T.split + T.beforeShuffle
     + Math.max(0, n - 1) * T.launchEvery + T.flight + T.beforeReturn + T.flyBack;
 }
 
