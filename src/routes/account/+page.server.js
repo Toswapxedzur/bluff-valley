@@ -15,7 +15,7 @@ import {
   dailyBonusReady,
   DAILY_BONUS
 } from "$lib/server/wallet.js";
-import { listForUser, unlockAndReward, streakAchievements } from "$lib/server/achievements.js";
+import { listForUser, unlockAndReward, streakAchievements, achievementInfo } from "$lib/server/achievements.js";
 import { recordEvent as recordQuestEvent } from "$lib/server/quests.js";
 import { handsPlayedByUser } from "$lib/server/poker/store.js";
 
@@ -103,7 +103,8 @@ export const actions = {
     await recordQuestEvent(locals.user.id, "daily_login", 1);
     return {
       bonusOk: true, bonusAmount: res.amount, chips: res.balance,
-      streak: res.streak, bestStreak: res.bestStreak, newBadges
+      streak: res.streak, bestStreak: res.bestStreak, newBadges,
+      badgeInfo: (newBadges || []).map(achievementInfo).filter(Boolean)
     };
   },
 

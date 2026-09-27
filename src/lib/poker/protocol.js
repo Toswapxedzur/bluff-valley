@@ -86,6 +86,7 @@ export const S2C = {
   ICE_CONFIG: "voice.ice",     // { iceServers } — STUN/TURN config for RTCPeerConnection (ephemeral creds)
   RTC_SIGNAL: "rtc.signal",    // { tableId, fromUserId, signal } — relayed WebRTC signal
   NOTIF: "notif",              // { notification } — a single live notification
+  ACHIEVEMENT: "achievement",  // { key, name, desc, tier, reward } — one just unlocked (the toast)
   NOTIF_LIST: "notif.listing", // { notifications:[], unread } — seed / refresh
   CALL_RING: "call.ring",      // { callId, fromUserId, fromName } — incoming call
   CALL_STATE: "call.state",    // { callId, state, peer:{userId,name}, room?, iceServers? } — ringing|active|ended|declined|busy|unavailable

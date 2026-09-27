@@ -17,7 +17,7 @@ import {
   handsPlayedByUser
 } from "./store.js";
 import { getBalance } from "../wallet.js";
-import { unlockAndReward, handAchievements } from "../achievements.js";
+import { unlockAndReward, handAchievements, achievementInfo } from "../achievements.js";
 import { recordEvent as recordQuestEvent } from "../quests.js";
 import { areFriends } from "../friends.js";
 import { sendMessage, markRead } from "../dm.js";
@@ -284,9 +284,14 @@ export class PokerHub {
         if (s.userId == null || this.botManager.isBotUser(s.userId)) continue; // humans only
         const won = (s.net ?? 0) > 0;
         const handsPlayed = await handsPlayedByUser(s.userId);
-        await unlockAndReward(s.userId, handAchievements({
+        const fresh = await unlockAndReward(s.userId, handAchievements({
           won, vsBot, allInWin: false, potWon: won ? (s.net ?? 0) : 0, handsPlayed
         }));
+        // tell them now: the unlock toast (their open pages, wherever they are)
+        for (const key of fresh || []) {
+          const info = achievementInfo(key);
+          if (info) for (const c of this.connsForUser(s.userId)) c.send(encode(S2C.ACHIEVEMENT, info));
+        }
         // Quest progress (best-effort — recordQuestEvent swallows its own errors).
         await recordQuestEvent(s.userId, "hands_played", 1);
         if (won) {
