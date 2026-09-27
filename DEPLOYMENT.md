@@ -334,15 +334,23 @@ From the repo on the laptop:
 cd statisticasino
 npm run build
 rsync -az --delete \
-  --exclude=node_modules/ --exclude=.svelte-kit/ --exclude=.git/ \
+  --exclude=node_modules/ --exclude=.svelte-kit/ --exclude=.git --exclude=.git/ \
   --exclude=.venv/ --exclude=.idea/ --exclude=.DS_Store --exclude='smoke-*.sqlite*' \
-  --exclude=.env --exclude=.env.prod.bak \
+  --exclude=.env --exclude='.env.*' --exclude=var/ \
   -e ssh ./ hk:/opt/bluffing-valley/
 ssh hk 'cd /opt/bluffing-valley && npm ci --omit=dev && sudo systemctl restart bluffing-valley'
 ```
 
 Dry-run with `--dry-run --itemize-changes` first; `--delete` is safe because the
-excludes protect `node_modules`/`.env`/`.venv` (box-only). Migrations are idempotent
+excludes protect `node_modules`/`.env`/`.venv`/`var/` (box-only). When other work is
+in progress in the checkout, deploy from a clean `git worktree` of the commit instead
+(`--exclude=.git` also skips a worktree's `.git` file).
+
+**Player banners live OUTSIDE this folder** (2026-09-27): `.env` on the box sets
+`BANNER_DIR=/var/lib/bluff-valley/banners` (uploaded masters `m/` + rendered banners
+`r/`, owned by `admin`) and `BODY_SIZE_LIMIT=6M` (adapter-node's default 512K would
+refuse a 5 MB upload). Never point BANNER_DIR inside `/opt/bluffing-valley` — the
+rsync `--delete` above would wipe every banner. Back it up with the box, not git. Migrations are idempotent
 and run at every boot via `hooks.server.js#ensureMigrated`, so you rarely invoke
 `migrate.js` by hand. Verify: `curl https://bluffvalley.blopybox.net/` = 200.
 
