@@ -5,6 +5,7 @@
 
 import { query } from "./db.js";
 import { ACHIEVEMENTS } from "./achievements.js";
+import { ACHIEVEMENTS_ON } from "../config.js";
 import { identities } from "./profiles.js";
 
 const NINETY_DAYS = 90 * 24 * 60 * 60 * 1000;
@@ -51,7 +52,7 @@ export async function recentActivity(userId, { limit = 200, filter = "all", sinc
     }
   }
 
-  if (filter === "all" || filter === "achievements") {
+  if (ACHIEVEMENTS_ON && (filter === "all" || filter === "achievements")) {
     const ach = await query(
       "SELECT achievement, unlocked_at FROM user_achievement WHERE user_id = ? ORDER BY unlocked_at DESC LIMIT 60",
       [userId]
