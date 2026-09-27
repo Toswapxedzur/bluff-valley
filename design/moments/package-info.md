@@ -37,3 +37,12 @@ toast — the medal is a placeholder) · cosmetics (equip ring, equip badge, loo
 top: surface (board, hands, piles of cards, pot pill) · piles (coins at rest) · seats (plates) ·
 top (anything moving). Never rely on append order. A coin reaching a badge sinks by shrinking at
 its centre; it never passes under anything. Check mid-flight frames. (Memory: feedback-layering.)
+
+**Shared norms (owner, 2026-09-27: fixes kept landing in one animation only):** `NORM` at the top of
+`demo.js` holds one value per kind of motion — card flip 280 ms, coin flight 560 ms, 45 ms between
+coins of a stream, 100 ms between columns of a bet, ring draw 600 ms, one card size per table (58,
+my hand 68), close-up coins 40, page coins 22 — plus one helper each for the winner mark (the game's
+green outline), the loser dim (the game's fold style), count-ups that run while coins ARRIVE, pile
+departure (top-down) and the plate change (spread from the upper left). Scenes use these, never
+their own numbers; the rare exceptions are named in place (the all-in river's slow squeeze,
+moment ring draws at twice the norm).
