@@ -14,7 +14,7 @@ import { resolve, join } from "node:path";
 import sharp from "sharp";
 import { query, queryOne, execute } from "./db.js";
 import {
-  normalize, cropBox, inkHex, PLATE_ASPECT, TAB_ASPECT, PLATE_PX, TAB_PX,
+  normalize, cropBox, inkHex, PLATE_ASPECT, PLATE_PX,
   regionLums, inksFor, washRgb, isRenderName
 } from "../banner.js";
 
@@ -96,15 +96,14 @@ export async function ingest(userId, buf) {
  *  → { src, layout, ink, sub, money, wash } */
 export async function renderBanner(master, settingsIn) {
   const s = normalize(settingsIn);
-  const plate = s.layout === "plate";
-  const [W, H] = plate ? PLATE_PX : TAB_PX;
+  const [W, H] = PLATE_PX;
   const meta = await sharp(master).metadata();
-  const box = cropBox(meta.width, meta.height, plate ? PLATE_ASPECT : TAB_ASPECT, s);
+  const box = cropBox(meta.width, meta.height, PLATE_ASPECT, s);
   const { data } = await sharp(master).extract(box).resize(W, H, { fit: "fill" }).removeAlpha().raw().toBuffer({ resolveWithObject: true });
   const ink = inkHex(s.ink);
   // the picture keeps its brightness: only the player's wash, exactly as set (owner, 2026-09-27)
   const wash = s.wash;
-  const inks = plate ? inksFor(regionLums(data, W, H, 3), ink, wash) : { ink, sub: null, money: null };
+  const inks = inksFor(regionLums(data, W, H, 3), ink, wash);
   if (wash > 0) {
     const w = washRgb(ink);
     for (let i = 0; i < data.length; i += 3) for (let c = 0; c < 3; c++) data[i + c] = Math.round(data[i + c] + (w[c] - data[i + c]) * wash);
@@ -156,14 +155,14 @@ export async function setBanned(userId, on) {
 }
 
 // the compact form every seat carries
-const wire = (r) => ({ l: r.layout === "tab" ? "tab" : "plate", src: r.src, ink: r.ink || null, sub: r.sub || null, money: r.money || null });
+const wire = (r) => ({ l: "plate", src: r.src, ink: r.ink || null, sub: r.sub || null, money: r.money || null });
 
 /** Live banners for many players at once: id → { l, src, ink, sub, money }. */
 export async function bannersFor(userIds) {
   const ids = [...new Set((userIds || []).filter(Boolean))];
   if (!ids.length) return new Map();
   const rows = await query(
-    `SELECT user_id, src, layout, ink, sub, money FROM banner WHERE status = 'live' AND src IS NOT NULL AND user_id IN (${ids.map(() => "?").join(",")})`,
+    `SELECT user_id, src, layout, ink, sub, money FROM banner WHERE status = 'live' AND layout = 'plate' AND src IS NOT NULL AND user_id IN (${ids.map(() => "?").join(",")})`,
     ids
   );
   return new Map(rows.map((r) => [r.user_id, wire(r)]));
@@ -175,7 +174,7 @@ export async function bannerState(userId) {
   let settings = null;
   try { settings = r?.settings ? normalize(JSON.parse(r.settings)) : null; } catch { settings = null; }
   return {
-    live: r?.status === "live" && r.src ? wire(r) : null,
+    live: r?.status === "live" && r.layout === "plate" && r.src ? wire(r) : null,
     removed: r?.status === "removed",
     banned: !!Number(r?.banned || 0),
     fileId: r?.file_id || null,

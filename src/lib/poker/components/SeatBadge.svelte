@@ -154,7 +154,7 @@
       <div class="bet" in:scale={{ start: 0.6, duration: d(DUR.base) }} out:fade={{ duration: d(DUR.fast) }}><CoinStack value={seat.committed} size={18} /><Num value={seat.committed} /></div>
     {/if}
 
-    <div class="plate" class:tabbed={!!look?.tab} style={plateVars} use:plateSpread={look?.bg} in:fade={{ duration: d(DUR.base) }}>   <!-- fades in: no size change -->
+    <div class="plate" style={plateVars} use:plateSpread={look?.bg} in:fade={{ duration: d(DUR.base) }}>   <!-- fades in: no size change -->
       <div class="av">
         <Avatar id={seat.userId} name={house ? "House" : seat.name} mediaId={seat.avatar ?? null} userId={isMine || house ? null : seat.userId} size={avSize} ring={house ? null : seat.ring || "default"} {ringRemain} ringFloat />
         {#key glowKey}{#if glowKey}<span class="turnglow" style="--box:{ringBox(avSize)}px;--in:{avSize / 2}px" aria-hidden="true"></span>{/if}{/key}
@@ -225,10 +225,6 @@
     transition: box-shadow var(--dur) var(--ease);
   }
   .mine .plate { height: 46px; }
-  /* a banner in the "tab" layout: the picture fills a tab at the right end (26 × 38; mine 31 × 46), so
-     the text stops short of it — a fixed room, whatever the picture */
-  .plate.tabbed { padding-right: 32px; }
-  .mine .plate.tabbed { padding-right: 37px; }
   .mine .plate { background: var(--surface-2); box-shadow: 0 0 0 2px var(--accent-soft), var(--shadow-card); }
   .toact .plate { box-shadow: 0 0 0 2px var(--accent), 0 0 20px color-mix(in srgb, var(--accent) 45%, transparent); }
   .house .plate { background: color-mix(in srgb, var(--surface) 70%, var(--gold-bg) 30%); }

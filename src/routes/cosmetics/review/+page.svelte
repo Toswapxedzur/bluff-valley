@@ -24,10 +24,10 @@
     <div class="list">
       {#each data.banners as b (b.user_id)}
         <div class="item" class:off={b.status !== "live"}>
-          <img class="pic" class:tab={b.layout === "tab"} src={bannerUrl(b.src)} alt="Banner by {b.name || b.email}" loading="lazy" />
+          <img class="pic" src={bannerUrl(b.src)} alt="Banner by {b.name || b.email}" loading="lazy" />
           <div class="meta">
             <a class="who" href="/u/{b.user_id}">{b.name || b.email}</a>
-            <span class="muted small">{STATUS[b.status] || b.status} · {b.layout === "tab" ? "End tab" : "Whole plate"} · {when(b.updated_at)}{#if Number(b.banned)} · <b class="bad">barred from uploading</b>{/if}</span>
+            <span class="muted small">{STATUS[b.status] || b.status}{#if b.layout === "tab"} · old end-tab banner, not shown{/if} · {when(b.updated_at)}{#if Number(b.banned)} · <b class="bad">barred from uploading</b>{/if}</span>
             {#if b.file_id}<a class="small" href="/banner/master/{b.file_id}" target="_blank" rel="noopener">Full picture</a>{/if}
           </div>
           <div class="acts">
@@ -57,7 +57,6 @@
   .item { display: flex; align-items: center; gap: 14px; padding: 10px 12px; background: var(--surface); border-radius: var(--r-card); box-shadow: var(--shadow-card); flex-wrap: wrap; }
   .item.off { opacity: 0.6; }
   .pic { width: 246px; height: 69px; border-radius: 10px; object-fit: cover; background: var(--well); flex: none; }
-  .pic.tab { width: 48px; height: 70px; }
   .meta { display: flex; flex-direction: column; gap: 3px; min-width: 0; flex: 1; }
   .who { font-weight: 700; color: var(--text); text-decoration: none; }
   .bad { color: var(--danger); }

@@ -4,7 +4,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import sharp from "sharp";
-import { PLATE_PX, TAB_PX } from "../banner.js";
+import { PLATE_PX } from "../banner.js";
 
 const dir = mkdtempSync(join(tmpdir(), "banners-"));
 process.env.BANNER_DIR = dir;
@@ -39,12 +39,12 @@ test("a dark picture under light text needs no wash; the stack stays gold", asyn
   assert.equal(r.money, "#f5b60d");
 });
 
-test("a tab banner is the tab's shape and keeps the player's wash as set", async () => {
+test("an old end-tab setting renders as a whole-plate banner", async () => {
   const r = await renderBanner(await solid(600, 1200, { r: 200, g: 30, b: 50 }), { layout: "tab", ink: "white", wash: 0.2 });
   const out = await sharp(await readRender(r.src)).metadata();
-  assert.deepEqual([out.width, out.height], TAB_PX);
+  assert.deepEqual([out.width, out.height], PLATE_PX);
+  assert.equal(r.layout, "plate");
   assert.equal(r.wash, 0.2);
-  assert.equal(r.layout, "tab");
 });
 
 test("junk names never read from disk", async () => {

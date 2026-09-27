@@ -1,5 +1,5 @@
 <script>
-  // The banner editor (owner, 2026-09-27): upload a picture, crop it to the plate (or the end tab),
+  // The banner editor (owner, 2026-09-27): upload a picture, crop it to the seat plate,
   // pick the text colour and an optional wash, and see the real seat plate update as you go. The
   // picture keeps its own brightness: only the player's wash, exactly as set (owner, 2026-09-27).
   // The preview is instant (owner: "the image feels laggy"): the plates and the crop frame draw the
@@ -7,10 +7,9 @@
   // the server cuts the same crop ($lib/banner.js) and the banner is live on every seat at once.
   import SeatBadge from "$lib/poker/components/SeatBadge.svelte";
   import {
-    normalize, cropBox, inkHex, INKS, PLATE_ASPECT, TAB_ASPECT, PLATE_PX, TAB_PX, MAX_WASH, MAX_ZOOM,
-    regionLums, inksFor, washRgb, inkOnSteps, cropCss
+    normalize, cropBox, inkHex, INKS, PLATE_ASPECT, PLATE_PX, MAX_WASH, MAX_ZOOM,
+    regionLums, inksFor, washRgb, cropCss
   } from "$lib/banner.js";
-  import { plateStyle } from "$lib/cosmetics.js";
 
   import { untrack } from "svelte";
 
@@ -34,7 +33,6 @@
   let error = $state(null), note = $state(initial.removed ? "An admin took your last banner down. You can make a new one." : null);
   let dragOver = $state(false);
 
-  let previewUrl = $state(null);   // the end tab's small render (the whole-plate preview needs none)
   let inks = $state({ ink: inkHex("cream"), sub: null, money: null });
   let work;                         // offscreen canvas
   let frame = $state(null);         // the crop frame element (for drag scale)
@@ -53,7 +51,7 @@
   });
 
   // the crop as CSS for the frame and the whole-plate preview, and the wash as a flat layer over it
-  let crop = $derived(img ? cropCss(img.naturalWidth, img.naturalHeight, s.layout === "plate" ? PLATE_ASPECT : TAB_ASPECT, s) : null);
+  let crop = $derived(img ? cropCss(img.naturalWidth, img.naturalHeight, PLATE_ASPECT, s) : null);
   let washLayer = $derived.by(() => {
     if (!(s.wash > 0)) return "";
     const c = washRgb(inkHex(s.ink)).join(",");
@@ -61,54 +59,26 @@
   });
   let frameBg = $derived(masterUrl && crop ? `${washLayer}url("${masterUrl}") ${crop.pos} / ${crop.size} no-repeat` : "");
 
-  // the metal behind a tab banner (its three steps), for which inks read on it
-  const METAL_STEPS = { default: ["#6E685B", "#3E3A31", "#1C1A15"] };
-  function stepsOf(look) {
-    if (METAL_STEPS[look]) return METAL_STEPS[look];
-    const bg = plateStyle(look).bg, m = bg.match(/#[0-9a-f]{6}/gi);
-    return m ? m.slice(0, 3) : METAL_STEPS.default;
-  }
-  const inkReads = (key) => s.layout === "plate" || inkOnSteps(inkHex(key), stepsOf(badge));
-
-  // once a frame: the stack's colour for the whole plate (gold only where gold reads — a sample of
-  // the crop, nothing encoded), and for the end tab its small render (the tab's picture is a separate
-  // shape, so it can't be a CSS crop of the whole plate)
+  // once a frame: the stack's colour (gold only where gold reads) from a sample of the crop —
+  // drawn, never encoded
   let raf = 0;
   $effect(() => {
-    const deps = [img, s.layout, s.x, s.y, s.z, s.ink, s.wash];
+    const deps = [img, s.x, s.y, s.z, s.ink, s.wash];
     void deps;
     cancelAnimationFrame(raf);
     raf = requestAnimationFrame(draw);
     return () => cancelAnimationFrame(raf);
   });
   function draw() {
-    if (!img) { swap(null); return; }
-    const plate = s.layout === "plate";
-    const [W, H] = plate ? PLATE_PX : TAB_PX;
+    if (!img) return;
+    const [W, H] = PLATE_PX;
     work ??= document.createElement("canvas");
     work.width = W; work.height = H;
     const ctx = work.getContext("2d", { willReadFrequently: true });
-    ctx.imageSmoothingQuality = "high";
-    const box = cropBox(img.naturalWidth, img.naturalHeight, plate ? PLATE_ASPECT : TAB_ASPECT, s);
+    const box = cropBox(img.naturalWidth, img.naturalHeight, PLATE_ASPECT, s);
     ctx.drawImage(img, box.left, box.top, box.width, box.height, 0, 0, W, H);
-    const ink = inkHex(s.ink);
-    if (plate) { inks = inksFor(regionLums(ctx.getImageData(0, 0, W, H).data, W, H, 4), ink, s.wash); return; }
-    inks = { ink, sub: null, money: null };
-    if (s.wash > 0) { const [r, g, b] = washRgb(ink); ctx.fillStyle = `rgba(${r},${g},${b},${s.wash})`; ctx.fillRect(0, 0, W, H); }
-    const seq = ++drawn;
-    work.toBlob((b) => { if (b) show(URL.createObjectURL(b), seq); }, "image/webp", 0.9);
+    inks = inksFor(regionLums(ctx.getImageData(0, 0, W, H).data, W, H, 4), inkHex(s.ink), s.wash);
   }
-  // A fresh frame reaches the plates only once it is DECODED: a background whose picture is still
-  // decoding paints nothing for a frame, so the metal flashed through on every drag step (owner:
-  // "the background banner is always flashy"). Frames that finish out of order never go back in time.
-  let drawn = 0, shown = 0;
-  async function show(url, seq) {
-    try { const im = new Image(); im.src = url; await im.decode(); } catch { /* shown anyway */ }
-    if (seq < shown) { URL.revokeObjectURL(url); return; }
-    shown = seq;
-    swap(url);
-  }
-  function swap(url) { const old = previewUrl; previewUrl = url; if (old) setTimeout(() => URL.revokeObjectURL(old), 1500); }
 
   // ---- upload
   async function upload(file) {
@@ -123,7 +93,7 @@
       const j = await r.json().catch(() => ({ error: "Upload failed. Try again." }));
       if (!r.ok || j.error) { error = j.error || "Upload failed. Try again."; return; }
       fileId = j.file.id;
-      s = normalize({ layout: s.layout, ink: s.ink });   // a new picture starts centred
+      s = normalize({ ink: s.ink });   // a new picture starts centred
       uploadsLeft = Math.max(0, uploadsLeft - 1);
     } catch { error = "Upload failed. Check your connection."; }
     finally { busy = ""; }
@@ -163,8 +133,7 @@
   let drag = null;
   function down(e) {
     if (!img || !frame) return;
-    const plate = s.layout === "plate";
-    const box = cropBox(img.naturalWidth, img.naturalHeight, plate ? PLATE_ASPECT : TAB_ASPECT, s);
+    const box = cropBox(img.naturalWidth, img.naturalHeight, PLATE_ASPECT, s);
     drag = { x0: e.clientX, y0: e.clientY, box, k: box.width / frame.getBoundingClientRect().width,
       freeW: img.naturalWidth - box.width, freeH: img.naturalHeight - box.height };
     frame.setPointerCapture(e.pointerId);
@@ -192,8 +161,8 @@
   // the seats in the preview: yours (to act, the clock running) and how others see you
   let banner = $derived(
     !img ? live
-    : s.layout === "plate" ? (masterUrl && crop ? { l: "plate", preview: masterUrl, size: crop.size, pos: crop.pos, wash: s.wash, ink: inks.ink, sub: inks.sub, money: inks.money } : live)
-    : previewUrl ? { l: "tab", preview: previewUrl, ink: inks.ink } : live
+    : masterUrl && crop ? { l: "plate", preview: masterUrl, size: crop.size, pos: crop.pos, wash: s.wash, ink: inks.ink, sub: inks.sub, money: inks.money }
+    : live
   );
   let deadline = $state(Date.now() + 25_000);
   $effect(() => { const id = setInterval(() => { deadline = Date.now() + 25_000; }, 25_000); return () => clearInterval(id); });
@@ -226,18 +195,10 @@
       {/if}
 
       {#if img}
-        <div class="row">
-          <span class="lbl">Layout</span>
-          <div class="seg" role="radiogroup" aria-label="Layout">
-            <button type="button" role="radio" aria-checked={s.layout === "plate"} class="seg-btn" class:on={s.layout === "plate"} onclick={() => (s.layout = "plate")}>Whole plate</button>
-            <button type="button" role="radio" aria-checked={s.layout === "tab"} class="seg-btn" class:on={s.layout === "tab"} onclick={() => (s.layout = "tab")}>End tab</button>
-          </div>
-        </div>
-
         <div class="row col">
           <span class="lbl">Crop <span class="muted small">— drag to move, scroll or slide to zoom</span></span>
           <!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions -->
-          <div class="frame" class:tab={s.layout === "tab"} style:background={frameBg || null} bind:this={frame} tabindex="0" role="application" aria-label="Crop: arrow keys move the picture"
+          <div class="frame" style:background={frameBg || null} bind:this={frame} tabindex="0" role="application" aria-label="Crop: arrow keys move the picture"
             onpointerdown={down} onpointermove={move} onpointerup={up} onpointercancel={up} onwheel={wheel} onkeydown={key}>
           </div>
           <div class="zoom">
@@ -251,12 +212,10 @@
           <span class="lbl">Text colour</span>
           <div class="inks" role="radiogroup" aria-label="Text colour">
             {#each INKS as i (i.key)}
-              {@const ok = inkReads(i.key)}
-              <button type="button" role="radio" aria-checked={s.ink === i.key} class="ink" class:on={s.ink === i.key} class:no={!ok}
-                style="--c:{i.hex}" title={ok ? i.name : `${i.name} — doesn't read on your plate's metal`} aria-label={i.name} onclick={() => (s.ink = i.key)}></button>
+              <button type="button" role="radio" aria-checked={s.ink === i.key} class="ink" class:on={s.ink === i.key}
+                style="--c:{i.hex}" title={i.name} aria-label={i.name} onclick={() => (s.ink = i.key)}></button>
             {/each}
           </div>
-          {#if s.layout === "tab" && !inkReads(s.ink)}<span class="muted small">That colour doesn't read on your plate's metal, so the metal's own colour shows.</span>{/if}
         </div>
 
         <div class="row col">
@@ -316,17 +275,11 @@
   .row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
   .row.col { flex-direction: column; align-items: stretch; gap: 7px; }
   .lbl { font-weight: 700; font-size: 13px; }
-  .seg { display: inline-flex; background: var(--well); border-radius: var(--r-pill); padding: 3px; gap: 2px; }
-  .seg-btn { border: 0; background: transparent; color: var(--muted); font: inherit; font-weight: 600; font-size: 13px; padding: 7px 14px; border-radius: var(--r-pill); cursor: pointer;
-    transition: color var(--dur) var(--ease), background-color var(--dur) var(--ease); }
-  .seg-btn:hover { color: var(--text); }
-  .seg-btn.on { color: var(--text); background: var(--surface-2); box-shadow: var(--shadow-card); }
 
   .frame { position: relative; width: 100%; max-width: 492px; aspect-ratio: 492 / 138; border-radius: 12px; overflow: hidden; background: var(--well);
     cursor: grab; touch-action: none; user-select: none; outline: none; }
   .frame:focus-visible { box-shadow: 0 0 0 2px var(--accent); }
   .frame:active { cursor: grabbing; }
-  .frame.tab { width: auto; height: 210px; aspect-ratio: 96 / 140; align-self: flex-start; }
   .zoom { display: flex; align-items: center; gap: 10px; }
   .zoom input { flex: 1; accent-color: var(--accent); }
   .val { font-variant-numeric: tabular-nums; font-weight: 700; font-size: 13px; min-width: 3.2em; text-align: right; }
@@ -336,7 +289,6 @@
   .ink { width: 30px; height: 30px; border-radius: 50%; border: 0; cursor: pointer; background: var(--c); box-shadow: 0 0 0 1px rgba(128,128,128,0.35);
     transition: box-shadow var(--dur) var(--ease); }
   .ink.on { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--accent); }
-  .ink.no { opacity: 0.35; }
 
   .acts { display: flex; gap: 10px; flex-wrap: wrap; }
   .err { color: var(--danger); margin: 0; font-weight: 600; }
