@@ -114,7 +114,8 @@ export async function renderBanner(master, settingsIn) {
   return { src, layout: s.layout, ...inks, wash, settings: s };
 }
 
-/** Save `userId`'s banner from one of their masters; it is live at once. → the wire banner | { error } */
+/** Save `userId`'s banner from one of their masters, and WEAR it (the custom badge) — it is on their
+ *  seats at once (owner: "save also wears it"). → { banner, wash, settings } | { error } */
 export async function saveBanner(userId, fileId, settingsIn) {
   if (await isBanned(userId)) return { error: "You can't upload banners." };
   if (!(await ownsFile(userId, fileId))) return { error: "Upload a picture first." };
@@ -130,12 +131,20 @@ export async function saveBanner(userId, fileId, settingsIn) {
        wash = VALUES(wash), status = 'live', updated_at = VALUES(updated_at)`,
     [userId, fileId, JSON.stringify({ ...r.settings, wash: r.settings.wash }), r.src, r.layout, r.ink, r.sub, r.money, r.wash, Date.now()]
   );
+  await execute("UPDATE user SET badge = 'custom' WHERE id = ?", [userId]);
   return { banner: wire({ src: r.src, layout: r.layout, ink: r.ink, sub: r.sub, money: r.money }), wash: r.wash, settings: r.settings };
 }
 
-/** The player takes their banner off (the master stays, so they can put it back). */
+/** The player deletes their banner (the master stays, so they can make it again); a worn one gives
+ *  way to the default badge. */
 export async function clearBanner(userId) {
   await execute("UPDATE banner SET status = 'none', updated_at = ? WHERE user_id = ? AND status = 'live'", [Date.now(), userId]);
+  await execute("UPDATE user SET badge = 'default' WHERE id = ? AND badge = 'custom'", [userId]);
+}
+
+/** Has `userId` a saved banner (worn or not)? */
+export async function hasSavedBanner(userId) {
+  return !!(await queryOne("SELECT 1 AS ok FROM banner WHERE user_id = ? AND status = 'live' AND layout = 'plate' AND src IS NOT NULL", [userId]));
 }
 
 /** An admin takes a banner down (and, with `ban`, bars the player from uploading). */
@@ -146,6 +155,7 @@ export async function adminRemove(userId, { ban = false } = {}) {
      ON DUPLICATE KEY UPDATE status = IF(status = 'live', 'removed', status), banned = GREATEST(banned, VALUES(banned)), updated_at = VALUES(updated_at)`,
     [userId, ban ? 1 : 0, now]
   );
+  await execute("UPDATE user SET badge = 'default' WHERE id = ? AND badge = 'custom'", [userId]);
 }
 export async function setBanned(userId, on) {
   await execute(
@@ -157,12 +167,14 @@ export async function setBanned(userId, on) {
 // the compact form every seat carries
 const wire = (r) => ({ l: "plate", src: r.src, ink: r.ink || null, sub: r.sub || null, money: r.money || null });
 
-/** Live banners for many players at once: id → { l, src, ink, sub, money }. */
+/** The banners players WEAR (a saved banner + the custom badge) — the only ones anyone else sees:
+ *  id → { l, src, ink, sub, money }. */
 export async function bannersFor(userIds) {
   const ids = [...new Set((userIds || []).filter(Boolean))];
   if (!ids.length) return new Map();
   const rows = await query(
-    `SELECT user_id, src, layout, ink, sub, money FROM banner WHERE status = 'live' AND layout = 'plate' AND src IS NOT NULL AND user_id IN (${ids.map(() => "?").join(",")})`,
+    `SELECT b.user_id, b.src, b.layout, b.ink, b.sub, b.money FROM banner b JOIN user u ON u.id = b.user_id AND u.badge = 'custom'
+      WHERE b.status = 'live' AND b.layout = 'plate' AND b.src IS NOT NULL AND b.user_id IN (${ids.map(() => "?").join(",")})`,
     ids
   );
   return new Map(rows.map((r) => [r.user_id, wire(r)]));
@@ -188,7 +200,7 @@ export async function bannerState(userId) {
 export async function recentBanners(limit = 120) {
   return query(
     `SELECT b.user_id, b.src, b.layout, b.status, b.banned, b.updated_at, b.file_id,
-            u.display_name AS name, u.email
+            u.display_name AS name, u.email, (u.badge = 'custom') AS worn
        FROM banner b JOIN user u ON u.id = b.user_id
       WHERE b.src IS NOT NULL
       ORDER BY b.updated_at DESC LIMIT ?`,

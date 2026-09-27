@@ -5,7 +5,7 @@
 
   let { data, form } = $props();
   const when = (ms) => new Date(Number(ms)).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
-  const STATUS = { live: "Live", none: "Taken off by the player", removed: "Removed by an admin" };
+  const STATUS = { live: "Saved", none: "Deleted by the player", removed: "Removed by an admin" };
 </script>
 
 <svelte:head><title>Banner review — {SITE_NAME}</title></svelte:head>
@@ -27,7 +27,7 @@
           <img class="pic" src={bannerUrl(b.src)} alt="Banner by {b.name || b.email}" loading="lazy" />
           <div class="meta">
             <a class="who" href="/u/{b.user_id}">{b.name || b.email}</a>
-            <span class="muted small">{STATUS[b.status] || b.status}{#if b.layout === "tab"} · old end-tab banner, not shown{/if} · {when(b.updated_at)}{#if Number(b.banned)} · <b class="bad">barred from uploading</b>{/if}</span>
+            <span class="muted small">{STATUS[b.status] || b.status}{#if b.status === "live"}{Number(b.worn) ? " · wearing it" : " · not wearing it"}{/if}{#if b.layout === "tab"}{" · old end-tab banner, not shown"}{/if} · {when(b.updated_at)}{#if Number(b.banned)} · <b class="bad">barred from uploading</b>{/if}</span>
             {#if b.file_id}<a class="small" href="/banner/master/{b.file_id}" target="_blank" rel="noopener">Full picture</a>{/if}
           </div>
           <div class="acts">
