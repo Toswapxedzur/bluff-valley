@@ -3,8 +3,8 @@
 // live preview, and every plate that draws one). Pure — no DOM, no Node.
 //
 // A banner is one uploaded master image plus settings:
-//   layout  "plate" — the picture fills the whole plate, behind the name and stack
-//           "tab"   — the picture fills a fixed tab at the plate's right end; the plate keeps its metal
+//   layout  always "plate": the picture fills the whole plate, behind the name and stack (the owner
+//           deleted the end-tab layout, 2026-09-27; an old "tab" row is simply not shown)
 //   x, y    where the crop sits inside the picture (0…1 along the free room), z the zoom (1 = the
 //           largest crop of the plate's shape that fits)
 //   ink     the text colour (one of INKS)
@@ -14,14 +14,11 @@
 // The server bakes crop + wash into one small WebP; a plate draws that image. The editor's preview
 // draws the master itself with CSS (cropCss) so dragging costs nothing.
 
-// the plate's shape (my own plate: 164 × 46, the others 136 × 38 — the same 3.6 : 1) and the tab's
-// (26 × 38 at an opponent's plate; its width follows the plate's height)
+// the plate's shape (my own plate: 164 × 46, the others 136 × 38 — the same 3.6 : 1)
 export const PLATE_ASPECT = 164 / 46;
-export const TAB_ASPECT = 26 / 38;
 // rendered at 3× my plate, so it stays sharp on a phone's dense screen
 export const PLATE_PX = [492, 138];
-export const TAB_PX = [96, 140];
-export const LAYOUTS = ["plate", "tab"];
+export const LAYOUTS = ["plate"];
 export const MAX_WASH = 0.85;
 export const MAX_ZOOM = 4;
 
@@ -112,12 +109,6 @@ export function inksFor(pixels, inkHexStr, wash) {
   const sub = mixHex(inkHexStr, rgbHex(...avg), 0.22);
   const money = readable(readability(pixels, GOLD, wash)) && washRgb(GOLD)[0] === W[0] ? GOLD : inkHexStr;
   return { ink: inkHexStr, sub, money };
-}
-
-/** Does `inkHexStr` read on a metal plate's three steps? (the tab layout keeps the metal behind the text) */
-export function inkOnSteps(inkHexStr, stepHexes) {
-  const l = lumHex(inkHexStr);
-  return stepHexes.every((s) => contrast(l, lumHex(s)) >= MIN_P10) && stepHexes.some((s) => contrast(l, lumHex(s)) >= MIN_MEDIAN);
 }
 
 /** The crop as CSS for the whole picture drawn as a background of a box of the crop's shape:
