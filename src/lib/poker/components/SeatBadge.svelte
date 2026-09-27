@@ -33,6 +33,7 @@
     canSit = false, onSit = () => {}, seatNo = 0,
     selectable = null, onSelect = () => {}, labelOf = null,
     house = false, size = "sm", children = null,
+    lost = false,           // this hand is out (a bust, a fold): the shared fold dim + one shake
     handSpace = 0,          // px to keep for this seat's hand from the start (a card game: the card height)
     cardWidth = 82          // the table's card size (my hand + centre); shrinks on crowded tables
   } = $props();
@@ -169,7 +170,7 @@
     <!-- everything under the plate HANGS: it never counts toward the seat's size -->
     <div class="below">
       {#if children}<div class="extra">{@render children()}</div>{/if}
-      <div class="hand" class:dealt-away={hideCards} class:has={hasCards}>
+      <div class="hand" class:dealt-away={hideCards} class:has={hasCards} class:lost data-cards={house ? "house" : `s${seatNo}`}>
         <HandFan {cards} count={cardCount} width={cardW} fan={isMine ? "auto" : (cardCount > 3 || (cards?.length ?? 0) > 3 ? "stack" : "auto")} {selectable} {onSelect} {labelOf} {reveal} />
       </div>
     </div>
@@ -256,6 +257,8 @@
   .seat.folded .plate, .seat.folded .hand { opacity: 0.42; filter: grayscale(0.4); }
   .seat.sitting-out .plate { opacity: 0.7; }
   .seat.gone .plate { opacity: 0; }
+  .hand.lost { opacity: 0.42; filter: grayscale(0.4); animation: lostshake 0.26s ease-out 1; }
+  @keyframes lostshake { 25% { transform: translate(4px, -2px); } 50% { transform: translate(-4px, 1px); } 75% { transform: translate(2px, 0); } }
   .seat.leaving .below { visibility: hidden; }
   /* the your-turn glow: a bright arc once round the ring band (masked to the band) */
   .turnglow {

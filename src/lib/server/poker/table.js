@@ -698,7 +698,8 @@ export class LiveTable {
     const revealed = (hand.result?.hands || []).map((h) => ({
       seat: h.seat,
       holeCards: [...h.holeCards],
-      handName: h.name
+      handName: h.name,
+      best: h.best ? [...h.best] : null
     }));
     // Run-it-twice: expose every run's board so the client can show both.
     const boards = hand.result?.runItTwice ? (hand.result.runs || []).map((r) => [...r.board]) : null;

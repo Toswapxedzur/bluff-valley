@@ -28,6 +28,7 @@
   import DeckLayer from "$lib/poker/components/DeckLayer.svelte";
   import MoneyLayer from "$lib/poker/components/MoneyLayer.svelte";
   import ButtonGlide from "$lib/poker/components/ButtonGlide.svelte";
+  import CardLayer from "$lib/poker/components/CardLayer.svelte";
 
   let { data } = $props();
   // Reactive: a River Sprint fold-teleport navigates /table/A -> /table/B on the
@@ -151,7 +152,7 @@
   function toggleSfx() { sfxOn = !sfxOn; setSoundEnabled(sfxOn); }
   tableSounds({
     get view() { return view; }, get me() { return me; },
-    get dealer() { return motion.dealer; }, get bank() { return motion.bank; },
+    get dealer() { return motion.dealer; }, get bank() { return motion.bank; }, get cards() { return motion.cards; },
     get deadline() { return turn?.deadline ?? null; }
   });
   const motion = tableMotion({
@@ -211,6 +212,7 @@
 <div class="tablepage">
   {#if bank}<MoneyLayer {bank} />{/if}
   {#if view && layout === "poker"}<ButtonGlide {view} />{/if}
+  {#if motion.cards}<CardLayer motion={motion.cards} />{/if}
   {#if dealer}<DeckLayer {dealer} />{/if}
   <!-- slim overlay strip: no site bar on a table -->
   <div class="hud">
