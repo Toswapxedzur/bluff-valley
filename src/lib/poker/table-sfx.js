@@ -33,10 +33,10 @@ export function tableSoundCues(prev, next, myUserId) {
   for (const s of nSeats) if (s.userId && !pById.has(s.userId)) cues.push({ name: "join" });
   for (const s of pSeats) if (s.userId && !nById.has(s.userId)) cues.push({ name: "leave" });
 
-  // New hand: shuffle, then a card slide per dealt player.
+  // New hand: a card slide per dealt player. No shuffle: the deck is shuffled only when it has run
+  // out completely and a card must be dealt — the Hold'em dealer plays that, sound and all (owner).
   if (next.handNo != null && prev.handNo != null && next.handNo > prev.handNo) {
     const dealt = nSeats.filter((s) => s.hasCards || s.inHand).length || 2;
-    cues.push({ name: "shuffle" });
     cues.push({ name: "deal", count: Math.min(dealt * 2, 12), gap: 85, delay: 500 });
     return cues; // the rest of the diff is noise across a hand boundary
   }
@@ -182,11 +182,11 @@ function gameCues(prev, next, myUserId) {
 // Where a cue plays. Cards and coins that move on screen sound on their own landing (the dealer's and
 // the coin engine's cues, table-audio.js), so their view-diff cue is dropped. On a table where they
 // don't move, the same moment plays the same table sound now. Everything else is a plain $lib/sfx cue.
-const DEALT = new Set(["shuffle", "deal", "board", "fold"]);            // the dealer's motion plays these
+const DEALT = new Set(["deal", "board", "fold"]);                       // the dealer's motion plays these
 const CARD_MOVES = new Set(["deal", "board", "fold", "cardPlay"]);       // the card layer's (no shuffle there)
 const COINED = new Set(["bet", "raise", "allin", "pot", "winChips"]);   // the coins' motion plays these
 const AS_TABLE = {
-  deal: ["cardLand"], board: ["flip"], fold: ["pileTap"], shuffle: ["riffle", { dur: 1200 }], cardPlay: ["cardPlay"],
+  deal: ["cardLand"], board: ["flip"], fold: ["pileTap"], cardPlay: ["cardPlay"],
   bet: ["coins", { count: 3 }], raise: ["coins", { count: 5 }], allin: ["allIn"], pot: ["pot"], winChips: ["coins", { count: 5 }],
   ballRoll: ["ballRoll"], ballSettle: ["ballSettle"], reelSpin: ["reelSpin"]
 };
