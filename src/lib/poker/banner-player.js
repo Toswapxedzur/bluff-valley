@@ -14,6 +14,8 @@ import { cueAt, coinTicks } from "./table-audio.js";
 
 const W = 1120;
 const EASE = "cubic-bezier(.22,.61,.36,1)", SNAP = "cubic-bezier(.3,1.45,.5,1)", INOUT = "cubic-bezier(.65,0,.35,1)";
+// player names are theirs to choose: never let one become markup
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 const h = (tag, cls = "", html = "") => { const e = document.createElement(tag); if (cls) e.className = cls; if (html) e.innerHTML = html; return e; };
 const metal = (k) => METALS.find((m) => m.key === k);
 const ramp = (m) => [mix(m.base, m.hi, 0.45), m.base, mix(m.base, m.lo, 0.3)];
@@ -75,14 +77,15 @@ export function playBanner(host, moment, ctx = {}) {
 
   // ---- pieces
   const appear = (el, delay, from = "translateY(12px)") => A(el, [{ opacity: 0, transform: from }, { opacity: 1, transform: "none" }], { duration: 340, delay });
-  const title = (t) => h("div", "b-title", t), caption = (t) => h("div", "b-caption", t);
+  const text = (cls, t) => { const e = h("div", cls); e.textContent = t; return e; };
+  const title = (t) => text("b-title", t), caption = (t) => text("b-caption", t);
   function plate(p, { av = 64, w = 300, hgt = 76, look = null } = {}) {
     // a metal being shown off (`look`) shows bare; otherwise the player's banner lies over their metal
     const st = plateStyle(look ?? p.badge ?? "default", look ? null : p.banner ?? null), ring = look ?? p.ring ?? "default", e = h("div", "b-plate");
     Object.assign(e.style, { width: w + "px", height: hgt + "px", background: st.bg, color: st.ink });
     if (st.tab) e.style.paddingRight = Math.round(hgt * TAB_ASPECT + 10) + "px";   // the banner's tab keeps its room
     const over = (ringBox(av) - av) / 2;
-    e.innerHTML = `<span class="av" style="width:${av}px;height:${av}px;margin-right:${Math.round(over + av * 0.2)}px"><span class="ring">${ringSvg(av, ring)}</span><span class="face" style="background:${avColor(p.name)};font-size:${Math.round(av * 0.36)}px">${initials(p.name)}</span></span><span class="txt"><b class="name" style="font-size:${Math.round(hgt * 0.3)}px">${p.name}</b></span>`;
+    e.innerHTML = `<span class="av" style="width:${av}px;height:${av}px;margin-right:${Math.round(over + av * 0.2)}px"><span class="ring">${ringSvg(av, ring)}</span><span class="face" style="background:${avColor(p.name)};font-size:${Math.round(av * 0.36)}px">${esc(initials(p.name))}</span></span><span class="txt"><b class="name" style="font-size:${Math.round(hgt * 0.3)}px">${esc(p.name)}</b></span>`;
     return e;
   }
   const setRing = (pl, look, remain) => { const av = pl.querySelector(".av"); av.querySelector(".ring").innerHTML = ringSvg(parseFloat(av.style.width), look, remain); };
