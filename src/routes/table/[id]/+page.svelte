@@ -27,6 +27,7 @@
   import { tableMotion } from "$lib/poker/table-motion.svelte.js";
   import DeckLayer from "$lib/poker/components/DeckLayer.svelte";
   import MoneyLayer from "$lib/poker/components/MoneyLayer.svelte";
+  import ButtonGlide from "$lib/poker/components/ButtonGlide.svelte";
 
   let { data } = $props();
   // Reactive: a River Sprint fold-teleport navigates /table/A -> /table/B on the
@@ -209,6 +210,7 @@
 
 <div class="tablepage">
   {#if bank}<MoneyLayer {bank} />{/if}
+  {#if view && layout === "poker"}<ButtonGlide {view} />{/if}
   {#if dealer}<DeckLayer {dealer} />{/if}
   <!-- slim overlay strip: no site bar on a table -->
   <div class="hud">

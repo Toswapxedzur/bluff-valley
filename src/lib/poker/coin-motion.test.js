@@ -4,6 +4,7 @@ import { Money, COIN, breakdown, DENOMS, radix } from "./coin-motion.js";
 
 const total = (m) => [...m.stack.values()].reduce((a, b) => a + b, 0)
   + [...m.piles.keys()].reduce((a, k) => a + m.amountOf(k), 0)
+  + [...m.held].reduce((a, [key, n]) => a + +key.split("|")[1] * n, 0)          // coins waiting their turn to leave
   + m.flights.filter((f) => !f.landed).reduce((a, f) => a + f.amount, 0);
 // every landed column below its radix = the pile reads as one proper number
 const canonical = (m, pile) => m.columnsOf(pile).every(([d, n]) => n < radix(d));
@@ -97,7 +98,10 @@ test("borrow: dividing a pile breaks a bigger coin where a digit is short, then 
   const home = seen.filter((f) => f.to.kind === "stack");
   // share 1 = 100+ 5×4 + 1: a 25 breaks into five 5s; share 2 = the same from what's left
   assert.ok(breaks.length >= 1, JSON.stringify(breaks));
-  assert.deepEqual(home.filter((f) => f.to.seat === 0).map((f) => [f.denom, f.count]), [[100, 1], [5, 4], [1, 1]]);
+  const got = new Map();
+  for (const f of home.filter((f) => f.to.seat === 0)) got.set(f.denom, (got.get(f.denom) || 0) + f.count);
+  assert.deepEqual([...got].sort((a, b) => b[0] - a[0]), [[100, 1], [5, 4], [1, 1]]);
+  assert.ok(home.every((f) => f.count === 1), "the share leaves coin by coin");
   assert.equal(m.stack.get(0), 121);
   assert.equal(m.stack.get(3), 121);
   assert.equal(m.amountOf("pot"), 0);
@@ -153,4 +157,45 @@ test("sound cues are announced as the coins leave, for the frame they land", () 
   assert.ok(lands.some((l) => l.f.to.pile === "pot" && l.t === pot.t), "the pot sound on the sweep's landing");
   const sink = m.cues.find((c) => c.name === "sink");
   assert.ok(sink.count > 0, "winnings carry their coin count (for the one / few / pile sound)");
+});
+
+test("a pile leaves coin by coin from the top down, each coin staying on the pile until its turn", () => {
+  const m = new Money({ 0: 0 });
+  m._add("pot", 100, 3, 0); m._add("pot", 25, 2, 0); m._add("pot", 5, 4, 0);   // columns 100·3 (front), 25·2 (back, raised), 5·4 (front)
+  run(m, 0, 200, 1);
+  m.award([{ seat: 0, amount: 370 }], 300);
+  const left = [];
+  let sawHeld = false;
+  run(m, 300, 6000, 1, (t) => {
+    for (const f of m.flights) if (f.to.kind === "stack" && !left.includes(f)) left.push(f);
+    if (m.heldOf("pot") > 0 && m.pileAt("pot") === m.amountOf("pot") + m.heldOf("pot")) sawHeld = true;
+  });
+  assert.ok(sawHeld, "the pot's number still counts the coins waiting to leave");
+  // heights: 25s raised by 0.6 → 25@1 (0.74), 100@2 / 5@3 … ; the highest coin leaves first
+  const h = (f) => (f.denom === 25 ? 0.6 : 0) + f.level * 0.14;
+  for (let i = 1; i < left.length; i++) assert.ok(h(left[i]) <= h(left[i - 1]) + 0.14, `coin ${i} (${left[i].denom}@${left[i].level}) is not above coin ${i - 1}`);
+  assert.equal(left[0].denom, 25, "the raised back column's top coin is the highest");
+  assert.ok(left.every((f, i) => i === 0 || f.t0 > left[i - 1].t0), "one at a time");
+  assert.equal(m.stack.get(0), 370);
+  assert.equal(m.pileAt("pot"), 0);
+});
+
+test("the all-in: the pile rises with its first column, holds, drops as one, and nothing sweeps it mid-air", () => {
+  const m = new Money({ 1: 60, 2: 500 });
+  m.bet(1, 60, 0);                                   // all-in: 25·2 + 5·2
+  m.sweep(10);
+  m.tick(1);
+  const h = m.hover.get("bet:1");
+  assert.ok(h, "the all-in pile holds high");
+  assert.equal(m.hoverAt("bet:1", 0), 0);
+  assert.equal(m.hoverAt("bet:1", COIN.flight + 1), 1, "risen by the time the first column lands");
+  assert.equal(m.hoverAt("bet:1", h.drop - 1), 1, "holding");
+  assert.ok(m.hoverAt("bet:1", h.drop + COIN.drop / 2) < 1, "falling");
+  assert.equal(m.hoverAt("bet:1", h.drop + COIN.drop), 0, "landed");
+  const land = h.drop + COIN.drop;
+  assert.deepEqual(m.drops.map((d) => [d.seat, d.t]), [[1, land]]);
+  assert.equal(m.cues.find((c) => c.name === "allIn").t, land, "the all-in sound is the landing");
+  let sweptAt = null;
+  run(m, 2, 5000, 1, (t) => { if (sweptAt == null && m.flights.some((f) => f.to.pile === "pot")) sweptAt = t; });
+  assert.ok(sweptAt >= land + COIN.squash, `swept at ${sweptAt}, the pile landed at ${land}`);
 });

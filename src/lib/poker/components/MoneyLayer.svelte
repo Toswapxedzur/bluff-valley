@@ -62,6 +62,8 @@
     denoms.forEach((d, i) => out.set(d, { x: x0 + s * i * pitch, y: base - (i % 2 ? raise : 0), back: i % 2 === 1 }));
     return out;
   }
+  /** How far an all-in pile is lifted right now (px). */
+  const liftOf = (m, pile, t) => (pile && pile.startsWith("bet:") ? m.hoverAt(pile, t) * G.size * COIN.hover : 0);
   function pointOf(m, at) {
     if (at.kind === "stack") {
       const b = G.plate(at.seat);
@@ -107,8 +109,11 @@
     const size = G.size;
     // resting columns
     const live = new Set();
-    for (const pile of m.piles.keys()) {
-      const cols = new Map(m.columnsOf(pile)), lay = layoutOf(pile, m.slotsOf(pile));
+    for (const pile of m.shownPiles()) {
+      const cols = new Map(m.shownColumnsOf(pile)), lay = layoutOf(pile, m.slotsOf(pile)), lift = liftOf(m, pile, t);
+      const drop = m.drops.find((dr) => dr.pile === pile && t >= dr.t && t < dr.t + COIN.squash);
+      const u = drop ? (t - drop.t) / COIN.squash : 1;
+      const squash = drop ? (u < 0.55 ? 0.8 + (1.04 - 0.8) * (u / 0.55) : 1.04 - 0.04 * ((u - 0.55) / 0.45)) : 1;
       for (const [d, pos] of lay) {
         const n = cols.get(d) || 0;
         if (!n) continue;
@@ -119,7 +124,7 @@
         c.x += (pos.x - c.x) * k; c.y += (pos.y - c.y) * k;
         const key = `${d}x${n}@${size}`;
         if (c.key !== key) { c.key = key; c.el.innerHTML = columnHTML(d, n, size); }
-        place(c.el, `translate(${c.x.toFixed(1)}px, ${c.y.toFixed(1)}px) translate(-50%, -100%)`);
+        place(c.el, `translate(${c.x.toFixed(1)}px, ${(c.y - lift).toFixed(1)}px) translate(-50%, -100%)${squash !== 1 ? ` scale(${(2 - squash).toFixed(3)}, ${squash.toFixed(3)})` : ""}`);
         c.el.style.zIndex = pos.back ? "1" : "2";
       }
     }
@@ -128,7 +133,10 @@
     const liveF = new Set();
     for (const f of m.flights) {
       liveF.add(f.id);
-      const st = m.flightAt(f, t), a = pointOf(m, f.from), b = pointOf(m, f.to);
+      const st = m.flightAt(f, t), a = { ...pointOf(m, f.from) }, b = { ...pointOf(m, f.to) };
+      if (f.level) a.y -= f.level * Math.max(2, Math.round(size * 0.14));              // a coin leaving from inside its column
+      if (f.from.kind === "slot") a.y -= liftOf(m, f.from.pile, t);
+      if (f.to.kind === "slot") b.y -= liftOf(m, f.to.pile, f.t0 + f.dur);
       let denom = f.denom, count = f.count;
       if (f.kind === "merge") { count = Math.max(1, Math.round(f.count - (f.count - 1) * st.s)); if (st.s > 0.5) denom = f.toDenom; }
       if (f.kind === "break") { count = Math.max(1, Math.round(1 + (f.toCount - 1) * st.s)); if (st.s > 0.5) denom = f.toDenom; }
@@ -146,7 +154,7 @@
     for (const [id, r] of [...flightEls]) if (!liveF.has(id)) { r.el.remove(); flightEls.delete(id); }
     // the amounts beside the piles; swept ones ride into the pot's number
     const liveL = new Set();
-    for (const pile of m.piles.keys()) {
+    for (const pile of m.shownPiles()) {
       if (!pile.startsWith("bet:")) continue;
       const amount = m.pileAt(pile);
       const seat = pile.slice(4) === "house" ? "house" : +pile.slice(4), p = amount ? labelOf(seat, m.slotsOf(pile)) : null;
@@ -156,7 +164,7 @@
       if (!e) { e = node("amt"); labelEls.set(pile, e); }
       const txt = amount.toLocaleString();
       if (e.textContent !== txt) e.textContent = txt;
-      place(e, `translate(${p.x.toFixed(1)}px, ${p.y.toFixed(1)}px) translate(${p.ax}%, -50%)`);
+      place(e, `translate(${p.x.toFixed(1)}px, ${(p.y - liftOf(m, pile, t)).toFixed(1)}px) translate(${p.ax}%, -50%)`);
     }
     const pn = potNumber();
     m.sweeps.forEach((s, i) => {
@@ -175,6 +183,45 @@
       place(e, `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) translate(${(a.ax + (-50 - a.ax) * st.s).toFixed(1)}%, -50%) scale(${(1 - 0.2 * fade).toFixed(3)})`, String(1 - fade));
     });
     for (const [key, e] of [...labelEls]) if (!liveL.has(key)) { e.remove(); labelEls.delete(key); }
+    burst(m, t);
+  }
+
+  // ---- the all-in landing: a jolt through the table, a shock ring, rhombus sparks (owner, 2026-09-27)
+  const burstEls = new Map();
+  const SPARK_TONES = ["#ffe485", "#f5b60d", "#fbf8ef", "#ff9aa1", "#e1d3ad"];
+  const SPARKS = 16;
+  function burst(m, t) {
+    const live = new Set();
+    for (const dr of m.drops) {
+      if (t < dr.t || t >= dr.t + COIN.burst) continue;
+      const id = `${dr.pile}@${dr.t}`, seat = +dr.pile.slice(4);
+      live.add(id);
+      let b = burstEls.get(id);
+      if (!b) {
+        const ring = node("shock"), sparks = Array.from({ length: SPARKS }, (_, i) => { const e = node("spark"); e.style.background = SPARK_TONES[i % SPARK_TONES.length]; return e; });
+        b = { ring, sparks };
+        burstEls.set(id, b);
+        document.querySelector(".arena")?.animate(
+          [{ transform: "none" }, { transform: "translate(3px, -2px)" }, { transform: "translate(-3px, 1px)" }, { transform: "translate(2px, 0)" }, { transform: "none" }],
+          { duration: 220, easing: "ease-out" });
+      }
+      // centred under the pile it belongs to
+      const cols = m.slotsOf(dr.pile), lay = layoutOf(dr.pile, cols.length ? cols : [1]);
+      const xs = [...lay.values()].map((p) => p.x), base = Math.max(...[...lay.values()].map((p) => p.y));
+      const cx = (Math.min(...xs) + Math.max(...xs)) / 2, cy = base - G.size * 0.2;
+      const u = (t - dr.t) / COIN.burst;
+      const w = G.size * 4.4, h = G.size * 1.35, rs = 0.3 + 1.8 * (1 - (1 - Math.min(1, u / 0.75)) ** 2);
+      b.ring.style.width = w + "px"; b.ring.style.height = h + "px"; b.ring.style.borderWidth = Math.max(3, G.size / 3) + "px";
+      place(b.ring, `translate(${cx.toFixed(1)}px, ${cy.toFixed(1)}px) translate(-50%, -50%) scale(${rs.toFixed(3)})`, String(Math.max(0, 0.8 * (1 - u / 0.75)).toFixed(3)));
+      b.sparks.forEach((e, i) => {
+        const ang = Math.PI * (1.08 + (i / (SPARKS - 1)) * 0.84), sp = G.size * (8 + ((i * 53 + seat) % 5)), tt = u * 0.6;
+        const x = cx + Math.cos(ang) * sp * tt * 1.5, y = cy + Math.sin(ang) * sp * tt + G.size * 28 * tt * tt;
+        const sz = G.size * (0.28 + (i % 4) * 0.08);
+        e.style.width = e.style.height = sz.toFixed(1) + "px";
+        place(e, `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) translate(-50%, -50%) rotate(45deg) scale(${(1 - u * 0.6).toFixed(3)})`, String(u > 0.65 ? Math.max(0, 1 - (u - 0.65) / 0.35).toFixed(3) : 1));
+      });
+    }
+    for (const [id, b] of [...burstEls]) if (!live.has(id)) { b.ring.remove(); b.sparks.forEach((e) => e.remove()); burstEls.delete(id); }
   }
 
   onMount(() => {
@@ -195,6 +242,8 @@
   .money-layer :global(.cc) { position: absolute; left: 0; display: block; line-height: 0; }
   .money-layer :global(.coin) { display: inline-block; line-height: 0; filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.45)); }
   .money-layer :global(.coin svg) { display: block; }
+  .money-layer :global(.shock) { position: absolute; left: 0; top: 0; z-index: 6; box-sizing: border-box; border-radius: 50%; border: 6px solid rgba(255, 228, 133, 0.6); will-change: transform, opacity; }
+  .money-layer :global(.spark) { position: absolute; left: 0; top: 0; z-index: 6; border-radius: 2px; will-change: transform, opacity; }
   .money-layer :global(.amt) {
     position: absolute; left: 0; top: 0; z-index: 4; white-space: nowrap; line-height: 1; will-change: transform, opacity;
     font-size: 12px; font-weight: 800; color: var(--gold-ink); font-variant-numeric: tabular-nums;
