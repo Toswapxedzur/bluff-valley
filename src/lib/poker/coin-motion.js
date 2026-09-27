@@ -371,8 +371,9 @@ export class Money {
     }
     coins.sort((a, b) => (Math.abs(a.h - b.h) < 0.14 ? a.back - b.back : b.h - a.h));
     const gap = Math.min(COIN.leaveEvery, COIN.leaveSpan / coins.length);
-    this.cues.push({ t: t + dur + COIN.sink, name: "sink", count: coins.length, at: { kind: "stack", seat } });
     coins.forEach((c, j) => this._at(t + j * gap, (now) => {
+      // each coin ticks as it sinks in (past the 8th only every second one: a big pile never rattles)
+      if (j < 8 || j % 2 === 0) this.cues.push({ t: now + dur + COIN.sink, name: "sink", count: 1, at: { kind: "stack", seat } });
       this._hold(pile, c.d, -1);
       this._fly({ kind: "column", denom: c.d, count: 1, level: c.level, amount: c.d, from: { kind: "slot", pile, denom: c.d }, to: { kind: "stack", seat }, dur, sink: COIN.sink }, now, (tl) => {
         this._setStack(seat, (this.stack.get(seat) ?? 0) + c.d, tl);

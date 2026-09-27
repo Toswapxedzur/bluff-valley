@@ -174,3 +174,21 @@ export class TableSounds {
     this.pending = keep;
   }
 }
+
+// ------------------------------------------------------------------ the app-wide scheduler
+// Moments, banners and rewards cue their sounds on the same clock as the table (each hit lands on
+// its frame). One shared queue, pumped on animation frames only while something is waiting.
+const shared = new TableSounds();
+let sharedRaf = 0;
+function pump() { shared.frame(); sharedRaf = shared.pending.length ? requestAnimationFrame(pump) : 0; }
+/** Play table sound `name` so its hit lands at `t` (performance.now() clock). opts: gain, count, at. */
+export function cueAt(name, t, opts = {}) {
+  if (!browser || !TABLE_SOUNDS[name]) return;
+  shared.pending.push({ t, name, ...opts });
+  if (!sharedRaf) sharedRaf = requestAnimationFrame(pump);
+}
+/** Coins landing one by one from `t0`, `gap` apart: a single-coin tick each — past the 8th only every
+ *  second one, so a big pile never rattles (the norm for every coin stream: piles, rewards, moments). */
+export function coinTicks(t0, n, gap, gain = 0.8) {
+  for (let j = 0; j < n; j++) if (j < 8 || j % 2 === 0) cueAt("coins", t0 + j * gap, { count: 1, gain });
+}

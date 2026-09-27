@@ -11,6 +11,8 @@ import { coinSvg } from "./chips.js";
 import { ringSvg, ringBox, plateStyle } from "../cosmetics.js";
 import { initials, avColor } from "../initials.js";
 import { WHEEL, STEP, pocketFill, wheelSvg, dieSvg, symSvg, FILL } from "./resolve-art.js";
+import { cueAt, coinTicks } from "./table-audio.js";
+import { play } from "../sfx.js";
 
 export const W = 1120, H = 700;
 const NORM = { flip: 280, coinDur: 560, coinGap: 45, momentCoin: 40 };
@@ -21,8 +23,11 @@ const fmt = (n) => Math.round(n).toLocaleString("en-US");
 /** Play `moment` inside `root` (the scaled 1120 × 700 screen); the veil goes in `ctx.veilHost` (the
  *  whole page). ctx.seat(no) → { name, ring, badge, stack } | null. Returns a stop function. */
 export function playMoment(root, moment, ctx) {
-  const timers = [], anims = [];
+  const timers = [], anims = [], T0 = performance.now();
   let alive = true;
+  // sounds on the moment's own clock: table sounds land their hit on the frame (cueAt), the rest start then
+  const snd = (name, ms, opts = {}) => cueAt(name, T0 + ms, opts);
+  const sfx = (name, ms, opts = {}) => play(name, { ...opts, delay: ms });
   const at = (ms, fn) => timers.push(setTimeout(() => alive && fn(), ms));
   const A = (el, kf, o) => { const a = el.animate(kf, { fill: "both", easing: EASE, ...o }); anims.push(a); return a; };
   const tween = (start, dur, fn, ease = (t) => 1 - Math.pow(1 - t, 3)) => at(start, () => {
@@ -129,6 +134,7 @@ export function playMoment(root, moment, ctx) {
       at(delay + dur / 2, () => { el.innerHTML = renderBoard(face, +el.dataset.w); A(el, [{ transform: "scaleX(0.02)" }, { transform: "scaleX(1)" }], { duration: dur / 2, easing: "ease-out", fill: "none" }); });
     };
     sides.forEach((x, i) => x.els.forEach((e, j) => flip(e, x.cards[j], 1000 + (i * 2 + j) * 80)));
+    snd("flip", 1000);
     // the board as it stood when everyone was all-in, then each street
     const boardEls = [];
     for (let i = 0; i < moment.from; i++) { const e = h("div", "m-card", renderBoard(moment.board[i], CW)); e.dataset.w = CW; slots[i].append(e); boardEls[i] = e; }
@@ -143,6 +149,8 @@ export function playMoment(root, moment, ctx) {
     const deal = (i, delay, turnAt, dur = NORM.flip) => {
       const e = h("div", "m-card", renderBack(CW)); e.dataset.w = CW; slots[i].append(e); boardEls[i] = e;
       A(e, [{ opacity: 0, transform: "translateY(-70px) rotate(-6deg)" }, { opacity: 1, transform: "none" }], { duration: 300, delay });
+      snd("cardLand", delay + 300);
+      snd("flip", turnAt);
       flip(e, moment.board[i], turnAt, dur);
     };
     let t = 1900, k = 1;
@@ -183,6 +191,7 @@ export function playMoment(root, moment, ctx) {
     appear(pl, 520, "translateX(-40px)"); appear(mid, 700, "scale(.9)");
     pile.querySelectorAll(".m-coin-rest").forEach((c, k) => A(c, [{ opacity: 0, transform: "translateY(-30px)" }, { opacity: 1, transform: "none" }], { duration: 200, delay: 450 + k * 14 }));
     at(1150, () => pileTo(pile, centre(pl.querySelector(".av")), 0));
+    coinTicks(T0 + 1150 + NORM.coinDur, N, NORM.coinGap);
     counter(num, 0, moment.amount, 1150, N * NORM.coinGap + 200);
     counter(pl.querySelector(".stack"), Math.max(0, p.stack - moment.won), p.stack, 1150 + NORM.coinDur, Math.max(160, (N - 1) * NORM.coinGap));
     at(1150 + NORM.coinDur + N * NORM.coinGap, () => { markWinner(pl); A(pl, [{ transform: "scale(1)" }, { transform: "scale(1.05)" }, { transform: "scale(1)" }], { duration: 420, fill: "none" }); });
@@ -196,12 +205,13 @@ export function playMoment(root, moment, ctx) {
     content.append(pl, row, t, caption(`${p.name}${odds ? " · " + odds : ""}`));
     appear(pl, 460);
     els.forEach((e, i) => A(e, [{ opacity: 0, transform: "translateY(-36px) scale(1.35)" }, { opacity: 1, transform: "none" }], { duration: 280, delay: 620 + i * 150, easing: SNAP }));
+    els.forEach((e, i) => snd("cardPlay", 620 + i * 150 + 280, { gain: 1.2 }));
     const landed = 620 + (els.length - 1) * 150 + 280;
     at(landed, () => shake(stage, 0, moment.royal ? 7 : 4));
     sheen(row, landed + 150);
     appear(t, landed + 260, "translateY(16px)", 420);
     appear(content.lastChild, landed + 520);
-    if (moment.royal) at(landed + 300, () => rain(34, 0, 1700));
+    if (moment.royal) { at(landed + 300, () => rain(34, 0, 1700)); for (let i = 0; i < 8; i++) snd("coins", landed + 500 + i * 130, { count: 3, gain: 0.45 }); }
   } else if (moment.kind === "jackpot") {
     content.classList.add("m-row");
     const box = h("div", "m-spin"), right = h("div", "m-col m-left");
@@ -219,6 +229,7 @@ export function playMoment(root, moment, ctx) {
       A(arm, [{ transform: "rotate(40deg)" }, { transform: `rotate(${-360 * 4}deg)` }], { duration: 2600, delay: 500, easing: "cubic-bezier(.12,.6,.25,1)" });
       A(ball, [{ transform: "translate(-50%, -140px)", offset: 0 }, { transform: "translate(-50%, -140px)", offset: 0.7 }, { transform: "translate(-50%, -112px)", offset: 0.82 }, { transform: "translate(-50%, -124px)", offset: 0.9 }, { transform: "translate(-50%, -118px)", offset: 1 }], { duration: 2600, delay: 500, easing: "linear" });
       land = 3150; stamp(pocket, land, 420);
+      sfx("shake", 500); sfx("dice", 3100);          // as the table's roulette (until its own ball sounds are picked)
     } else if (moment.game === "sic-bo") {
       moment.outcome.dice.forEach((n, i) => {
         const d = h("div", "m-die", dieSvg(1 + i)); box.append(d);
@@ -229,6 +240,7 @@ export function playMoment(root, moment, ctx) {
         at(600 + i * 110 + 1500, () => { d.innerHTML = dieSvg(n); d.classList.add("hit"); });
       });
       land = 2350;
+      sfx("shake", 600); sfx("dice", 600 + 2 * 110 + 1500 - 80);
     } else {
       const CELL = 128;
       moment.outcome.reels.forEach((r, i) => {
@@ -239,6 +251,7 @@ export function playMoment(root, moment, ctx) {
         A(strip, [{ transform: "translateY(0)" }, { transform: `translateY(${-(syms.length - 1) * CELL}px)` }], { duration: 1500 + i * 450, delay: 650, easing: "cubic-bezier(.15,.55,.25,1.04)" });
       });
       land = 650 + 1500 + 2 * 450;
+      [0, 1, 2].forEach((i) => sfx("reel", 650 + 1500 + i * 450));
       at(land + 60, () => box.querySelectorAll(".m-reel").forEach((r) => r.classList.add("hit")));
     }
     stamp(mult, land + 120, 460);
@@ -265,6 +278,7 @@ export function playMoment(root, moment, ctx) {
     left.querySelectorAll(".m-title, .m-caption").forEach((e, k) => appear(e, 1350 + k * 200, "translateY(12px)"));
     cards.forEach((e, i) => A(e, [{ opacity: 0, transform: `translateY(260px) rotate(${(i - 2) * 9}deg)` }, { opacity: 1, transform: "none" }], { duration: 420, delay: 620 + i * 70 }));
     at(620 + (cards.length - 1) * 70 + 420, () => shake(stage, 0, 5));
+    cards.forEach((e, i) => snd("cardPlay", 620 + i * 70 + 420));
     rows.forEach((r, k) => appear(r, 560 + k * 90, "translateX(30px)"));
     let n = 0;
     at(2000, () => {
@@ -272,6 +286,7 @@ export function playMoment(root, moment, ctx) {
       rows.forEach((r) => { const from = centre(r.querySelector(".av")); for (let c = 0; c < 5; c++) arc([500, 100, 2500][n % 3], NORM.momentCoin, from, to, (n++) * NORM.coinGap); });
     });
     const coins = rows.length * 5;
+    coinTicks(T0 + 2000 + NORM.coinDur, coins, NORM.coinGap);
     counter(pl.querySelector(".stack"), Math.max(0, p.stack - moment.pot), p.stack, 2000 + NORM.coinDur, Math.max(160, (coins - 1) * NORM.coinGap));
     at(2000 + NORM.coinDur + coins * NORM.coinGap, () => markWinner(pl));
   }
