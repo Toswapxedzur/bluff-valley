@@ -15,6 +15,7 @@ import { detectMoment } from "./moments.js";
 import { buildRoutine } from "./deck-routine.js";
 import { COUNT, FULL_DECK } from "./deck3d.js";
 
+const ALL_CARDS = [..."23456789TJQKA"].flatMap((r) => [..."shdc"].map((u) => r + u));
 const now = () => (typeof performance !== "undefined" ? performance.now() : Date.now());
 
 export class Dealer {
@@ -32,8 +33,9 @@ export class Dealer {
   faces = new Map();                 // visual id → card string, when the card is public
   flights = [];                      // { id, from, to, t0, dur, faceUp, arc, onLand }
   held = [];                         // cards the canvas holds in place: { id, at, faceUp, until }
-  // the deck deals down across hands; only when it runs dry with a card still to deal is the used
-  // pile shuffled into a new deck, right there mid-deal (owner, 2026-09-27; the server's deckLeft)
+  // at the end of a hand every card, the rest of the deck too, goes to the used pile: the deck has run
+  // out. It is shuffled the instant the next deal needs a card — the start of the next hand, not the
+  // end of this one (owner, 2026-09-27; the server holds the first turn for it, deckLeft)
   routine = null;                    // { R, t0, face, onDone } while the shuffle routine plays
   // the showdown: the five cards that made the winning hand(s) lift, the rest dim (the shared norms)
   highlight = null;                  // { win: Set of visual ids, t0 } while the result is held
@@ -76,7 +78,7 @@ export class Dealer {
   onView(prev, next, privates) {
     const t = now();
     if (next.handNo != null && next.handNo !== prev.handNo && (next.seats || []).some((s) => s.hasCards)) {
-      this._newHand(next, t, prev.deckLeft);
+      this._newHand(next, t);
       return;
     }
     // folds: their cards go to the used pile (face-up only if they were public: mine)
@@ -112,7 +114,7 @@ export class Dealer {
   }
 
   // ---------------------------------------------------------------- phases
-  _newHand(view, t, deckLeft) {
+  _newHand(view, t) {
     // a routine still playing (a slow network, a hidden tab): finish it now (its deal is abandoned)
     if (this.routine) this.routine.onDone = null;
     this._finishRoutine();
@@ -127,10 +129,10 @@ export class Dealer {
     this._mucked = new Set();
     this.tableHidden = false;
     this.boardShown = this.boardFaceUp = 0;
-    // between hands every card is in the deck or on the used pile (a collection cut short lands now)
-    const inDeck = new Set(this.deck);
-    this.used = [...this.used.filter((id) => !inDeck.has(id)), ...FULL_DECK.filter((id) => !inDeck.has(id) && !this.used.includes(id))];
-    this._syncDeck(deckLeft);
+    // every card is on the used pile now (a collection cut short lands at once): the deal's first
+    // card finds the deck empty and starts the shuffle (_dealChain)
+    this.used = [...this.used, ...this.deck, ...FULL_DECK.filter((id) => !this.used.includes(id) && !this.deck.includes(id))];
+    this.deck = [];
     const order = dealOrder(view.seats || [], view.buttonSeat);
     const plan = planDeal(order, this.holeCount);
     for (const s of order) { this._seatIds.set(s, []); this._landed.set(s, 0); }
@@ -242,8 +244,18 @@ export class Dealer {
 
   _collect() {
     this.highlight = null;
-    // every card on the table goes to the used pile; the deck stays as it is for the next hand
     const cards = this.held.slice(), t = now(), gap = collectEvery(cards.length);
+    // what's left of the deck goes too, turning over as one packet onto the bottom of the pile — the
+    // deck has run out, and the next deal starts with the shuffle; its bottom card shows as it lands
+    const rest = this.deck.slice();
+    this.deck = [];
+    if (rest.length) {
+      const seen = new Set([...this.faces.values()]);
+      const bottom = rest[rest.length - 1];
+      const unseen = ALL_CARDS.filter((c) => !seen.has(c));
+      this.faces.set(bottom, unseen[Math.floor(Math.random() * unseen.length)]);
+      this._fly({ id: bottom, ids: rest, from: { kind: "deck" }, to: { kind: "used" }, dur: DEAL.collectFlight + 180, flip: true, arc: 34, cue: { name: "pileTap" } }, () => this.used.unshift(...rest));
+    }
     cards.forEach((c, i) => {
       this._at(t + DEAL.collectEvery + i * gap, () => {
         this.held = this.held.filter((h) => h !== c);
