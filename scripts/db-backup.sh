@@ -7,7 +7,10 @@
 # dumped with --single-transaction (consistent, no locks). Keeps the last 7 dumps here; mini2 pulls
 # them hourly into ~/riverside-archive/db and keeps 30 days.
 set -euo pipefail
-set -a; . /opt/bluffing-valley/.env; set +a
+# Read only the MYSQL_* settings, without letting bash evaluate the file: a value with a space
+# (GMAIL_FROM_NAME=Bluff Valley, since the 2026-09-27 rename) made `. .env` fail and, under set -e,
+# silently skipped the nightly dump.
+while IFS='=' read -r k v; do case "$k" in MYSQL_*) export "$k=$v" ;; esac; done < /opt/bluffing-valley/.env
 DIR=/var/backups/bluffing-valley
 OUT="$DIR/db-$(date -u +%Y%m%d-%H%M).sql.gz"
 IGNORE=""
