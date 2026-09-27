@@ -32,6 +32,23 @@ const MATERIALS = {
   charcoal: { steps: [CHESS.gray, CHESS.charcoal, CHESS.ebony], ink: CHESS.white, sub: CHESS.ivory }
 };
 
+// ------------------------------------------------------------------ SHARED NORMS
+// One value per kind of motion, used by every animation — change it here, never per scene
+// (owner, 2026-09-27: fixes kept landing in one animation but not the others).
+const NORM = {
+  flip: 280,          // a card turning over (the all-in river's slow squeeze is the one named exception)
+  coinDur: 560,       // one coin's flight
+  coinGap: 45,        // between coins of one stream
+  colGap: 100,        // between columns of a bet going out
+  ringDraw: 600,      // a ring drawing on / off, gem by gem
+  cardW: 58,          // every card on a table (board, hands, piles, the centre) …
+  cardWMine: 68,      // … except my own hand
+  momentCoin: 40,     // coins in a full-screen close-up
+  pageCoin: 22,       // coins flying on a page (the wallet's own coin size)
+};
+/** A coin's arc height from how far it travels (the game's rule: flatter for short hops). */
+const liftFor = (a, b) => Math.max(20, Math.min(60, Math.hypot(b.x - a.x, b.y - a.y) * 0.22));
+
 // ------------------------------------------------------------------ timing (speed, cancel, replay)
 let speed = 1, gen = 0, timers = [], anims = [];
 const EASE = "cubic-bezier(.22,.61,.36,1)", SNAP = "cubic-bezier(.3,1.45,.5,1)", INOUT = "cubic-bezier(.65,0,.35,1)";
@@ -187,13 +204,21 @@ function shake(el, delay, amp = 5) {
     { transform: `translate(${amp / 2}px, 0)` }, { transform: "none" }], { duration: 260, delay, fill: "none" });
 }
 /** Turn a card element face up: squash to the edge, swap the art, open again. */
-function flip(el, card, delay, dur = 320) {
+function flip(el, card, delay, dur = NORM.flip) {
   const w = parseFloat(el.dataset.w);
   A(el, [{ transform: "scaleX(1)" }, { transform: "scaleX(0.02)" }], { duration: dur / 2, delay, easing: "ease-in", fill: "none" });
   at(delay + dur / 2, () => {
     el.innerHTML = cardHtml(card, w);
     A(el, [{ transform: "scaleX(0.02)" }, { transform: "scaleX(1)" }], { duration: dur / 2, easing: "ease-out", fill: "none" });
   });
+}
+/** The game's winner mark (SeatBadge .winner): a green outline on the plate. */
+const markWinner = (plateEl) => plateEl.classList.add("won");
+/** The game's fold dim, for anything that lost or dropped out: 0.42 opacity, a little grey. */
+const dimLoser = (el, delay = 0, duration = 400) => A(el, [{ opacity: 1, filter: "grayscale(0)" }, { opacity: 0.42, filter: "grayscale(.4)" }], { duration, delay });
+/** A stack count that runs while its coins ARRIVE: from the first landing to the last. */
+function countOnArrival(el, from, to, departAt, n, gap = NORM.coinGap, dur = NORM.coinDur) {
+  counter(el, from, to, departAt + dur, Math.max(160, (n - 1) * gap));
 }
 function cardEl(card, w, faceDown = false) {
   const e = h("div", "cardel", faceDown ? backHtml(w) : cardHtml(card, w));
@@ -208,7 +233,8 @@ function centre(el) {
 function coin(value, size, layer) { const c = h("div", "coin", coinSvg(value, size)); layer.append(c); return c; }
 function backLayer() { return { el: cur.back, dy: cur.dy }; }
 /** A coin arcing from a to b (screen coordinates). */
-function arc(value, size, a, b, delay, dur = 640, lift = 90, sink = true) {
+function arc(value, size, a, b, delay, dur = NORM.coinDur, lift = null, sink = true) {
+  lift ??= liftFor(a, b);
   const c = coin(value, size, cur.fly), kf = [], dy = cur.dy;
   for (let i = 0; i <= 12; i++) {
     const t = i / 12, x = a.x + (b.x - a.x) * t, y = a.y + (b.y - a.y) * t - lift * 4 * t * (1 - t) - dy;
@@ -288,7 +314,7 @@ function allIn() {
   [L.pc, R.pc].forEach((e) => appear(e, 1450, "scale(.7)"));
   let shown = [46, 54];
   const pct = (a, b, start) => { counter(L.pc, shown[0], a, start, 420, "", "%"); counter(R.pc, shown[1], b, start, 420, "", "%"); shown = [a, b]; };
-  const deal = (i, card, drop, turn, dur = 320) => {
+  const deal = (i, card, drop, turn, dur = NORM.flip) => {
     const c = cardEl(card, 76, true);
     slots[i].append(c);
     A(c, [{ opacity: 0, transform: "translateY(-70px) rotate(-6deg)" }, { opacity: 1, transform: "none" }], { duration: 300, delay: drop });
@@ -300,17 +326,17 @@ function allIn() {
   board5.push(deal(3, "5s", 3600, 4100));
   pct(95, 5, 4500);
   // the river: a slow squeeze, then the suck-out
-  const river = deal(4, "Qc", 5200, 5750, 1100);
+  const river = deal(4, "Qc", 5200, 5750, 1100);   // the named exception: a slow squeeze
   board5.push(river);
   A(river, [{ transform: "none" }, { transform: "translateY(-6px)" }, { transform: "none" }], { duration: 500, delay: 5250 + 300, fill: "none" });
   at(6300, () => shake(band, 0, 6));
   pct(0, 100, 6350);
   at(6600, () => {
-    A(L.col, [{ opacity: 1, filter: "grayscale(0)" }, { opacity: 0.4, filter: "grayscale(.6)" }], { duration: 400 });
+    dimLoser(L.col);
     [board5[0], board5[1], board5[4], R.els[0], R.els[1]].forEach((c, k) =>
       A(c, [{ transform: "none" }, { transform: "translateY(-12px)" }], { duration: 300, delay: k * 40, easing: SNAP }));
-    [board5[2], board5[3]].forEach((c) => A(c, [{ opacity: 1 }, { opacity: 0.45 }], { duration: 300 }));
-    R.pl.classList.add("glow");
+    [board5[2], board5[3]].forEach((c) => dimLoser(c));
+    markWinner(R.pl);
     cap.textContent = "Nora hits a queen on the river — three queens";
     appear(cap, 0);
   });
@@ -331,7 +357,7 @@ function monsterPot() {
   const coins = [];
   COLS.forEach(([v, n]) => {
     const col = h("div", "col");
-    for (let k = 0; k < n + 3; k++) { const c = h("div", "pc", coinSvg(v, 46)); c.style.bottom = k * 7 + "px"; c.dataset.v = v; col.append(c); coins.push(c); }
+    for (let k = 0; k < n + 3; k++) { const c = h("div", "pc cc", coinSvg(v, NORM.momentCoin)); c.style.bottom = k * 6 + "px"; c.dataset.v = v; c.dataset.s = NORM.momentCoin; col.append(c); coins.push(c); }
     pile.append(col);
   });
   content.append(pl, mid, pile);
@@ -339,20 +365,12 @@ function monsterPot() {
   appear(mid, 700, "scale(.9)");
   coins.forEach((c, k) => A(c, [{ opacity: 0, transform: "translateY(-30px)" }, { opacity: 1, transform: "none" }], { duration: 200, delay: 450 + k * 14 }));
   const N = coins.length;
-  at(1150, () => {
-    const to = centre(pl.querySelector(".av"));
-    // top coins first, one column after another; each flies as itself and sinks under the plate
-    const order = [...pile.children].flatMap((col) => [...col.children].reverse());
-    order.forEach((c, k) => {
-      const from = centre(c);
-      at(k * 36, () => { c.style.visibility = "hidden"; });
-      arc(+c.dataset.v, 46, from, to, k * 36, 620, 110);
-    });
-  });
-  counter(num, 0, POT, 1150, N * 36 + 500);
-  counter(pl.querySelector(".stack"), P.theo.stack, P.theo.stack + POT, 1600, N * 36 + 300);
-  at(1150 + N * 36 + 650, () => {
-    pl.classList.add("glow");
+  // the same departure as every pile: coin by coin from the top down
+  at(1150, () => columnTo(pile, centre(pl.querySelector(".av")), 0));
+  counter(num, 0, POT, 1150, N * NORM.coinGap + 200);
+  countOnArrival(pl.querySelector(".stack"), P.theo.stack, P.theo.stack + POT, 1150, N);
+  at(1150 + NORM.coinDur + N * NORM.coinGap, () => {
+    markWinner(pl);
     A(pl, [{ transform: "scale(1)" }, { transform: "scale(1.05)" }, { transform: "scale(1)" }], { duration: 420, fill: "none" });
   });
 }
@@ -522,12 +540,12 @@ function bigTwo() {
   at(2000, () => {
     const to = centre(pl.querySelector(".av"));
     rows.forEach((r, k) => {
-      const from = centre(r.querySelector(".plate"));
-      for (let c = 0; c < 5; c++) arc([500, 100, 2500][k], 34, from, to, k * 180 + c * 40, 600, 70);
+      const from = centre(r.querySelector(".plate .av"));
+      for (let c = 0; c < 5; c++) arc([500, 100, 2500][k], NORM.momentCoin, from, to, (k * 5 + c) * NORM.coinGap);
     });
   });
-  counter(pl.querySelector(".stack"), P.theo.stack, P.theo.stack + POT, 2400, 900);
-  at(3400, () => pl.classList.add("glow"));
+  countOnArrival(pl.querySelector(".stack"), P.theo.stack, P.theo.stack + POT, 2000, 15);
+  at(2000 + NORM.coinDur + 15 * NORM.coinGap, () => markWinner(pl));
 }
 
 // ================================================================== M6 — tournament / River Sprint
@@ -561,7 +579,7 @@ function knockout() {
   content.append(pl, mid);
   appear(pl, 450, "scale(.92)");
   mid.querySelectorAll("div").forEach((e, k) => appear(e, 1100 + k * 220, "translateY(12px)"));
-  tween(800, 1300, (t) => setRing(pl, "emerald", 1 - t), (t) => t);
+  tween(800, NORM.ringDraw * 2, (t) => setRing(pl, "emerald", 1 - t), (t) => t);   // a moment: twice the norm
   at(2150, () => A(pl, [{ transform: "none", opacity: 1, filter: "grayscale(0)" }, { transform: "translateY(26px)", opacity: 0.35, filter: "grayscale(1)" }], { duration: 520, easing: "cubic-bezier(.5,0,.75,0)" }));
 }
 function crowned() {
@@ -575,7 +593,7 @@ function crowned() {
   mid.append(title("Champion"), caption("1st of 24 · +1,200 prize"));
   content.append(pl, mid);
   A(pl, [{ opacity: 0, transform: "translateY(70px)" }, { opacity: 1, transform: "none" }], { duration: 560, delay: 430, easing: SNAP });
-  tween(950, 1100, (t) => setRing(pl, "silver", t), (t) => t);
+  tween(950, NORM.ringDraw * 2, (t) => setRing(pl, "silver", t), (t) => t);        // a moment: twice the norm
   at(2080, () => A(pl.querySelector(".av"), [{ transform: "scale(1)" }, { transform: "scale(1.12)" }, { transform: "scale(1)" }], { duration: 380, fill: "none", easing: SNAP }));
   mid.querySelectorAll("div").forEach((e, k) => appear(e, 1300 + k * 240, "translateY(12px)"));
   at(2100, () => rain(40, 0, 1800));
@@ -619,12 +637,7 @@ function newLook(key = "silver") {
     ring.remove();
     A(pl.querySelector(".av"), [{ transform: "scale(1)" }, { transform: "scale(1.1)" }, { transform: "scale(1)" }], { duration: 340, fill: "none", easing: SNAP });
   });
-  at(2900, () => {
-    const st = plateStyle(key);
-    pl.style.background = st.bg; pl.style.color = st.ink;
-    pl.querySelector(".stack").style.color = st.money;
-    sheen(pl, 0, 650);
-  });
+  swapPlate(pl, key, 2800);        // the same plate change as equipping a badge
   mid.querySelectorAll(".title, .caption").forEach((e, k) => appear(e, 1100 + k * 220, "translateY(12px)"));
   appear(btns, 3200, "translateY(10px)");
   btns.addEventListener("click", () => out(0));
@@ -676,7 +689,7 @@ const HOUSE_XY = { x: 560, y: 108 };
 const SHOE = { x: 1030, y: 86 }, DISCARD = { x: 90, y: 86 };
 const ringXY = (deg) => { const a = (deg * Math.PI) / 180; return { x: 560 + 400 * Math.cos(a), y: 330 + 215 * Math.sin(a) }; };
 const lerp = (a, b, t) => ({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t });
-const CW = 56, CWM = 68;                        // card widths: other seats / mine
+const CW = NORM.cardW, CWM = NORM.cardWMine;    // card widths: other seats / mine
 const ch = (w) => Math.round((w * 78) / 60);
 
 function hud(t, game) {
@@ -725,7 +738,7 @@ function scene(game, { seats = [], board = null, pot = null, shoe = false, hands
       return e;
     });
   }
-  if (board) surface.append(h("div", "board", board.map((c) => `<span class="bc">${cardHtml(c, 62)}</span>`).join("")));
+  if (board) surface.append(h("div", "board", board.map((c) => `<span class="bc">${cardHtml(c, CW)}</span>`).join("")));
   let potEl = null;
   if (pot != null) { potEl = h("div", "potpill", `<span>POT</span><b>${fmt(pot)}</b>`); surface.append(potEl); }
   cur = { fly: top, back: piles, dy: 0 };
@@ -754,7 +767,7 @@ const moveBy = (el, dx, dy, delay, dur = 520, easing = "cubic-bezier(.6,0,.2,1)"
  *  the coin nothing rests on — the highest on screen, and at the same height the front row's before
  *  the raised back row's — so no coin ever takes off from under another. Each flies over and sinks
  *  into the badge by shrinking at its centre. */
-function columnTo(g, b, delay, stagger = 40, dur = 560, lift = 60) {
+function columnTo(g, b, delay, stagger = NORM.coinGap, dur = NORM.coinDur, lift = null) {
   at(delay, () => {
     const coins = [...g.querySelectorAll(".cc")].map((c) => ({ c, y: rectOf(c).t, back: c.parentNode.style.zIndex === "0" }));
     coins.sort((p, q) => (Math.abs(p.y - q.y) < RISE ? p.back - q.back : p.y - q.y));
@@ -834,11 +847,11 @@ function nAllInPush() {
   cols.forEach((col, i) => {
     col.style.visibility = "hidden";
     const x = an.x0 + an.s * i * PITCH, y = an.base - (i % 2 ? RAISE : 0) - HOVER;
-    arc(+col.firstChild.dataset.v, COIN, from, { x, y }, 250 + i * 110, 420, 34, false);
-    at(250 + i * 110 + 410, () => { col.style.visibility = "visible"; });
+    arc(+col.firstChild.dataset.v, COIN, from, { x, y }, 250 + i * NORM.colGap, NORM.coinDur, null, false);
+    at(250 + i * NORM.colGap + NORM.coinDur, () => { col.style.visibility = "visible"; });
   });
-  counter(m.el.querySelector(".stack"), STACK, 0, 250, cols.length * 110 + 300);
-  const held = 250 + cols.length * 110 + 420;
+  counter(m.el.querySelector(".stack"), STACK, 0, 250, (cols.length - 1) * NORM.colGap + 200);
+  const held = 250 + (cols.length - 1) * NORM.colGap + NORM.coinDur;
   A(g, [{ transform: `translateY(${-HOVER}px)` }, { transform: `translateY(${-HOVER - 5}px)` }, { transform: `translateY(${-HOVER}px)` }], { duration: 420, delay: held, easing: "ease-in-out" });
   // … then drops all at once: a hard landing, a jolt through the table, a burst of sparks
   const DROP = held + 460, LAND = DROP + 150;
@@ -881,8 +894,10 @@ function nSplitPot() {
   moveBy(L, -34, 0, 350, 320, EASE); moveBy(R, 34, 0, 350, 320, EASE);
   // … and each flies to its winner, sinking under the plate
   at(800, () => { columnTo(L, avOf(S.Nora), 0, 40); columnTo(R, avOf(S.Theo), 0, 40); });
-  counter(S.Nora.el.querySelector(".stack"), P.nora.stack, P.nora.stack + 9_320, 1100, 600);
-  counter(S.Theo.el.querySelector(".stack"), P.theo.stack, P.theo.stack + 9_320, 1100, 600);
+  const nL = L.querySelectorAll(".cc").length, nR = R.querySelectorAll(".cc").length;
+  countOnArrival(S.Nora.el.querySelector(".stack"), P.nora.stack, P.nora.stack + 9_320, 800, nL);
+  countOnArrival(S.Theo.el.querySelector(".stack"), P.theo.stack, P.theo.stack + 9_320, 800, nR);
+  at(800 + NORM.coinDur, () => { markWinner(S.Nora.el); markWinner(S.Theo.el); });
   counter(potEl.querySelector("b"), 18_640, 0, 800, 700);
 }
 function nHousePay() {
@@ -897,18 +912,17 @@ function nHousePay() {
     let paid = 0;
     coins.forEach((d, j) => {
       const col = breakdown(bets[n]).findIndex(([v]) => v === d), x = an.x0 + an.s * col * PITCH, y = an.base - (col % 2 ? RAISE : 0);
-      const start = 300 + k * 220 + j * 80;
-      arc(d, COIN, house, { x, y }, start, 520, 70, false);
+      const start = 300 + k * 220 + j * NORM.coinGap;
+      arc(d, COIN, house, { x, y }, start, NORM.coinDur, null, false);
       // each coin joins the pile the moment it lands
-      at(start + 520, () => { paid += d; piles[n].remove(); piles[n] = pileOf(under, bets[n] + paid, an); });
+      at(start + NORM.coinDur, () => { paid += d; piles[n].remove(); piles[n] = pileOf(under, bets[n] + paid, an); });
     });
   });
   // … takes the losers' piles …
   columnTo(piles.Ivy, house, 1300); columnTo(piles.Theo, house, 1400);
   // … then every pile goes home, into its badge
-  at(2300, () => ["You", "Milo"].forEach((n) => columnTo(piles[n], avOf(S[n]), 0)));
-  counter(S.You.el.querySelector(".stack"), P.you.stack, P.you.stack + 450, 2600, 500);
-  counter(S.Milo.el.querySelector(".stack"), P.milo.stack, P.milo.stack + 1_200, 2600, 500);
+  at(2300, () => ["You", "Milo"].forEach((n) => { countOnArrival(S[n].el.querySelector(".stack"), P[n === "You" ? "you" : "milo"].stack, P[n === "You" ? "you" : "milo"].stack + bets[n] * 2, 0, piles[n].querySelectorAll(".cc").length); columnTo(piles[n], avOf(S[n]), 0); }));
+  at(300 + NORM.coinDur, () => { markWinner(S.You.el); markWinner(S.Milo.el); });
 }
 function nAntes() {
   const seats = [[P.you, 90], [P.milo, 180], [P.ivy, 270], [P.theo, 0]];
@@ -916,8 +930,8 @@ function nAntes() {
   // each ante joins the pot's pile the moment it lands (the coin never blinks out in between)
   let pot = null, total = 0;
   seats.forEach(([p], k) => {
-    const an = potAt(potEl, 100 * (k + 1)), land = 300 + k * 70 + 560;
-    arc(100, COIN, avOf(S[p.name]), { x: an.x0, y: an.base - k * RISE }, 300 + k * 70, 560, 50, false);
+    const an = potAt(potEl, 100 * (k + 1)), land = 300 + k * 70 + NORM.coinDur;
+    arc(100, COIN, avOf(S[p.name]), { x: an.x0, y: an.base - k * RISE }, 300 + k * 70, NORM.coinDur, null, false);
     at(land, () => { pot?.remove(); total += 100; pot = pileOf(under, total, potAt(potEl, total)); potEl.querySelector("b").textContent = fmt(total); });
   });
 }
@@ -931,18 +945,18 @@ function nBlackjack() {
   for (let r = 0; r < 2; r++) for (const n of order) {
     const seat = S[n], hole = n === "House" && r === 1;
     const c = cardTo(top, hands[n][r], SHOE, slotAt(seat, r), { w: seat.cw, delay: t, rot: r ? 4 : -2 });
-    if (!hole) flip(c, hands[n][r], t + 420, 260);
+    if (!hole) flip(c, hands[n][r], t + 420);
     els[n].push(c); t += 170;
   }
   // You hit: 20. Milo hits: bust.
-  const yh = cardTo(top, "4s", SHOE, slotAt(S.You, 2), { w: S.You.cw, delay: 2000, rot: 6 }); flip(yh, "4s", 2420, 260);
-  const mh = cardTo(top, "Kc", SHOE, slotAt(S.Milo, 2), { w: CW, delay: 2700, rot: 6 }); flip(mh, "Kc", 3120, 260);
+  const yh = cardTo(top, "4s", SHOE, slotAt(S.You, 2), { w: S.You.cw, delay: 2000, rot: 6 }); flip(yh, "4s", 2420);
+  const mh = cardTo(top, "Kc", SHOE, slotAt(S.Milo, 2), { w: CW, delay: 2700, rot: 6 }); flip(mh, "Kc", 3120);
   els.Milo.push(mh);
   at(3450, () => {
-    els.Milo.forEach((c) => { shake(c, 0, 4); A(c, [{ opacity: 1, filter: "grayscale(0)" }, { opacity: 0.45, filter: "grayscale(.7)" }], { duration: 380, delay: 260 }); });
+    els.Milo.forEach((c) => { shake(c, 0, 4); dimLoser(c, 260); });
     pillOn(S.Milo.el, "BUST", "allin", 0);
   });
-  flip(els.House[1], "7s", 3900, 360);
+  flip(els.House[1], "7s", 3900);
 }
 function nThreeCard() {
   const { S, top } = scene("three-card", { seats: [[null, "house"], [P.ivy, 150], [P.you, 90], [P.theo, 30]], shoe: true });
@@ -950,12 +964,12 @@ function nThreeCard() {
   const order = ["Ivy", "You", "Theo", "House"], els = { Ivy: [], You: [], Theo: [], House: [] };
   let t = 250;
   for (let r = 0; r < 3; r++) for (const n of order) { els[n].push(cardTo(top, hands[n][r], SHOE, slotAt(S[n], r, 0.5), { w: S[n].cw, delay: t, rot: (r - 1) * 3 })); t += 110; }
-  els.You.forEach((c, k) => flip(c, hands.You[k], t + 350 + k * 90, 260));
+  els.You.forEach((c, k) => flip(c, hands.You[k], t + 350 + k * 90));
   // Ivy folds: her cards slide to the discard pile
   at(2300, () => els.Ivy.forEach((c, k) => {
     A(c.wrap, [{ transform: c.wrap.dataset.end }, { transform: `translate(${DISCARD.x - CW / 2}px, ${DISCARD.y - ch(CW) / 2}px) rotate(${-10 + k * 4}deg)` }], { duration: 480, delay: k * 70, easing: EASE });
   }));
-  els.House.forEach((c, k) => flip(c, hands.House[k], 3200, 320));
+  els.House.forEach((c, k) => flip(c, hands.House[k], 3200));
 }
 function nBaccarat() {
   const { S, top, surface } = scene("baccarat", { seats: [[null, "house"], [P.milo, 150], [P.you, 90], [P.nora, 30]], shoe: true });
@@ -964,15 +978,15 @@ function nBaccarat() {
   surface.appendChild(h("div", "bac-lbl", "Banker")).style.cssText = `left:${BX}px;top:${Y - 84}px`;
   const tot = (x) => { const e = h("div", "bac-tot", ""); e.style.cssText = `left:${x}px;top:${Y + 62}px`; surface.append(e); return e; };
   const pT = tot(PX), bT = tot(BX);
-  const W2 = 64, at2 = (x, k) => ({ x: x + (k - 0.5) * W2 * 0.62, y: Y });
+  const W2 = CW, at2 = (x, k) => ({ x: x + (k - 0.5) * W2 * 0.62, y: Y });
   const deal = [["3h", PX, 0], ["Kc", BX, 0], ["2c", PX, 1], ["6s", BX, 1]];
   const els = deal.map(([c, x, k], i) => cardTo(top, c, SHOE, at2(x, k), { w: W2, delay: 250 + i * 200, rot: k ? 3 : -3 }));
-  els.forEach((c, i) => flip(c, deal[i][0], 1350 + i * 330, 280));
+  els.forEach((c, i) => flip(c, deal[i][0], 1350 + i * 330));
   at(1350 + 2 * 330 + 300, () => { pT.textContent = "3"; bT.textContent = "0"; });
   at(1350 + 3 * 330 + 300, () => { pT.textContent = "5"; bT.textContent = "6"; });
   // the Player's third card comes in sideways
   const third = cardTo(top, "4d", SHOE, { x: PX + W2 * 1.32, y: Y + 6 }, { w: W2, delay: 3000, rot0: 60, rot: 90 });
-  flip(third, "4d", 3500, 320);
+  flip(third, "4d", 3500);
   at(3850, () => { pT.textContent = "9"; pT.classList.add("win"); });
 }
 function nBigTwoPlay() {
@@ -983,14 +997,14 @@ function nBigTwoPlay() {
   for (let r = 0; r < 13; r++) names.forEach((n, k) => {
     const seat = S[n], i = r * 4 + k;
     const to = n === "You" ? { x: seat.hand.x + (r - 6) * 30, y: seat.hand.y } : { x: seat.hand.x + (r - 6) * 2.2, y: seat.hand.y - r * 0.6 };
-    const c = cardTo(top, n === "You" ? MINE[r] : null, TC, to, { w: n === "You" ? 62 : 44, delay: 200 + i * 15, dur: 300, rot0: 0, rot: 0, lift: 12 });
+    const c = cardTo(top, n === "You" ? MINE[r] : null, TC, to, { w: n === "You" ? CWM : CW, delay: 200 + i * 15, dur: 300, rot0: 0, rot: 0, lift: 12 });
     (n === "You" ? mine : stacks[n]).push(c);
   });
-  mine.forEach((c, k) => flip(c, MINE[k], 1250 + k * 28, 220));
+  mine.forEach((c, k) => flip(c, MINE[k], 1250 + k * 28));
   const play = (who, cards, delay, off) => cards.map((cd, k) => {
     const from = S[who].hand, to = { x: TC.x + (k - 0.5) * 40 + off, y: TC.y };
     at(delay, () => stacks[who].splice(-1, 1).forEach((b) => (b.wrap.style.visibility = "hidden")));
-    const c = cardTo(top, cd, from, to, { w: 62, delay: delay + k * 60, dur: 420, faceDown: false, rot0: -12, rot: (k - 0.5) * 5, lift: 40 });
+    const c = cardTo(top, cd, from, to, { w: CW, delay: delay + k * 60, faceDown: false, rot0: -12, rot: (k - 0.5) * 5, lift: 40 });
     return c;
   });
   const first = play("Milo", ["9s", "9c"], 2000, 0);
@@ -1005,8 +1019,8 @@ function nWinningFive() {
   const bc = [...t.querySelectorAll(".board .bc")];
   const lift = [...nora, bc[0], bc[1], bc[4]], dim = [...milo, bc[2], bc[3]];
   lift.forEach((e, k) => A(e, [{ transform: "none", filter: "none" }, { transform: "translateY(-10px)", filter: "drop-shadow(0 0 10px rgba(255,255,255,.55))" }], { duration: 320, delay: 400 + k * 50, easing: SNAP }));
-  dim.forEach((e) => A(e, [{ opacity: 1 }, { opacity: 0.45 }], { duration: 320, delay: 400 }));
-  at(500, () => S.Nora.el.classList.add("won"));
+  dim.forEach((e) => dimLoser(e, 400));
+  at(500, () => markWinner(S.Nora.el));
 }
 
 // ---------------------------------------------------------------- resolves (in place, table size)
@@ -1034,15 +1048,15 @@ function nJoinLeave() {
   seatsL.append(pl);
   setRing(pl, "default", 0);
   A(pl, [{ opacity: 0 }, { opacity: 1 }], { duration: 320, delay: 500 });
-  tween(600, 600, (k) => setRing(pl, "default", k), (k) => k);
+  tween(600, NORM.ringDraw, (k) => setRing(pl, "default", k), (k) => k);
   // Theo leaves: the ring un-draws, the plate fades, the seat reads "Empty"
   const th = S.Theo.el;
-  tween(2000, 450, (k) => setRing(th, "sapphire", 1 - k), (k) => k);
-  A(th, [{ opacity: 1 }, { opacity: 0 }], { duration: 320, delay: 2350 });
+  tween(2000, NORM.ringDraw, (k) => setRing(th, "sapphire", 1 - k), (k) => k);
+  A(th, [{ opacity: 1 }, { opacity: 0 }], { duration: 320, delay: 2000 + NORM.ringDraw - 150 });
   const e2 = h("div", "emptyseat muted", "Empty");
   Object.assign(e2.style, { left: S.Theo.xy.x + "px", top: S.Theo.xy.y + "px" });
   seatsL.append(e2);
-  A(e2, [{ opacity: 0 }, { opacity: 1 }], { duration: 260, delay: 2650 });
+  A(e2, [{ opacity: 0 }, { opacity: 1 }], { duration: 260, delay: 2000 + NORM.ringDraw + 150 });
 }
 function nYourTurn() {
   const { S, top } = scene("holdem", { seats: SEATS6(), board: ["Kd", "7c", "2h"], hands: true });
@@ -1056,7 +1070,7 @@ function nFold() {
   const iv = S.Ivy;
   at(300, () => iv.handEls.forEach((e) => (e.style.visibility = "hidden")));
   [0, 1].forEach((k) => cardTo(top, null, slotAt(iv, k), DISCARD, { w: CW, delay: 300 + k * 60, dur: 460, rot0: 0, rot: -14 + k * 5, lift: 30 }));
-  A(iv.el, [{ opacity: 1, filter: "grayscale(0)" }, { opacity: 0.42, filter: "grayscale(.4)" }], { duration: 420, delay: 380 });
+  dimLoser(iv.el, 380);
 }
 function nButton() {
   const { S, top } = scene("holdem", { seats: SEATS6() });
@@ -1090,9 +1104,9 @@ function pageScene() {
 function burstTo(fromEl, toEl, n, delay) {
   at(delay, () => {
     const a = centre(fromEl), b = centre(toEl);
-    for (let i = 0; i < n; i++) arc([100, 500, 2500, 10000][i % 4], 26, { x: a.x + ((i * 37) % 60) - 30, y: a.y }, b, i * 55, 700, 120 + (i % 3) * 30);
+    for (let i = 0; i < n; i++) arc([100, 500, 2500, 10000][i % 4], NORM.pageCoin, { x: a.x + ((i * 37) % 60) - 30, y: a.y }, b, i * NORM.coinGap);
   });
-  at(delay + n * 55 + 700, () => A(toEl, [{ transform: "scale(1)" }, { transform: "scale(1.1)" }, { transform: "scale(1)" }], { duration: 300, fill: "none", easing: SNAP }));
+  at(delay + (n - 1) * NORM.coinGap + NORM.coinDur, () => A(toEl, [{ transform: "scale(1)" }, { transform: "scale(1.1)" }, { transform: "scale(1)" }], { duration: 300, fill: "none", easing: SNAP }));
 }
 function claimed(btn, delay) {
   at(delay, () => {
@@ -1108,7 +1122,7 @@ function nDaily() {
   card.append(btn); main.append(card);
   burstTo(btn, wallet, 10, 450);
   claimed(btn, 420);
-  counter(wallet.querySelector("b"), 24_300, 25_300, 900, 800);
+  countOnArrival(wallet.querySelector("b"), 24_300, 25_300, 450, 10);
 }
 function nQuest() {
   const { main, wallet } = pageScene();
@@ -1123,7 +1137,7 @@ function nQuest() {
   });
   burstTo(btn, wallet, 6, 450);
   claimed(btn, 420);
-  counter(wallet.querySelector("b"), 24_300, 24_800, 900, 600);
+  countOnArrival(wallet.querySelector("b"), 24_300, 24_800, 450, 6);
   at(1500, () => A(row0.querySelector(".q"), [{ opacity: 1 }, { opacity: 0.5 }], { duration: 400 }));
 }
 const MEDAL = `<svg viewBox="0 0 60 60" width="46" height="46"><polygon points="30,4 56,30 30,56 4,30" fill="#9a5215"/><polygon points="30,4 4,30 30,30" fill="#eda45e"/><polygon points="30,4 56,30 30,30" fill="#c1691f"/><polygon points="4,30 30,56 30,30" fill="#c1691f"/><polygon points="30,14 46,30 30,46 14,30" fill="#71390c" opacity=".35"/></svg>`;
@@ -1142,7 +1156,7 @@ function swapRing(plateEl, look, delay) {
   const ring = plateEl.querySelector(".ring");
   at(delay, () => A(ring, [{ transform: "translate(-50%,-50%) rotate(0) scale(1)", opacity: 1 }, { transform: "translate(-50%,-50%) rotate(50deg) scale(1.15)", opacity: 0 }], { duration: 260, easing: "ease-in", fill: "none" }));
   at(delay + 250, () => { ring.style.opacity = 1; });
-  tween(delay + 250, 620, (k) => setRing(plateEl, look, k), (k) => k);
+  tween(delay + 250, NORM.ringDraw, (k) => setRing(plateEl, look, k), (k) => k);
 }
 /** The plate swap: the new metal spreads from the upper left (the light's side). */
 function swapPlate(plateEl, look, delay) {
