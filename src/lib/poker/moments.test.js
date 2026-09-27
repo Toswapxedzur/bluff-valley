@@ -39,3 +39,15 @@ test("jackpots: 25x the bet or more; Three Card rare hands; Big Two's winner", (
   const b = detectMoment(b2);
   assert.deepEqual([b.kind, b.seat, b.pot, b.others[0].pays], ["bigTwo", 2, 300, 300]);
 });
+
+test("Hold'em: an all-in run-out is the all-in showdown (before a monster pot or a rare hand)", async () => {
+  const { allInMs } = await import("./moments.js");
+  const v = holdem({ type: "showdown", board: ["Kd", "7c", "2h", "5s", "Qc"], winners: [{ seat: 2, amount: 20_000 }],
+    runout: { from: 0, stages: [{ board: 0, pct: { 1: 46, 2: 54 } }, { board: 3, pct: { 1: 92, 2: 8 } }, { board: 4, pct: { 1: 95, 2: 5 } }, { board: 5, pct: { 1: 0, 2: 100 } }] },
+    revealed: [{ seat: 1, holeCards: ["Ah", "Kh"], handName: "Pair", best: [] }, { seat: 2, holeCards: ["Qs", "Qd"], handName: "Three of a Kind", best: ["Qs", "Qd", "Qc", "Kd", "7c"] }] });
+  const m = detectMoment(v);
+  assert.equal(m.kind, "allIn");
+  assert.equal(m.ms, allInMs(0));
+  assert.ok(allInMs(0) > allInMs(3) && allInMs(3) > allInMs(4), "fewer streets to come, a shorter moment");
+  assert.deepEqual(m.players.map((p) => [p.seat, p.won]), [[1, false], [2, true]]);
+});

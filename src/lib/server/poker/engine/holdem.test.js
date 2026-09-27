@@ -216,6 +216,14 @@ test("preflop all-ins automatically deal all streets and go to showdown", () => 
     ["action", "streetDealt", "streetDealt", "streetDealt", "showdown", "payout", "handComplete"]
   );
   assert.equal(legalActions(result.state).toActSeat, null);
+  // the run-out for the all-in showdown moment: from the empty board, the win chances at each street
+  const r = result.state.result.runout;
+  assert.equal(r.from, 0);
+  assert.deepEqual(r.stages.map((x) => x.board), [0, 3, 4, 5]);
+  assert.ok(r.stages.every((x) => Object.keys(x.pct).length === 2));
+  const winner = result.state.payouts?.[0]?.seat ?? Object.entries(r.stages[3].pct).find(([, v]) => v === 100)?.[0];
+  assert.deepEqual(Object.values(r.stages[3].pct).sort((a, b) => a - b), [0, 100], "the river decides: one player has it all");
+  assert.equal(r.stages[3].pct[winner], 100);
 });
 
 test("partial all-in blinds are posted exactly while the full BB remains the bring-in", () => {

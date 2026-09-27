@@ -75,6 +75,14 @@
   .moment-layer :global(.m-strip) { position: absolute; left: 0; top: 0; width: 100%; }
   .moment-layer :global(.m-sym) { height: 128px; display: grid; place-items: center; }
   .moment-layer :global(.m-sym svg) { width: 88px; height: 88px; }
+  .moment-layer :global(.m-title.small) { font-size: 36px; }
+  .moment-layer :global(.m-allrow) { display: flex; align-items: center; gap: 40px; }
+  .moment-layer :global(.m-side) { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+  .moment-layer :global(.m-hand) { display: flex; gap: 8px; }
+  .moment-layer :global(.m-pct) { font-family: var(--f-display); font-weight: 800; font-size: 34px; font-variant-numeric: tabular-nums; min-height: 40px; }
+  .moment-layer :global(.m-board) { display: flex; gap: 10px; }
+  .moment-layer :global(.m-slot) { position: relative; width: 76px; height: 99px; border-radius: 8px; background: rgba(238,242,255,.08); }
+  .moment-layer :global(.m-slot .m-card) { position: absolute; inset: 0; }
   .moment-layer :global(.m-opp) { display: flex; flex-direction: column; gap: 14px; }
   .moment-layer :global(.m-opprow) { display: flex; align-items: center; gap: 12px; }
   .moment-layer :global(.m-fanmini) { display: flex; line-height: 0; }
