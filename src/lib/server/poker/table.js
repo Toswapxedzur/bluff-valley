@@ -100,8 +100,9 @@ export class LiveTable {
     this.sbSeat = null;
     this.bbSeat = null;
     this.actionDeadline = null;
-    // the visual deck across hands (deal-anim.js drawFromDeck): shuffled only when it runs out, mid-deal;
-    // the table holds its next turn until the shuffle has played (dealHoldUntil)
+    // the visual deck (deal-anim.js drawFromDeck): at the end of a hand every card, the rest of the deck
+    // too, goes to the used pile, so the deck has run out; it is shuffled the instant the next hand's
+    // deal needs a card, and the table holds its first turn until the shuffle has played (dealHoldUntil)
     this.deckLeft = DECK_SIZE;
     this.dealHoldUntil = 0;
     this._handStartedAt = null;
@@ -567,7 +568,9 @@ export class LiveTable {
     const bb = this.seats.get(this.bbSeat);
     if (bb) bb.lastAction = "BB";
 
-    // the hole cards come off the deck (previous hands' cards are all in the used pile now)
+    // the hole cards: the deck ran out at the last collection (all 52 are on the used pile), so the
+    // deal starts with the shuffle (owner, 2026-09-27: at the start of the deal, not at the round's end)
+    this.deckLeft = 0;
     this._drawDeck(hand.players.reduce((a, p) => a + (p.holeCards?.length || 0), 0), 0, DEAL.every);
 
     // holeCardsDealt is routed PRIVATELY; everything else is public state.
@@ -577,7 +580,7 @@ export class LiveTable {
     await this.promptActor();
   }
 
-  /** n cards off the visual deck with `onTable` out (deal-anim.js). If the deck runs dry the used pile
+  /** n cards off the visual deck with `onTable` out (deal-anim.js). If the deck is empty the used pile
    *  is shuffled in right there, and — on a table whose players watch the deck — the next turn waits
    *  for the shuffle to play (promptActor). */
   _drawDeck(n, onTable, every) {

@@ -50,6 +50,8 @@ test("a present player who stalls gets one time-bank extension, then auto-acts",
   await table.sit(c0, 0, 100);
   await table.sit(c1, 1, 100);
   await table.beginHand();
+  // the deal opens with the shuffle: the first turn waits for it
+  await clock.fireMs(table.dealHoldUntil - clock.now() + 5);
 
   const actor = table.seats.get(table.hand.toActSeat);
   // Topped up at beginHand: INIT + one PER_HAND increment.
