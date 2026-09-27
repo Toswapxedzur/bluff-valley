@@ -83,7 +83,18 @@
     }
     if (wash > 0) { const [r, g, b] = washRgb(ink); ctx.fillStyle = `rgba(${r},${g},${b},${wash})`; ctx.fillRect(0, 0, W, H); }
     autoWash = wash; inks = got;
-    work.toBlob((b) => swap(b ? URL.createObjectURL(b) : null), "image/webp", 0.9);
+    const seq = ++drawn;
+    work.toBlob((b) => { if (b) show(URL.createObjectURL(b), seq); }, "image/webp", 0.9);
+  }
+  // A fresh frame reaches the plates only once it is DECODED: a background whose picture is still
+  // decoding paints nothing for a frame, so the metal flashed through on every drag step (owner:
+  // "the background banner is always flashy"). Frames that finish out of order never go back in time.
+  let drawn = 0, shown = 0;
+  async function show(url, seq) {
+    try { const im = new Image(); im.src = url; await im.decode(); } catch { /* shown anyway */ }
+    if (seq < shown) { URL.revokeObjectURL(url); return; }
+    shown = seq;
+    swap(url);
   }
   function swap(url) { const old = previewUrl; previewUrl = url; if (old) setTimeout(() => URL.revokeObjectURL(old), 1500); }
 
