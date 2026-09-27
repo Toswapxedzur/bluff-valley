@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { normalize, cropBox, PLATE_ASPECT, TAB_ASPECT, readability, readable, minWash, inksFor, inkOnSteps, inkHex, MAX_WASH, isRenderName, GOLD } from "./banner.js";
+import { normalize, cropBox, cropCss, PLATE_ASPECT, TAB_ASPECT, readability, readable, inksFor, inkOnSteps, inkHex, MAX_WASH, isRenderName, GOLD } from "./banner.js";
 import { plateStyle } from "./cosmetics.js";
 
 test("settings are clamped to safe values", () => {
@@ -28,27 +28,26 @@ test("the crop is the plate's shape, inside the picture, slid by x / y and shrun
   for (const b of [wide, left, right, tall, zoomed]) assert.ok(b.left >= 0 && b.top >= 0);
 });
 
-test("readability: white text needs a wash over a white picture, none over black", () => {
+test("readability: white on white fails, a wash helps, dark text over dark needs a light wash", () => {
   const white = Array.from({ length: 200 }, () => [255, 255, 255]);
   const black = Array.from({ length: 200 }, () => [0, 0, 0]);
   assert.ok(!readable(readability(white, "#ffffff", 0)));
-  assert.equal(minWash(black, "#ffffff"), 0);
-  const w = minWash(white, "#ffffff");
-  assert.ok(w > 0.3 && w <= MAX_WASH, `wash ${w}`);
-  assert.ok(readable(readability(white, "#ffffff", w)));
-  assert.ok(!readable(readability(white, "#ffffff", Math.round((w - 0.05) * 100) / 100)), "the least wash that works");
-  // dark text over a dark picture: a LIGHT wash rescues it
-  const dw = minWash(black, inkHex("ebony"));
-  assert.ok(dw > 0 && readable(readability(black, inkHex("ebony"), dw)));
-  // the player's own wash is a floor
-  assert.equal(minWash(black, "#ffffff", 0.4), 0.4);
+  assert.ok(readable(readability(black, "#ffffff", 0)));
+  assert.ok(readable(readability(white, "#ffffff", 0.7)));
+  assert.ok(!readable(readability(black, inkHex("ebony"), 0)));
+  assert.ok(readable(readability(black, inkHex("ebony"), 0.7)), "under dark ink the wash is light");
 });
 
-test("a busy picture: the worst tenth of the pixels decides", () => {
-  // 85% black, 15% white: the median reads, the worst tenth doesn't until washed
-  const px = Array.from({ length: 1000 }, (_, i) => (i % 100 < 15 ? [255, 255, 255] : [0, 0, 0]));
-  assert.ok(!readable(readability(px, "#ffffff", 0)));
-  assert.ok(minWash(px, "#ffffff") > 0);
+test("the CSS crop draws exactly the server's crop", () => {
+  for (const [w, h, s] of [[1400, 800, { x: 0.3, y: 0.8, z: 1.6 }], [900, 1200, { x: 1, y: 0, z: 1 }], [2000, 500, { x: 0.5, y: 0.5, z: 3 }]]) {
+    const b = cropBox(w, h, PLATE_ASPECT, s), c = cropCss(w, h, PLATE_ASPECT, s);
+    // a box of the crop's shape, W wide: the picture is drawn size% of W wide, placed pos% along the free room
+    const W = 1000, H = W / PLATE_ASPECT, scale = (parseFloat(c.size) / 100) * W / w;
+    const [px, py] = c.pos.split(" ").map((v) => parseFloat(v) / 100);
+    const offX = (W - w * scale) * px, offY = (H - h * scale) * py;
+    assert.ok(Math.abs(-offX / scale - b.left) <= 1.5, `left ${-offX / scale} vs ${b.left}`);
+    assert.ok(Math.abs(-offY / scale - b.top) <= 1.5 + h * 0.002, `top ${-offY / scale} vs ${b.top}`);
+  }
 });
 
 test("the stack is gold only where gold reads; the soft ink leans toward the picture", () => {
