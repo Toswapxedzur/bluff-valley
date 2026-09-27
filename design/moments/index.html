@@ -88,8 +88,7 @@
   .bignum { font-family: var(--f-display); font-weight: 800; font-size: 84px; line-height: 1; font-variant-numeric: tabular-nums; letter-spacing: -1px; }
   .sheen { position: absolute; top: -20%; left: 0; width: 22%; height: 140%; background: rgba(255,255,255,.42); pointer-events: none; mix-blend-mode: soft-light; }
   .fxback { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
-  .fly { position: absolute; inset: 0; pointer-events: none; z-index: 2; }
-  .content .plate { z-index: 3; }   /* above the flights: won coins sink under the badge */
+  .fly { position: absolute; inset: 0; pointer-events: none; z-index: 4; }   /* in flight = on top; coins sink by shrinking */
   .newring { position: absolute; line-height: 0; z-index: 4; filter: drop-shadow(0 10px 14px rgba(0,0,0,.3)); }
   .money { color: var(--gold-ink); }
   .band .money { color: inherit; }
@@ -178,6 +177,8 @@
   .splate-pill { position: absolute; right: -6px; top: -12px; padding: 3px 9px; border-radius: 999px; font-size: 11px; font-weight: 800; letter-spacing: .8px; z-index: 2; }
   .splate-pill.allin { background: #ef4444; color: #fff; }
   .splate-pill.pass { background: var(--surface-2); color: var(--text); }
+  .shock { position: absolute; width: 80px; height: 24px; border-radius: 50%; border: 6px solid rgba(255, 228, 133, .6); box-sizing: border-box; }
+  .spark { position: absolute; border-radius: 2px; }
   .ringglow { position: absolute; border-radius: 50%; pointer-events: none; }
   .emptyseat { position: absolute; transform: translate(-50%, -50%); padding: 9px 18px; border-radius: 999px; background: var(--accent); color: #fff; font-weight: 800; font-size: 13px; }
   .emptyseat.muted { background: var(--surface); color: var(--faint); }

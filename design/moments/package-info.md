@@ -32,3 +32,8 @@ money (all-in push, split pot, House pays, Big Two antes) · cards (Blackjack, T
 Big Two deal + play, winning five) · resolves at table size (roulette, sic bo, slots) · seats
 (join / leave, your turn, fold, dealer button) · rewards (daily bonus, quest claim, achievement
 toast — the medal is a placeholder) · cosmetics (equip ring, equip badge, look change at a table).
+
+**Layering (owner flagged recurring bugs, 2026-09-27):** every scene uses ONE named stack, bottom →
+top: surface (board, hands, piles of cards, pot pill) · piles (coins at rest) · seats (plates) ·
+top (anything moving). Never rely on append order. A coin reaching a badge sinks by shrinking at
+its centre; it never passes under anything. Check mid-flight frames. (Memory: feedback-layering.)

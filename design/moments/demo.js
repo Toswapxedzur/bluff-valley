@@ -159,8 +159,8 @@ function frame({ banner = false, material = "blue", bandH = 330, game, kicker, l
     band.style.setProperty("--ink", "#eef2ff"); band.style.setProperty("--sub", "#9db0d6");
   }
   ov.append(band);
-  // three layers: celebration coins BEHIND the content (never over the cards / numbers), the content,
-  // then coin flights — which still pass UNDER the plates (z-index 3), so won coins sink into a badge
+  // three layers, bottom → top: celebration coins BEHIND the content (never over the cards / numbers),
+  // the content, then everything in flight (a coin reaching a badge sinks by shrinking at its centre)
   const back = h("div", "fxback"), content = h("div", "content"), fly = h("div", "fly");
   band.append(back, content, fly);
   cur = { back, fly, dy: y };
@@ -208,13 +208,14 @@ function centre(el) {
 function coin(value, size, layer) { const c = h("div", "coin", coinSvg(value, size)); layer.append(c); return c; }
 function backLayer() { return { el: cur.back, dy: cur.dy }; }
 /** A coin arcing from a to b (screen coordinates). */
-function arc(value, size, a, b, delay, dur = 640, lift = 90) {
+function arc(value, size, a, b, delay, dur = 640, lift = 90, sink = true) {
   const c = coin(value, size, cur.fly), kf = [], dy = cur.dy;
   for (let i = 0; i <= 12; i++) {
     const t = i / 12, x = a.x + (b.x - a.x) * t, y = a.y + (b.y - a.y) * t - lift * 4 * t * (1 - t) - dy;
-    kf.push({ transform: `translate(${x - size / 2}px, ${y - size / 2}px)`, opacity: t < 0.92 ? 1 : 0, offset: t });
+    const k = sink ? Math.max(0, (t - 0.72) / 0.28) : 0;                 // the last stretch: shrink into the badge
+    kf.push({ transform: `translate(${x - size / 2}px, ${y - size / 2}px) scale(${1 - 0.78 * k})`, opacity: sink ? 1 - k * 0.9 : t < 0.97 ? 1 : 0, offset: t });
   }
-  A(c, kf, { duration: dur, delay, easing: "cubic-bezier(.45,.05,.55,.95)" });   // gone on arrival (under a plate, or into the wallet)
+  A(c, kf, { duration: dur, delay, easing: "cubic-bezier(.45,.05,.55,.95)" });
 }
 /** Coins thrown up from a point, falling off the bottom of the screen. */
 function fountain(from, n, delay, spread = 1) {
@@ -680,18 +681,26 @@ function hud(t, game) {
 }
 /** A table: seats = [[player, angle | "house", plateOpts?]]. Layers: `under` (below the plates —
  *  coins sink into badges through it) and `top` (cards, tokens, glows). */
+/** A table. EVERY element goes into one of four NAMED layers, stacked bottom → top — never rely on
+ *  the order things were appended (that is how the pot's coins ended up under the board):
+ *    surface  the felt: board, resting hands, deck / discard piles, pot pill, centre labels
+ *    piles    coins at rest (bet piles beside the badges, the pot's pile)
+ *    seats    the plates (and empty-seat pills)
+ *    top      everything in motion: flying coins and cards, tokens, glows, stamps, toasts
+ *  A coin reaching a badge "sinks" by shrinking and fading at its centre (like MoneyLayer) — it never
+ *  has to pass under anything. */
 function scene(game, { seats = [], board = null, pot = null, shoe = false, hands = false } = {}) {
   const t = $("#table");
   t.replaceChildren();
   hud(t, game);
-  const under = h("div", "tlayer");
-  t.append(under);
+  const surface = h("div", "tlayer"), piles = h("div", "tlayer"), seatsL = h("div", "tlayer"), top = h("div", "tlayer");
+  t.append(surface, piles, seatsL, top);
   if (shoe) {
     const sh = h("div", "pile", backHtml(CW) + backHtml(CW) + backHtml(CW));
     Object.assign(sh.style, { left: SHOE.x - CW / 2 + "px", top: SHOE.y - ch(CW) / 2 + "px" });
     const dc = h("div", "pile discard", backHtml(CW));
     Object.assign(dc.style, { left: DISCARD.x - CW / 2 + "px", top: DISCARD.y - ch(CW) / 2 + "px" });
-    t.append(sh, dc);
+    surface.append(sh, dc);
   }
   const S = {};
   for (const [p, where, o = {}] of seats) {
@@ -700,30 +709,24 @@ function scene(game, { seats = [], board = null, pot = null, shoe = false, hands
     if (where === "house") pl.classList.add("houseplate");
     pl.classList.add("seat");
     Object.assign(pl.style, { left: xy.x + "px", top: xy.y + "px" });
-    t.append(pl);
+    seatsL.append(pl);
     const cw = mine ? CWM : CW;
-    S[where === "house" ? "House" : p.name] = { el: pl, xy, mine, cw, hand: { x: xy.x, y: xy.y + (mine ? 34 : 28) + ch(cw) / 2 }, spot: lerp(xy, TC, 0.4) };
+    S[where === "house" ? "House" : p.name] = { el: pl, xy, mine, cw, hand: { x: xy.x, y: xy.y + (mine ? 34 : 28) + ch(cw) / 2 } };
   }
-  if (hands) for (const [name, s] of Object.entries(S)) {
+  if (hands) for (const s of Object.values(S)) {
     s.handEls = (s.mine ? ["Jh", "Jc"] : [null, null]).map((c, k) => {
       const e = cardEl(c, s.cw, !c), p = slotAt(s, k);
       e.classList.add("static");
       Object.assign(e.style, { left: p.x - s.cw / 2 + "px", top: p.y - ch(s.cw) / 2 + "px" });
-      t.append(e);
+      surface.append(e);
       return e;
     });
-    void name;
   }
-  if (board) {
-    const b = h("div", "board", board.map((c) => `<span class="bc">${cardHtml(c, 62)}</span>`).join(""));
-    t.append(b);
-  }
+  if (board) surface.append(h("div", "board", board.map((c) => `<span class="bc">${cardHtml(c, 62)}</span>`).join("")));
   let potEl = null;
-  if (pot != null) { potEl = h("div", "potpill", `<span>POT</span><b>${fmt(pot)}</b>`); t.append(potEl); }
-  const top = h("div", "tlayer");
-  t.append(top);
-  cur = { fly: under, back: under, dy: 0 };
-  return { S, under, top, t, potEl };
+  if (pot != null) { potEl = h("div", "potpill", `<span>POT</span><b>${fmt(pot)}</b>`); surface.append(potEl); }
+  cur = { fly: top, back: piles, dy: 0 };
+  return { S, surface, piles, under: piles, seatsL, top, t, potEl };
 }
 /** A card flying from a to b (a wrapper moves; the card inside can flip). Returns the card. */
 function cardTo(layer, card, a, b, { w = CW, delay = 0, dur = 420, faceDown = true, rot0 = -8, rot = 0, lift = 26 } = {}) {
@@ -814,26 +817,50 @@ const SEATS6 = () => [[P.you, 90], [P.milo, 150], [P.ivy, 210], [P.nora, 270], [
 
 // ---------------------------------------------------------------- money
 function nAllInPush() {
-  const { S, under } = scene("holdem", { seats: SEATS6(), board: ["Kd", "7c", "2h"], pot: 2_400, hands: true });
-  const m = S.Milo, an = seatAnchor(m), from = avOf(m);
-  // the whole stack comes out from under the badge as one tall column …
-  const tower = h("div", "ccol"), vals = [10000, 2500, 2500, 2500, 500, 500, 500, 100, 100, 100, 100, 25, 25, 25];
-  const th = COIN + (vals.length - 1) * RISE;
-  Object.assign(tower.style, { left: from.x - COIN / 2 + "px", top: an.base - th + COIN / 2 + "px", width: COIN + "px", height: th + "px" });
-  vals.forEach((v, k) => { const c = h("div", "cc", coinSvg(v, COIN)); c.style.bottom = k * RISE + "px"; tower.append(c); });
-  under.append(tower);
-  const dx = an.x0 - from.x;
-  A(tower, [{ transform: "translate(0,0) scaleY(1)" }, { transform: `translate(${dx}px, 0) scaleY(1)`, offset: 0.8 }, { transform: `translate(${dx}px, 2px) scaleY(.9)`, offset: 0.9 }, { transform: `translate(${dx}px, 0) scaleY(1)` }],
-    { duration: 700, delay: 300, easing: "cubic-bezier(.6,0,.25,1)" });
-  // … and lands as the pile: one column per coin value
-  at(1050, () => {
-    tower.remove();
-    const g = pileOf(under, P.milo.stack, an);
-    [...g.children].forEach((col, i) => A(col, [{ transform: `translateX(${-an.s * i * PITCH}px)` }, { transform: "none" }], { duration: 220, easing: EASE }));
+  const { S, piles, top, t } = scene("holdem", { seats: SEATS6(), board: ["Kd", "7c", "2h"], pot: 2_400, hands: true });
+  const m = S.Milo, an = seatAnchor(m), from = avOf(m), HOVER = 48, STACK = P.milo.stack;
+  // the bet goes out like any bet — one column per coin value, highest first — but it holds HIGH …
+  const g = pileOf(piles, STACK, an), cols = [...g.children];
+  g.style.transform = `translateY(${-HOVER}px)`;
+  cols.forEach((col, i) => {
+    col.style.visibility = "hidden";
+    const x = an.x0 + an.s * i * PITCH, y = an.base - (i % 2 ? RAISE : 0) - HOVER;
+    arc(+col.firstChild.dataset.v, COIN, from, { x, y }, 250 + i * 110, 420, 34, false);
+    at(250 + i * 110 + 410, () => { col.style.visibility = "visible"; });
   });
-  A(m.el, [{ boxShadow: "0 0 0 0 rgba(239,68,68,0)" }, { boxShadow: "0 0 0 4px rgba(239,68,68,.85), 0 0 22px rgba(239,68,68,.5)" }, { boxShadow: "0 0 0 3px rgba(239,68,68,.7), 0 0 14px rgba(239,68,68,.35)" }], { duration: 700, delay: 950 });
-  counter(m.el.querySelector(".stack"), P.milo.stack, 0, 300, 700);
-  pillOn(m.el, "ALL-IN", "allin", 1000);
+  counter(m.el.querySelector(".stack"), STACK, 0, 250, cols.length * 110 + 300);
+  const held = 250 + cols.length * 110 + 420;
+  A(g, [{ transform: `translateY(${-HOVER}px)` }, { transform: `translateY(${-HOVER - 5}px)` }, { transform: `translateY(${-HOVER}px)` }], { duration: 420, delay: held, easing: "ease-in-out" });
+  // … then drops all at once: a hard landing, a jolt through the table, a burst of sparks
+  const DROP = held + 460, LAND = DROP + 150;
+  at(DROP, () => A(g, [{ transform: `translateY(${-HOVER}px)` }, { transform: "translateY(0)" }], { duration: 150, easing: "cubic-bezier(.55,0,1,.45)" }));
+  at(LAND, () => {
+    cols.forEach((col) => A(col, [{ transform: "scaleY(.8) scaleX(1.08)" }, { transform: "scaleY(1.04)", offset: 0.55 }, { transform: "none" }], { duration: 240, easing: "ease-out", fill: "none" }));
+    shake(t, 0, 3);
+    const c = { x: an.x0 + (an.s * (cols.length - 1) * PITCH) / 2, y: an.base + COIN * 0.3 };
+    const ring = h("div", "shock");
+    Object.assign(ring.style, { left: c.x - 40 + "px", top: c.y - 12 + "px" });
+    top.append(ring);
+    A(ring, [{ transform: "scale(.3)", opacity: 0.8 }, { transform: "scale(2.1)", opacity: 0 }], { duration: 460, easing: "cubic-bezier(.2,.7,.3,1)" });
+    sparks(top, c, 16);
+    A(m.el, [{ boxShadow: "0 0 0 0 rgba(239,68,68,0)" }, { boxShadow: "0 0 0 4px rgba(239,68,68,.9), 0 0 24px rgba(239,68,68,.55)" }, { boxShadow: "0 0 0 3px rgba(239,68,68,.7), 0 0 14px rgba(239,68,68,.35)" }], { duration: 600 });
+    pillOn(m.el, "ALL-IN", "allin", 0);
+  });
+}
+/** Little rhombus sparks thrown up from an impact, falling back as they fade (the gems' shape). */
+function sparks(layer, c, n) {
+  const tones = ["#ffe485", "#f5b60d", "#FBF8EF", "#ff9aa1", "#e1d3ad"];
+  for (let i = 0; i < n; i++) {
+    const e = h("div", "spark"), sz = 5 + (i % 4) * 1.5;
+    Object.assign(e.style, { width: sz + "px", height: sz + "px", background: tones[i % tones.length], left: c.x - sz / 2 + "px", top: c.y - sz / 2 + "px" });
+    layer.append(e);
+    const ang = Math.PI * (1.08 + (i / (n - 1)) * 0.84), sp = 150 + ((i * 53) % 90), kf = [];
+    for (let k = 0; k <= 8; k++) {
+      const tt = (k / 8) * 0.55, x = Math.cos(ang) * sp * tt * 1.5, y = Math.sin(ang) * sp * tt + 520 * tt * tt;
+      kf.push({ transform: `translate(${x}px, ${y}px) rotate(45deg) scale(${1 - k / 12})`, opacity: k > 5 ? 1 - (k - 5) / 3 : 1, offset: k / 8 });
+    }
+    A(e, kf, { duration: 560, easing: "linear" });
+  }
 }
 function nSplitPot() {
   const { S, under, potEl } = scene("holdem", { seats: SEATS6(), board: ["Kd", "7c", "2h", "5s", "Qc"], pot: 18_640, hands: true });
@@ -858,7 +885,7 @@ function nHousePay() {
   // the House pays each winner into their own pile, coin by coin (1:1 here) …
   ["You", "Milo"].forEach((n, k) => {
     const an = seatAnchor(S[n]), coins = breakdown(bets[n]).flatMap(([d, c]) => Array(Math.min(c, 12)).fill(d));
-    coins.forEach((d, j) => arc(d, COIN, house, { x: an.x0, y: an.base }, 300 + k * 220 + j * 80, 520, 70));
+    coins.forEach((d, j) => arc(d, COIN, house, { x: an.x0, y: an.base }, 300 + k * 220 + j * 80, 520, 70, false));
     at(300 + k * 220 + coins.length * 80 + 520, () => { piles[n].remove(); piles[n] = pileOf(under, bets[n] * 2, an); });
   });
   // … takes the losers' piles …
@@ -872,7 +899,7 @@ function nAntes() {
   const seats = [[P.you, 90], [P.milo, 180], [P.ivy, 270], [P.theo, 0]];
   const { S, under, potEl } = scene("big-two", { seats, pot: 0 });
   const potAn = potAt(potEl, 400);
-  seats.forEach(([p], k) => arc(100, COIN, avOf(S[p.name]), { x: potAn.x0, y: potAn.base }, 300 + k * 70, 560, 50));
+  seats.forEach(([p], k) => arc(100, COIN, avOf(S[p.name]), { x: potAn.x0, y: potAn.base }, 300 + k * 70, 560, 50, false));
   at(300 + 3 * 70 + 560, () => pileOf(under, 400, potAn));
   counter(potEl.querySelector("b"), 0, 400, 800, 350);
 }
@@ -913,11 +940,11 @@ function nThreeCard() {
   els.House.forEach((c, k) => flip(c, hands.House[k], 3200, 320));
 }
 function nBaccarat() {
-  const { S, top, t } = scene("baccarat", { seats: [[null, "house"], [P.milo, 150], [P.you, 90], [P.nora, 30]], shoe: true });
+  const { S, top, surface } = scene("baccarat", { seats: [[null, "house"], [P.milo, 150], [P.you, 90], [P.nora, 30]], shoe: true });
   const PX = 470, BX = 650, Y = 300;
-  t.insertBefore(h("div", "bac-lbl", "Player"), top).style.cssText = `left:${PX}px;top:${Y - 84}px`;
-  t.insertBefore(h("div", "bac-lbl", "Banker"), top).style.cssText = `left:${BX}px;top:${Y - 84}px`;
-  const tot = (x) => { const e = h("div", "bac-tot", ""); e.style.cssText = `left:${x}px;top:${Y + 62}px`; t.insertBefore(e, top); return e; };
+  surface.appendChild(h("div", "bac-lbl", "Player")).style.cssText = `left:${PX}px;top:${Y - 84}px`;
+  surface.appendChild(h("div", "bac-lbl", "Banker")).style.cssText = `left:${BX}px;top:${Y - 84}px`;
+  const tot = (x) => { const e = h("div", "bac-tot", ""); e.style.cssText = `left:${x}px;top:${Y + 62}px`; surface.append(e); return e; };
   const pT = tot(PX), bT = tot(BX);
   const W2 = 64, at2 = (x, k) => ({ x: x + (k - 0.5) * W2 * 0.62, y: Y });
   const deal = [["3h", PX, 0], ["Kc", BX, 0], ["2c", PX, 1], ["6s", BX, 1]];
@@ -954,8 +981,8 @@ function nBigTwoPlay() {
   at(3600, () => { const p = pillOn(S.Theo.el, "Pass", "pass", 0); A(p, [{ opacity: 1 }, { opacity: 0 }], { duration: 300, delay: 1000 }); });
 }
 function nWinningFive() {
-  const { S, top, t } = scene("holdem", { seats: SEATS6(), board: ["Kd", "7c", "2h", "5s", "Qc"] });
-  const show = (seat, cards) => cards.map((c, k) => { const e = cardEl(c, CW); e.classList.add("static"); const p = slotAt(seat, k); Object.assign(e.style, { left: p.x - CW / 2 + "px", top: p.y - ch(CW) / 2 + "px" }); t.insertBefore(e, top); return e; });
+  const { S, surface, t } = scene("holdem", { seats: SEATS6(), board: ["Kd", "7c", "2h", "5s", "Qc"] });
+  const show = (seat, cards) => cards.map((c, k) => { const e = cardEl(c, CW); e.classList.add("static"); const p = slotAt(seat, k); Object.assign(e.style, { left: p.x - CW / 2 + "px", top: p.y - ch(CW) / 2 + "px" }); surface.append(e); return e; });
   const milo = show(S.Milo, ["Ah", "Kh"]), nora = show(S.Nora, ["Qs", "Qd"]);
   const bc = [...t.querySelectorAll(".board .bc")];
   const lift = [...nora, bc[0], bc[1], bc[4]], dim = [...milo, bc[2], bc[3]];
@@ -966,9 +993,9 @@ function nWinningFive() {
 
 // ---------------------------------------------------------------- resolves (in place, table size)
 function resolveScene(game, build) {
-  const { t, top } = scene(game, { seats: [[null, "house"], [P.you, 90], [P.milo, 150], [P.nora, 30]] });
+  const { surface } = scene(game, { seats: [[null, "house"], [P.you, 90], [P.milo, 150], [P.nora, 30]] });
   const wrap = h("div", "resolve"), stage = h("div", "m4-stage");
-  wrap.append(stage); t.insertBefore(wrap, top);
+  wrap.append(stage); surface.append(wrap);
   return build(stage);
 }
 const nRoulette = () => resolveScene("roulette", (st) => wheel(st, 23, 2200));
@@ -977,16 +1004,16 @@ const nSlots = () => resolveScene("slots", (st) => slotsReels(st, ["cherry", "be
 
 // ---------------------------------------------------------------- seats
 function nJoinLeave() {
-  const { S, t } = scene("holdem", { seats: SEATS6().filter(([p]) => p !== P.ivy) });
+  const { S, seatsL } = scene("holdem", { seats: SEATS6().filter(([p]) => p !== P.ivy) });
   const xy = ringXY(210);
   const empty = h("div", "emptyseat", "Sit here");
   Object.assign(empty.style, { left: xy.x + "px", top: xy.y + "px" });
-  t.append(empty);
+  seatsL.append(empty);
   A(empty, [{ opacity: 1 }, { opacity: 0 }], { duration: 200, delay: 400 });
   const pl = plate(P.ivy);
   pl.classList.add("seat");
   Object.assign(pl.style, { left: xy.x + "px", top: xy.y + "px" });
-  t.append(pl);
+  seatsL.append(pl);
   setRing(pl, "default", 0);
   A(pl, [{ opacity: 0 }, { opacity: 1 }], { duration: 320, delay: 500 });
   tween(600, 600, (k) => setRing(pl, "default", k), (k) => k);
@@ -996,7 +1023,7 @@ function nJoinLeave() {
   A(th, [{ opacity: 1 }, { opacity: 0 }], { duration: 320, delay: 2350 });
   const e2 = h("div", "emptyseat muted", "Empty");
   Object.assign(e2.style, { left: S.Theo.xy.x + "px", top: S.Theo.xy.y + "px" });
-  t.append(e2);
+  seatsL.append(e2);
   A(e2, [{ opacity: 0 }, { opacity: 1 }], { duration: 260, delay: 2650 });
 }
 function nYourTurn() {
@@ -1083,9 +1110,9 @@ function nQuest() {
 }
 const MEDAL = `<svg viewBox="0 0 60 60" width="46" height="46"><polygon points="30,4 56,30 30,56 4,30" fill="#9a5215"/><polygon points="30,4 4,30 30,30" fill="#eda45e"/><polygon points="30,4 56,30 30,30" fill="#c1691f"/><polygon points="4,30 30,56 30,30" fill="#c1691f"/><polygon points="30,14 46,30 30,46 14,30" fill="#71390c" opacity=".35"/></svg>`;
 function nAchievement() {
-  const { t } = scene("holdem", { seats: SEATS6(), board: ["Kd", "7c", "2h"], hands: true });
+  const { top } = scene("holdem", { seats: SEATS6(), board: ["Kd", "7c", "2h"], hands: true });
   const toast = h("div", "achv", `${MEDAL}<div><div class="k">Achievement · Bronze</div><b>Regular</b><div class="sub">100 hands played</div></div>`);
-  t.append(toast);
+  top.append(toast);
   A(toast, [{ transform: "translateX(120%)" }, { transform: "translateX(0)" }], { duration: 460, delay: 300, easing: SNAP });
   sheen(toast, 800, 700);
   at(3000, () => A(toast, [{ transform: "translateX(0)" }, { transform: "translateX(120%)" }], { duration: 380, easing: "cubic-bezier(.5,0,.75,.2)" }));
@@ -1142,7 +1169,7 @@ function nLookAtTable() {
 }
 
 const NORMAL = [
-  { id: "n-allin", cat: "Money", label: "All-in push", run: nAllInPush, spec: ["A player goes all-in (any poker game).", "≈ 1.2 s", "Their seat.", "The whole stack slides forward as one tall column with a heavy landing; the plate pulses red and ALL-IN stamps on it; the stack counts down to 0."] },
+  { id: "n-allin", cat: "Money", label: "All-in push", run: nAllInPush, spec: ["A player goes all-in (any poker game).", "≈ 2.2 s", "Their seat and bet pile.", "The stack goes out like any bet — one column per coin value, highest first — but holds higher than normal; then the whole pile drops at once: a hard landing, a jolt through the table, a ring of shock and a burst of rhombus sparks. The plate pulses red and ALL-IN stamps on it."] },
   { id: "n-split", cat: "Money", label: "Split pot", run: nSplitPot, spec: ["A pot is split between winners.", "≈ 1.8 s", "The pot and the winners' seats.", "The pot parts into equal shares, each share flies to its winner and sinks under the plate."] },
   { id: "n-house", cat: "Money", label: "House pays", run: nHousePay, spec: ["Roulette, Sic Bo and Slots settle (Blackjack / Three Card / Baccarat already do this).", "≈ 2.8 s", "The House badge and the bettors' spots.", "The House pays winners coin by coin beside their bet, takes the losers' bets, then every pile goes home."] },
   { id: "n-antes", cat: "Money", label: "Big Two antes", run: nAntes, spec: ["A Big Two round starts.", "≈ 1.2 s", "Every seat → the centre.", "Each player's ante comes out from under their plate into the pot; the pot counts up."] },
