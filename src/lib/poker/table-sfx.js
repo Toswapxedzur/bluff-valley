@@ -1,3 +1,4 @@
+import { RESOLVE, resolveMs } from "./resolve-anim.js";
 // Turn consecutive public table views into sound cues. Pure: (prev, next, me)
 // → [{ name, count?, gap?, delay?, volume? }]. The table page feeds it every
 // TABLE_STATE for the table on screen, so sounds are scoped to what the
@@ -146,9 +147,10 @@ function gameCues(prev, next, myUserId) {
   // The resolve: wheel spin / dice roll / slot reels. Card resolves already
   // counted as dealt cards above.
   if (!pr.outcome && nr.outcome) {
-    if (WHEEL_GAMES.has(next.game)) { cues.push({ name: "shake" }); cues.push({ name: "dice", delay: 550 }); }
-    else if (DICE_GAMES.has(next.game)) { cues.push({ name: "shake" }); cues.push({ name: "dice", delay: 400 }); }
-    else if (next.game === "slots") cues.push({ name: "reel", count: 3, gap: 220 });
+    // on the resolve's own moments (resolve-anim.js): the ball drops, the dice settle, each reel stops
+    if (WHEEL_GAMES.has(next.game)) { cues.push({ name: "shake" }); cues.push({ name: "dice", delay: RESOLVE.roulette.spin }); }
+    else if (DICE_GAMES.has(next.game)) { const R = RESOLVE["sic-bo"]; cues.push({ name: "shake" }); cues.push({ name: "dice", delay: R.tumble + 2 * R.every - 80 }); }
+    else if (next.game === "slots") for (const t of RESOLVE.slots.stops) cues.push({ name: "reel", delay: t });
   }
 
   // Big Two: a new combination on the centre pile (it replaces the last one, so compare contents,
@@ -163,7 +165,7 @@ function gameCues(prev, next, myUserId) {
   if (r1.length > 0 && r0.length === 0) {
     const mine = nSeats.find((s) => s.userId === myUserId);
     const my = mine ? r1.find((r) => r.seat === mine.seat) : null;
-    const delay = nr.outcome ? 700 : 150;
+    const delay = nr.outcome ? resolveMs(next.game) + 150 : 150;
     if (my) {
       const net = netOf(my);
       if (net > 0) { cues.push({ name: "winChips", delay }); cues.push({ name: "win", delay: delay + 150 }); }
