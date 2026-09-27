@@ -1,0 +1,139 @@
+<title>Animation Sounds</title>
+<meta charset="utf-8">
+<meta name="description" content="Bluffing Valley — pick the new sounds for the animations">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,800&family=Hanken+Grotesk:wght@400;600;700;800&display=swap">
+<style>
+  /* the app's dark navy system, one deliberate theme */
+  :root {
+    color-scheme: dark;
+    --bg: #0f172a; --well: #0b1220; --surface: #182541; --surface-2: #20305a;
+    --text: #eef2ff; --muted: #9db0d6; --faint: #6c80a8; --accent: #4d7cff; --accent-soft: rgba(77,124,255,.18); --gold: #f4c94b; --ok: #4ade80;
+    --f-display: "Fraunces", Georgia, serif; --f-body: "Hanken Grotesk", -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  body { background: var(--bg); color: var(--text); font-family: var(--f-body); }
+  .page { max-width: 980px; margin: 0 auto; padding-inline: 16px; padding-block: 28px 60px; display: flex; flex-direction: column; gap: 16px; }
+  h1 { font-family: var(--f-display); font-size: clamp(28px, 4vw, 38px); margin: 0; }
+  .intro { color: var(--muted); line-height: 1.55; max-width: 72ch; margin: 0; }
+  .bar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 2; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 10px 14px; border-radius: 14px; background: var(--surface-2); }
+  .bar .count { font-weight: 800; }
+  .bar .picked { color: var(--muted); font-size: 13px; flex: 1; min-width: 200px; }
+  button { font: inherit; cursor: pointer; border: 0; color: inherit; }
+  .btn { padding: 8px 14px; border-radius: 10px; background: var(--surface); font-weight: 700; font-size: 14px; }
+  .btn:hover { background: #26386a; }
+  .btn.primary { background: var(--accent); color: #fff; }
+  .slot { background: var(--surface); border-radius: 18px; padding: 16px 18px; display: flex; flex-direction: column; gap: 12px; }
+  .slot h2 { font-family: var(--f-display); font-size: 21px; margin: 0; }
+  .slot .where { color: var(--muted); font-size: 14px; margin: 2px 0 0; }
+  .cands { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; }
+  .cand { background: var(--well); border-radius: 14px; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+  .cand.on { box-shadow: 0 0 0 3px var(--ok); }
+  .cand .nm { font-weight: 700; font-size: 14px; line-height: 1.35; min-height: 38px; }
+  .cand .row { display: flex; gap: 6px; flex-wrap: wrap; }
+  .cand .row .btn { font-size: 13px; padding: 7px 11px; }
+  .cand .pick { margin-left: auto; background: transparent; box-shadow: inset 0 0 0 2px var(--surface-2); }
+  .cand.on .pick { background: var(--ok); color: #0b1220; box-shadow: none; }
+  .none { font-size: 13px; color: var(--faint); }
+  .none input { accent-color: var(--ok); }
+  .copied { color: var(--ok); font-weight: 700; font-size: 13px; }
+  @media (max-width: 520px) { .cand .pick { margin-left: 0; } }
+</style>
+
+<div class="page">
+  <header>
+    <h1>Animation sounds</h1>
+    <p class="intro">The new sounds the animations still need. Everything that an existing sound already fits is wired in the game; these 13 have three candidates each, all unpitched, no whooshes. <b>In context</b> plays it with the game's own sounds around it, its hit landing on the animation's moment. Pick one per slot (or none), then copy your picks and send them.</p>
+  </header>
+  <div class="bar">
+    <span class="count" id="count">0 / 13 picked</span>
+    <span class="picked" id="summary"></span>
+    <button class="btn primary" id="copy">Copy my picks</button>
+    <span class="copied" id="copied" hidden>Copied</span>
+  </div>
+  <div id="slots"></div>
+</div>
+
+<script>
+(async () => {
+  const S = await (await fetch("candidates.json")).json();
+  const KEY = "bv-moment-sound-picks";
+  let picks = {};
+  try { picks = JSON.parse(localStorage.getItem(KEY) || "{}"); } catch { picks = {}; }
+  const savePicks = () => { try { localStorage.setItem(KEY, JSON.stringify(picks)); } catch { /* fine */ } };
+
+  // ---- audio: buffers on one clock; a clip "lands" when its hit (lead) is at the given ms
+  let ctx = null;
+  const bufs = new Map();
+  const audio = () => { if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)(); if (ctx.state === "suspended") ctx.resume(); return ctx; };
+  async function buf(file) {
+    if (!bufs.has(file)) bufs.set(file, fetch(file).then((r) => r.arrayBuffer()).then((a) => audio().decodeAudioData(a)));
+    return bufs.get(file);
+  }
+  let playing = [];
+  function stopAll() { for (const s of playing) { try { s.stop(); } catch {} } playing = []; }
+  async function sequence(events) {
+    stopAll();
+    const c = audio(), list = await Promise.all(events.map(async (e) => ({ ...e, b: await buf(e.file) })));
+    const t0 = c.currentTime + 0.12;
+    for (const e of list) {
+      const src = c.createBufferSource(), g = c.createGain();
+      src.buffer = e.b; g.gain.value = e.gain ?? 1;
+      src.connect(g).connect(c.destination);
+      const at = t0 + Math.max(0, (e.at - (e.lead ?? 0)) / 1000);
+      src.start(at); playing.push(src);
+    }
+  }
+  const C = (k) => `ctx/${k}.mp3`;
+  const cand = (slot, i = 0) => S[slot].candidates[i];
+  // what surrounds each sound in the game (the sounds already chosen), and when its hit lands
+  const CONTEXT = {
+    allInSlam: (x) => [0, 100, 200, 300].map((t) => ({ file: C("table_coin-few-1"), at: t + 380, lead: 0 })).concat({ file: x.file, at: 1150, lead: x.lead }),
+    cardKnock: (x) => [{ file: C("table_card-deal"), at: 0 }, { file: C("table_card-flip"), at: 330 }, { file: C("table_card-deal"), at: 900 }, { file: x.file, at: 1350, lead: x.lead }],
+    buttonTap: (x) => [{ file: C("table_card-pile"), at: 0 }, { file: x.file, at: 760, lead: x.lead, gain: 0.6 }],
+    ballRoll: (x) => [{ file: x.file, at: 0 }, { file: cand("ballSettle").file, at: 2200, lead: cand("ballSettle").lead }],
+    ballSettle: (x) => [{ file: cand("ballRoll").file, at: 0 }, { file: x.file, at: 2200, lead: x.lead }],
+    reelSpin: (x) => [{ file: x.file, at: 0 }, ...[1400, 1850, 2300].map((t) => ({ file: C("reel-1"), at: t }))],
+    medalClink: (x) => [{ file: x.file, at: 260, lead: x.lead }],
+    ringSet: (x) => [{ file: x.file, at: 560, lead: x.lead }],
+    squeeze: (x) => [{ file: C("table_card-deal"), at: 0 }, { file: x.file, at: 550 }, { file: cand("lowThud").file, at: 1700, lead: cand("lowThud").lead }],
+    lowThud: (x) => [{ file: C("table_card-flip"), at: 0 }, { file: x.file, at: 380, lead: x.lead }],
+    revealHit: (x) => [280, 430, 580, 730, 880].map((t) => ({ file: C("table_card-play"), at: t })).concat({ file: x.file, at: 1180, lead: x.lead }),
+    stampHit: (x) => [0, 450, 900].map((t) => ({ file: C("reel-1"), at: t })).concat({ file: x.file, at: 1120, lead: x.lead }, { file: cand("coinShower").file, at: 1350 }),
+    coinShower: (x) => [{ file: cand("stampHit").file, at: 0, lead: cand("stampHit").lead }, { file: x.file, at: 230 }]
+  };
+
+  // ---- the page
+  const root = document.getElementById("slots");
+  root.style.cssText = "display:flex;flex-direction:column;gap:14px";
+  function render() {
+    root.replaceChildren();
+    for (const [key, s] of Object.entries(S)) {
+      const el = document.createElement("section");
+      el.className = "slot";
+      el.innerHTML = `<div><h2>${s.label}</h2><p class="where">Plays: ${s.where}</p></div><div class="cands"></div><label class="none"><input type="checkbox" ${picks[key] === "none" ? "checked" : ""}> no sound here</label>`;
+      const grid = el.querySelector(".cands");
+      s.candidates.forEach((c, i) => {
+        const d = document.createElement("div");
+        d.className = "cand" + (picks[key] === i ? " on" : "");
+        d.innerHTML = `<div class="nm">${String.fromCharCode(65 + i)} · ${c.name}</div><div class="row"><button class="btn a">▶ Alone</button><button class="btn c">▶ In context</button><button class="btn pick">${picks[key] === i ? "Picked" : "Pick"}</button></div>`;
+        d.querySelector(".a").onclick = () => sequence([{ file: c.file, at: 0 }]);
+        d.querySelector(".c").onclick = () => sequence(CONTEXT[key](c));
+        d.querySelector(".pick").onclick = () => { picks[key] = picks[key] === i ? undefined : i; savePicks(); render(); };
+        grid.append(d);
+      });
+      el.querySelector(".none input").onchange = (e) => { picks[key] = e.target.checked ? "none" : undefined; savePicks(); render(); };
+      root.append(el);
+    }
+    const done = Object.keys(S).filter((k) => picks[k] !== undefined);
+    document.getElementById("count").textContent = `${done.length} / ${Object.keys(S).length} picked`;
+    document.getElementById("summary").textContent = summary();
+  }
+  const summary = () => Object.entries(S).filter(([k]) => picks[k] !== undefined).map(([k, s]) => `${s.label}: ${picks[k] === "none" ? "none" : String.fromCharCode(65 + picks[k])}`).join(" · ");
+  document.getElementById("copy").onclick = async () => {
+    const text = "My sound picks — " + summary();
+    try { await navigator.clipboard.writeText(text); document.getElementById("copied").hidden = false; setTimeout(() => (document.getElementById("copied").hidden = true), 1600); }
+    catch { const s = document.getElementById("summary"); const r = document.createRange(); r.selectNodeContents(s); getSelection().removeAllRanges(); getSelection().addRange(r); }
+  };
+  render();
+})();
+</script>
