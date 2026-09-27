@@ -22,7 +22,7 @@ export const SPRINT = {
 };
 
 // UTC day bucket for the one-entry-per-day rule (reuses the quests daily key).
-export function dayKey(at = Date.now()) { return periodKey("daily", at); }
+export function dayKey(at = Date.now()) { return periodKey("daily", at, 0); }   // the Sprint's day stays UTC
 
 // Gross prize pool from the human bids collected. pool = bids / (1 - faucet),
 // so the overlay (pool - bids) is exactly faucet_bps of the pool.

@@ -57,7 +57,7 @@ test("unlock is idempotent and reports only newly-unlocked keys", async () => {
 test("listForUser annotates the full catalog with unlocked state", async () => {
   const db = makeDb();
   await unlock("u2", ["first_hand"], db);
-  const list = await listForUser("u2", db);
+  const list = await listForUser("u2", db, {}, true);   // (as if switched on)
   assert.equal(list.length, ACHIEVEMENTS.length, "returns the whole catalog");
   const fh = list.find((a) => a.key === "first_hand");
   const fw = list.find((a) => a.key === "first_win");
@@ -91,7 +91,7 @@ test("unlockAndReward pays each newly-unlocked reward exactly once", async () =>
   const credited = [];
   const wallet = { credit: async (u, a, r, ref) => { credited.push({ u, a, r, ref }); return 1; } };
 
-  const fresh = await unlockAndReward("u9", ["first_hand", "big_pot"], db, wallet);
+  const fresh = await unlockAndReward("u9", ["first_hand", "big_pot"], db, wallet, true);   // (as if switched on)
   assert.deepEqual(fresh.sort(), ["big_pot", "first_hand"]);
   // Two reward-bearing badges → two credits, matching the catalog amounts.
   assert.equal(credited.length, 2);
@@ -100,7 +100,17 @@ test("unlockAndReward pays each newly-unlocked reward exactly once", async () =>
   assert.equal(byKey["ach:big_pot"], ACHIEVEMENTS.find((x) => x.key === "big_pot").reward);
 
   // Re-running unlocks nothing new, so no further credits.
-  const again = await unlockAndReward("u9", ["first_hand", "big_pot"], db, wallet);
+  const again = await unlockAndReward("u9", ["first_hand", "big_pot"], db, wallet, true);
   assert.deepEqual(again, []);
   assert.equal(credited.length, 2);
+});
+
+test("switched off (config ACHIEVEMENTS_ON): nothing unlocks or pays, and the list is empty", async () => {
+  const { unlockAndReward, listForUser } = await import("./achievements.js");
+  const calls = [];
+  const db = { execute: async (...a) => { calls.push(a); return { affectedRows: 1 }; }, query: async () => { calls.push("q"); return []; } };
+  const wallet = { credit: async (...a) => { calls.push(["credit", ...a]); } };
+  assert.deepEqual(await unlockAndReward("u1", ["first_win"], db, wallet, false), []);
+  assert.deepEqual(await listForUser("u1", db, {}, false), []);
+  assert.equal(calls.length, 0, "no database write, no payout");
 });
