@@ -14,7 +14,7 @@
 // reconnect "just work".
 
 import { encode, S2C } from "../../poker/protocol.js";
-import { animatesConfig, drawFromDeck, shuffleHoldMs, DECK_SIZE, DEAL } from "../../poker/deal-anim.js";
+import { animatesConfig, SHUFFLE_HAND_DELAY_MS } from "../../poker/deal-anim.js";
 import { resolveMs } from "../../poker/resolve-anim.js";
 import { detectMoment } from "../../poker/moments.js";
 import {
@@ -100,10 +100,6 @@ export class LiveTable {
     this.sbSeat = null;
     this.bbSeat = null;
     this.actionDeadline = null;
-    // the visual deck across hands (deal-anim.js drawFromDeck): shuffled only when it runs out, mid-deal;
-    // the table holds its next turn until the shuffle has played (dealHoldUntil)
-    this.deckLeft = DECK_SIZE;
-    this.dealHoldUntil = 0;
     this._handStartedAt = null;
     this.recorder = null; // universal match recorder for the live hand
 
@@ -334,7 +330,6 @@ export class LiveTable {
       actionDeadline,
       seats,
       result: this.result ?? null,
-      deckLeft: this.deckLeft,      // the visual deck (the page deals from it and shuffles when it runs dry)
       // Tournament HUD (blind level, prize pool, players left, next level) — null
       // for cash tables.
       tournament: this.isTournament && this.tournament ? this.tournament.view() : null
@@ -444,8 +439,7 @@ export class LiveTable {
     // A jackpot's moment plays its own spin, so it replaces the table's.
     const moment = this.result ? detectMoment(this.publicView()) : null;
     const spin = this.result && moment?.kind !== "jackpot" ? resolveMs(this.config.variant) : 0;
-    // (the deck no longer shuffles after every hand — only when it runs out, mid-deal, with its own hold)
-    let delay = NEW_HAND_DELAY_MS + spin + (moment?.ms ?? 0);
+    let delay = (this.result && animatesConfig(this.config) ? SHUFFLE_HAND_DELAY_MS : NEW_HAND_DELAY_MS + spin) + (moment?.ms ?? 0);
     // a banner moment someone is watching (a Sprint going live, a knockout): hold until it ends
     const hold = Math.max(this.holdUntil || 0, this.tournament?.holdUntil || 0) - Date.now();
     if (hold > delay) delay = hold;
@@ -567,9 +561,6 @@ export class LiveTable {
     const bb = this.seats.get(this.bbSeat);
     if (bb) bb.lastAction = "BB";
 
-    // the hole cards come off the deck (previous hands' cards are all in the used pile now)
-    this._drawDeck(hand.players.reduce((a, p) => a + (p.holeCards?.length || 0), 0), 0, DEAL.every);
-
     // holeCardsDealt is routed PRIVATELY; everything else is public state.
     this.sendAllPrivates();
     this.broadcast();
@@ -577,42 +568,10 @@ export class LiveTable {
     await this.promptActor();
   }
 
-  /** n cards off the visual deck with `onTable` out (deal-anim.js). If the deck runs dry the used pile
-   *  is shuffled in right there, and — on a table whose players watch the deck — the next turn waits
-   *  for the shuffle to play (promptActor). */
-  _drawDeck(n, onTable, every) {
-    if (!(n > 0)) return;
-    const r = drawFromDeck(this.deckLeft, n, onTable);
-    this.deckLeft = r.left;
-    if (r.shuffle && animatesConfig(this.config) && this.hand && this.hand.street !== "complete" && this._humanWatching()) {
-      this.dealHoldUntil = Math.max(this.dealHoldUntil, this.now() + shuffleHoldMs(r.shuffle, every));
-    }
-  }
-
-  /** Someone is looking at this table (bots don't watch the deck, so a bot-only table never waits). */
-  _humanWatching() {
-    for (const c of this.watchers) if (!c.isBot) return true;
-    return false;
-  }
-
   async promptActor() {
     if (!this.hand) return;
     if (this.hand.street === "complete" || this.hand.toActSeat === null) {
       await this.finishHand();
-      return;
-    }
-    // the deck ran dry mid-deal and is being shuffled on everyone's screen: the turn waits for it
-    const hold = this.dealHoldUntil - this.now();
-    if (hold > 0) {
-      // (the hold lives in the turn clock's slot: an action or the hand ending clears it the same way)
-      this.clearActionTimer();
-      const gen = this._actionGen;
-      this.actionDeadline = null;
-      this.actionTimer = this.setTimer(() => {
-        this.actionTimer = null;
-        return this._run(() => { if (this._actionGen === gen) return this.promptActor(); });
-      }, hold + 5);
-      this.broadcast();
       return;
     }
     const seat = this.seats.get(this.hand.toActSeat);
@@ -669,18 +628,11 @@ export class LiveTable {
   // Apply one action to the engine and mirror it onto seats. May throw.
   _commitAction(seatNo, action, auto = false) {
     // Spread the action (engine fields pass through); seat is forced to the authenticated seat.
-    const boardBefore = this.hand.board.length;
     const { state } = applyAction(this.hand, {
       ...action,
       seat: seatNo
     });
     this.hand = state;
-    // a new street (or an all-in run-out) comes off the deck; the live hands and the board are out
-    const dealt = state.board.length - boardBefore;
-    if (dealt > 0) {
-      const live = state.players.filter((p) => p.status !== "folded" && p.holeCards?.length).reduce((a, p) => a + p.holeCards.length, 0);
-      this._drawDeck(dealt, live + boardBefore, DEAL.boardEvery);
-    }
     this.recorder?.action(seatNo, action, auto);
     this.syncSeatsFromHand();
     // Re-push privates after every action. Idempotent

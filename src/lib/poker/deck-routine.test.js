@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { buildRoutine, TIMING, ZOOM, UTURN } from "./deck-routine.js";
+import { buildRoutine, routineMs, TIMING, QUICK, ZOOM, UTURN } from "./deck-routine.js";
 import { COUNT, W, thickness } from "./deck3d.js";
 
 // the real layout: face-up pile top-right, deck top-left, both just below the top bar
@@ -136,4 +136,24 @@ test("ends as one face-down deck at the top-left, original size", () => {
   assert.ok(Math.abs(e[0].scale - 1) < 1e-9);
   assert.ok(Math.abs(Math.cos(e[0].theta ?? 0) - 1) < 1e-9, "face-down");
   assert.deepEqual([...R.finalOrder].sort((a, b) => a - b), Array.from({ length: COUNT }, (_, i) => i + 1));
+});
+
+test("the everyday shuffle (QUICK): no cuts, every card kept, nothing jumps, ends as the deck", () => {
+  const Q = buildRoutine({ start, end, centre, seed: 11, timing: QUICK });
+  assert.ok(!Q.phases.some((p) => p.name.startsWith("cut")));
+  assert.equal(Q.duration, routineMs(COUNT, QUICK));
+  assert.equal(R.duration - Q.duration, TIMING.cuts * TIMING.cutPass + (TIMING.cuts - 1) * TIMING.cutGap, "exactly the cuts are gone");
+  let prev = null, worst = 0;
+  const flyEnd = Q.phases.find((p) => p.name === "fly-in").t1;
+  for (let t = 0; t <= Q.duration; t += 1) {
+    const f = Q.frameAt(t), ids = f.stacks.flatMap((s) => s.ids);
+    assert.equal(new Set(ids).size, COUNT, `t=${t}`);
+    const cur = cardPositions(f);
+    if (prev && t > flyEnd) for (const [id, p] of cur) { const q = prev.get(id); worst = Math.max(worst, Math.hypot(p.x - q.x, p.y - q.y, p.z - q.z) + Math.abs(p.scale - q.scale) * 60); }
+    prev = cur;
+  }
+  assert.ok(worst < 2, `a card jumped ${worst.toFixed(2)} units`);
+  const e = Q.frameAt(Q.duration).stacks;
+  assert.equal(e.length, 1);
+  assert.ok(Math.abs(e[0].fx - end.fx) < 1e-9 && Math.abs(e[0].scale - 1) < 1e-9);
 });
