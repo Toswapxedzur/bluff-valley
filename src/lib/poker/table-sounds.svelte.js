@@ -18,6 +18,7 @@ export function tableSounds(src) {
     let raf = 0;
     const loop = () => {
       if (src.dealer) engine.take(src.dealer.cues);
+      if (src.cards) engine.take(src.cards.cues);
       if (src.bank) engine.take(src.bank.money.cues, moneySound);
       engine.frame();
       raf = requestAnimationFrame(loop);
@@ -32,7 +33,7 @@ export function tableSounds(src) {
     const v = src.view;
     const prev = prevView; prevView = v;
     if (!v || !prev || prev.id !== v.id) return;
-    const animated = untrack(() => ({ cards: !!src.dealer, coins: !!src.bank }));
+    const animated = untrack(() => ({ cards: !!src.dealer, dealt: !!src.cards, coins: !!src.bank }));
     for (const c of tableSoundCues(prev, v, untrack(() => src.me?.id ?? null))) {
       const r = routeCue(c, animated);
       if (!r) continue;
