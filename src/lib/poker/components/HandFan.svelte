@@ -36,7 +36,7 @@
       {@const sel = !!selectable?.selected?.has(k)}
       {@const legal = selectable ? (selectable.legal ? selectable.legal.has(k) : true) : false}
       {#if selectable}
-        <button type="button" data-slot={i} class="slot pick" class:sel class:dim={selectable.legal && !legal} style="left:{i * step}px;--i:{i}" onclick={() => onSelect(k, i, c)} data-sfx="none" disabled={selectable.legal ? !legal : false}>
+        <button type="button" data-slot={i} data-card={c ?? ""} class="slot pick" class:sel class:dim={selectable.legal && !legal} style="left:{i * step}px;--i:{i}" onclick={() => onSelect(k, i, c)} data-sfx="none" disabled={selectable.legal ? !legal : false}>
           <span class="flip" class:up={!!c && reveal}>
             <span class="face back"><Card faceDown width={width} /></span>
             <span class="face front">{#if c}<Card card={c} width={width} />{/if}</span>
@@ -44,7 +44,7 @@
           {#if sel && labelOf}<span class="lbl">{labelOf(i, c)}</span>{/if}
         </button>
       {:else}
-        <span class="slot" data-slot={i} style="left:{i * step}px;--i:{i}">
+        <span class="slot" data-slot={i} data-card={c ?? ""} style="left:{i * step}px;--i:{i}">
           <span class="flip" class:up={!!c && reveal}>
             <span class="face back"><Card faceDown width={width} /></span>
             <span class="face front">{#if c}<Card card={c} width={width} />{/if}</span>
@@ -73,7 +73,7 @@
   .flip {
     position: absolute; inset: 0; display: block;
     transform-style: preserve-3d;
-    transition: transform 0.5s cubic-bezier(0.4, 0.85, 0.35, 1);
+    transition: transform 0.28s cubic-bezier(0.4, 0.85, 0.35, 1);   /* the flip norm (NORM.flip) */
     transition-delay: calc(var(--i) * 0.06s);
   }
   .flip.up { transform: rotateY(180deg); }

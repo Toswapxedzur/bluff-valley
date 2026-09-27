@@ -126,6 +126,16 @@ export function bestHand(cards, model = STANDARD_MODEL) {
   return best;
 }
 
+/** The five cards that make the best hand out of `cards` (for showing which cards won). */
+export function bestFive(cards, model = STANDARD_MODEL) {
+  let best = null, five = null;
+  for (const c of combinations(cards, 5)) {
+    const rank = rank5(c, model);
+    if (best === null || compareRank(rank, best) > 0) { best = rank; five = [...c]; }
+  }
+  return five;
+}
+
 // Standard Texas Hold'em: best 5 of exactly 7 cards. Kept as a named export with
 // its strict 7-card contract because the engine + bots depend on it directly.
 export function evaluate7(cards7) {

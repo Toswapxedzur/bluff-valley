@@ -29,7 +29,7 @@
   {#snippet center()}
     <div class="pile">
       {#if round.pile?.length}
-        <HandFan cards={round.pile} width={t.cardW} fan="row" />
+        <div data-cards="pile"><HandFan cards={round.pile} width={t.cardW} fan="row" /></div>
       {:else}<span class="muted waiting">Dealing…</span>{/if}
       {#if bank}
         <!-- the antes' pot: coins above, the pill below (drawn by MoneyLayer) -->

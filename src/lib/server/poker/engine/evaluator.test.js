@@ -56,3 +56,9 @@ test("evaluate7 rejects malformed or duplicate cards", () => {
     /invalid card/
   );
 });
+
+test("bestFive: the five cards that make the best hand", async () => {
+  const { bestFive } = await import("./evaluator.js");
+  const five = bestFive(["Qs", "Qd", "Kd", "7c", "2h", "5s", "Qc"]);
+  assert.deepEqual([...five].sort(), ["7c", "Kd", "Qc", "Qd", "Qs"].sort(), "three queens, king and seven kickers");
+});

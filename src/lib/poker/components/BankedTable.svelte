@@ -44,7 +44,7 @@
     {#if community.length}
       <div class="community" transition:fade={{ duration: d(DUR.base) }}>
         <div class="lbl">Board</div>
-        <HandFan cards={community} width={t.cardW} fan="row" />
+        <div data-cards="community"><HandFan cards={community} width={t.cardW} fan="row" /></div>
       </div>
     {/if}
   {/snippet}
@@ -56,6 +56,7 @@
     <SeatBadge cardWidth={t.cardW} handSpace={t.handSpace}
       seat={s ? { ...s, isToAct: round?.toActSeat === seatNo } : null} {seatNo} {me} isMine={mine}
       cards={hand?.cards?.length ? hand.cards : null}
+      lost={!!(hand?.bust || hand?.folded)}
       line={ln?.text ?? (s?.sittingOut ? "sitting out" : "")} lineKind={ln?.kind ?? "muted"}
       canSit={!!me && !t.iAmSeated && !s}
       deadline={round?.toActSeat === seatNo ? view?.actionDeadline ?? null : null}

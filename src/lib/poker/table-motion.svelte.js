@@ -8,11 +8,14 @@ import { untrack, setContext } from "svelte";
 import { Dealer } from "./dealer.svelte.js";
 import { Bank, moneyKind } from "./bank.svelte.js";
 import { animatesTable } from "./deal-anim.js";
+import { CardMotion } from "./card-motion.js";
+import { tableLayout } from "./games.js";
 import { reducedMotion } from "$lib/motion.js";
 
 class TableMotion {
   dealer = $state(null);
   bank = $state(null);
+  cards = $state(null);     // the other card games' motion (CardLayer): not Hold'em, which has the dealer
 }
 
 export function tableMotion(src) {
@@ -35,6 +38,12 @@ export function tableMotion(src) {
       const prev = dealerPrev; dealerPrev = v;
       if (prev !== v) m.dealer.onView(prev, v, src.privates);
     });
+  });
+
+  $effect(() => {
+    const v = src.view;
+    const on = !!v && !reducedMotion() && tableLayout(v.game || v.config?.variant) !== "poker";
+    untrack(() => { if (!on) m.cards = null; else if (!m.cards) m.cards = new CardMotion(); });
   });
 
   let bankFor = null, bankPrev = null;

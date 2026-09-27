@@ -4,6 +4,7 @@
 // through getVariant(state.variantKey). The betting state machine here is
 // variant-independent.
 import { getVariant } from "./variants.js";
+import { bestFive } from "./evaluator.js";
 
 const BETTING_STREETS = new Set(["preflop", "flop", "turn", "river"]);
 const ACTION_TYPES = new Set(["fold", "check", "call", "bet", "raise", "allin"]);
@@ -175,7 +176,8 @@ function awardBoard(state, variant, board, pots, amountFor, payoutBySeat) {
     .map((player) => ({
       seat: player.seat,
       holeCards: [...player.holeCards],
-      ...variant.evaluate(player.holeCards, board)
+      ...variant.evaluate(player.holeCards, board),
+      best: bestFive([...player.holeCards, ...board])          // the five cards the hand is made of
     }))
     .sort((a, b) => a.seat - b.seat);
   const handBySeat = new Map(hands.map((hand) => [hand.seat, hand]));

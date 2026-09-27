@@ -32,6 +32,8 @@ export class Dealer {
   flights = [];                      // { id, from, to, t0, dur, faceUp, arc, onLand }
   held = [];                         // cards the canvas holds in place: { id, at, faceUp, until }
   routine = null;                    // { R, t0, faceId } while the shuffle routine plays
+  // the showdown: the five cards that made the winning hand(s) lift, the rest dim (the shared norms)
+  highlight = null;                  // { win: Set of visual ids, t0 } while the result is held
   // sound cues, announced as each motion starts: { t, name, at?, gain?, dur? } where t is the frame
   // it lands (performance.now() clock) — cardLand · flip · pileTap · riffle (see table-audio.js)
   cues = [];
@@ -102,6 +104,7 @@ export class Dealer {
     this._finishRoutine();
     this.flights = [];
     this.held = [];
+    this.highlight = null;
     this._queue = [];
     this._seatIds = new Map();
     this._boardIds = [];
@@ -199,9 +202,14 @@ export class Dealer {
     }
     this._boardIds.forEach((id, i) => { if (id != null) out.push({ id, at: { kind: "board", slot: i }, faceUp: true }); });
     this.held = out;
+    // the winning five (each winner's best hand, as the server reports it)
+    const winners = new Set((view.result?.winners || []).map((w) => w.seat));
+    const winFaces = new Set((view.result?.revealed || []).filter((r) => winners.has(r.seat)).flatMap((r) => r.best || []));
+    this.highlight = winFaces.size ? { win: new Set(out.filter((h) => h.faceUp && winFaces.has(this.faces.get(h.id))).map((h) => h.id)), t0: now() } : null;
   }
 
   _collect() {
+    this.highlight = null;
     const cards = this.held.slice(), t = now(), gap = collectEvery(cards.length);
     // what's left of the deck goes too, turning over as one packet onto the bottom of the pile
     // (the shuffle starts from all 52); its bottom card shows as it lands — an unseen card

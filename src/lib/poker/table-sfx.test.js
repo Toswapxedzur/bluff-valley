@@ -110,5 +110,7 @@ test("routing: a moving card or coin sounds on its landing, not on the diff", as
   assert.deepEqual(routeCue({ name: "deal", count: 6, gap: 85 }, still), { table: "cardLand", opts: { delay: 0, gap: 85, burst: 6, volume: 1 } });
   assert.equal(routeCue({ name: "raise" }, still).opts.count, 5);
   assert.deepEqual(routeCue({ name: "join" }, moving), { sfx: "join", opts: { count: 1, gap: undefined, delay: undefined, volume: undefined } });
-  assert.equal(routeCue({ name: "cardPlay", count: 3 }, moving).table, "cardPlay", "Big Two's pile never animates");
+  assert.equal(routeCue({ name: "cardPlay", count: 3 }, moving).table, "cardPlay", "without the card layer the pile plays its sound");
+  assert.equal(routeCue({ name: "cardPlay", count: 3 }, { dealt: true }), null, "the card layer's play sounds on its landing");
+  assert.equal(routeCue({ name: "shuffle" }, { dealt: true }).table, "riffle", "the card layer doesn't shuffle: the sound still plays");
 });

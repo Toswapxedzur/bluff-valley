@@ -104,9 +104,12 @@
       if (dealer.used.length) resting.push({ ids: dealer.used, theta: Math.PI, fx: g.usedSpot.fx, fy: g.usedSpot.fy, art: { back, faceOf } });
     }
     // cards lying at a seat / on the board, then everything in the air (lowest first)
+    // the showdown highlight (the shared norms): winning cards lift a little, the rest take the fold dim
+    const hl = dealer.highlight, hk = hl ? Math.min(1, (t - hl.t0) / 320) : 0, he = 1 - (1 - hk) ** 3;
     const lying = dealer.held.map((h) => {
-      const p = g.place(h.at);
-      return { ids: [h.id], theta: h.faceUp ? Math.PI : 0, fx: p.fx, fy: p.fy, scale: p.scale, art: { back, faceOf } };
+      const p = g.place(h.at), win = hl?.win.has(h.id);
+      return { ids: [h.id], theta: h.faceUp ? Math.PI : 0, fx: p.fx, fy: p.fy - (win ? 10 * he : 0), scale: p.scale, art: { back, faceOf },
+        dim: hl && !win ? he : 0, glow: win ? he : 0 };
     }).sort((a, b) => a.fy - b.fy);
     const flying = dealer.flights.map((fl) => {
       const u = (t - fl.t0) / fl.dur, m = mj(u);
@@ -130,7 +133,12 @@
     });
     if (!back) return;
     for (const s of all) drawStackShadow(ctx, s);     // every shadow on the table first
-    for (const s of all) drawStack(ctx, s, s.art);
+    for (const s of all) {
+      if (s.dim) { ctx.save(); ctx.globalAlpha = 1 - 0.58 * s.dim; ctx.filter = `grayscale(${(0.4 * s.dim).toFixed(2)})`; }
+      else if (s.glow) { ctx.save(); ctx.shadowColor = `rgba(255,255,255,${(0.55 * s.glow).toFixed(2)})`; ctx.shadowBlur = 10 * s.glow; }
+      drawStack(ctx, s, s.art);
+      if (s.dim || s.glow) ctx.restore();
+    }
   }
 
   onMount(() => {

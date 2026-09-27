@@ -36,7 +36,7 @@
         {#if outcome.hands}
           <div class="ohands">
             {#each outcome.hands as h}
-              <div class="ohand"><div class="hl">{h.label}</div><HandFan cards={h.cards} width={t.cardW} fan="row" /></div>
+              <div class="ohand"><div class="hl">{h.label}</div><div data-cards="o-{h.label}"><HandFan cards={h.cards} width={t.cardW} fan="row" /></div></div>
             {/each}
           </div>
         {/if}
