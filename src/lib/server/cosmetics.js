@@ -6,7 +6,7 @@
 // wallet credit, a cash-out (a staked bot's winnings reach its funder), a received transfer, and each
 // hand's stack sync — and once more whenever the Cosmetics page loads, as a catch-all.
 import { query, execute } from "./db.js";
-import { LOOKS, isLook, ownedLooks, METALS } from "../cosmetics.js";
+import { LOOKS, isLook, ownedLooks, ownsLook, METALS } from "../cosmetics.js";
 import { bannersFor } from "./banners.js";
 
 // Who hears about a new metal (the hub registers: the player's personal "new look" banner).
@@ -51,8 +51,8 @@ export async function cosmeticsFor(userId) {
   const r = rows[0];
   if (!r) return null;
   const peak = Number(r.peak_wealth), owned = ownedLooks(peak);
-  const wearing = (k) => (owned.includes(k) ? k : "default");
-  return { wealth: Number(r.chips) + Number(r.on_tables), peak, owned, ring: wearing(r.ring), badge: wearing(r.badge) };
+  const wearing = (slot, k) => (ownsLook(slot, k, peak) ? k : "default");
+  return { wealth: Number(r.chips) + Number(r.on_tables), peak, owned, ring: wearing("ring", r.ring), badge: wearing("badge", r.badge) };
 }
 
 /** Equip `look` in `slot` ("ring" | "badge"). Refuses a look the player hasn't unlocked. */
@@ -61,7 +61,7 @@ export async function equip(userId, slot, look) {
   if (!isLook(look)) return { error: "Unknown look." };
   const c = await cosmeticsFor(userId);
   if (!c) return { error: "No such player." };
-  if (!c.owned.includes(look)) {
+  if (!ownsLook(slot, look, c.peak)) {
     const need = LOOKS.find((l) => l.key === look).at;
     return { error: `Unlocks at ${need.toLocaleString("en-US")} chips of wealth.` };
   }
@@ -78,7 +78,7 @@ export async function looksFor(userIds) {
   let banners = new Map();
   try { banners = await bannersFor(ids); } catch { /* banners optional */ }
   return new Map(rows.map((r) => {
-    const owned = ownedLooks(Number(r.peak_wealth));
-    return [r.id, { ring: owned.includes(r.ring) ? r.ring : "default", badge: owned.includes(r.badge) ? r.badge : "default", banner: banners.get(r.id) ?? null }];
+    const peak = Number(r.peak_wealth);
+    return [r.id, { ring: ownsLook("ring", r.ring, peak) ? r.ring : "default", badge: ownsLook("badge", r.badge, peak) ? r.badge : "default", banner: banners.get(r.id) ?? null }];
   }));
 }
