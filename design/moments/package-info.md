@@ -25,3 +25,10 @@ the avatar, comes down and covers the old ring.
 Moments: shuffle (stand-in cards) · all-in showdown · monster pot · rare hand (quads / straight flush / royal / Three Card) ·
 jackpot (slots / roulette / sic bo) · Big Two out · Sprint go · knockout · champion · new look
 (personal — nobody waits). Slot symbols are placeholders; no sounds yet.
+
+**Normal animations** (second tab, 2026-09-27) — in place, nobody waits, nothing on the table moves
+or resizes (cards, coins, tokens and glows travel on layers over / under the fixed plates):
+money (all-in push, split pot, House pays, Big Two antes) · cards (Blackjack, Three Card, Baccarat,
+Big Two deal + play, winning five) · resolves at table size (roulette, sic bo, slots) · seats
+(join / leave, your turn, fold, dealer button) · rewards (daily bonus, quest claim, achievement
+toast — the medal is a placeholder) · cosmetics (equip ring, equip badge, look change at a table).
