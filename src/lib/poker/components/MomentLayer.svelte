@@ -16,7 +16,7 @@
     const seats = new Map((view?.seats || []).map((s) => [s.seat, s]));
     const stop = playMoment(screen, moment, {
       veilHost: host,
-      seat: (no) => { const s = seats.get(no); return s ? { name: s.name, ring: s.ring, badge: s.badge, stack: s.stack } : null; }
+      seat: (no) => { const s = seats.get(no); return s ? { name: s.name, ring: s.ring, badge: s.badge, banner: s.banner ?? null, stack: s.stack } : null; }
     });
     return () => { window.removeEventListener("resize", fit); stop(); };
   });

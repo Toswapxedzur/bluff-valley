@@ -5,17 +5,19 @@
   import { LOOKS, plateStyle } from "$lib/cosmetics.js";
   import { SITE_NAME } from "$lib/config.js";
   import { plateSpread } from "$lib/actions/plate-spread.js";
+  import BannerEditor from "./BannerEditor.svelte";
 
   let { data } = $props();
   let ring = $state(data.ring);
   let badge = $state(data.badge);
   let error = $state(null);
+  let banner = $state(data.banner.live);   // the banner that is live on my seat
 
   const owned = new Set(data.owned);
   const fmt = (n) => Number(n).toLocaleString("en-US");
   const short = (n) => (n >= 1e6 ? `${n / 1e6}M` : n >= 1e3 ? `${n / 1e3}K` : String(n));
   const progress = (at) => Math.min(100, Math.round(((data.peak || 0) / at) * 100));
-  const plate = $derived(plateStyle(badge));
+  const plate = $derived(plateStyle(badge, banner));
   const plateVars = (p) => `background:${p.bg};--ink:${p.ink};--sub:${p.sub};--money:${p.money}`;
 
   // equip without a reload; the server re-checks the unlock
@@ -30,6 +32,7 @@
 <div class="wrap">
   <div class="head">
     <h1>Cosmetics</h1>
+    {#if data.isAdmin}<a class="review" href="/cosmetics/review">Banner review</a>{/if}
     <span class="bal" title="Your highest wealth ever: wallet plus chips on tables"><Chip value={data.peak} size={20} /> {fmt(data.peak)}</span>
   </div>
   <p class="muted intro">
@@ -40,7 +43,7 @@
 
   <!-- how you look at a table -->
   <div class="preview">
-    <div class="plate" style={plateVars(plate)} use:plateSpread={plate.bg}>
+    <div class="plate" class:tabbed={plate.tab} style={plateVars(plate)} use:plateSpread={plate.bg}>
       <Avatar id={data.me.id} name={data.me.name} mediaId={data.me.avatarMediaId} size={36} {ring} />
       <div class="txt">
         <div class="r1"><span class="name">{data.me.name}</span><span class="stack">{fmt(data.wealth)}</span></div>
@@ -49,6 +52,8 @@
     </div>
   </div>
   {#if error}<p class="err" role="alert">{error}</p>{/if}
+
+  <BannerEditor me={data.me} wealth={data.wealth} {ring} {badge} initial={data.banner} onLive={(b) => (banner = b)} />
 
   {#each [["ring", "Rings", "The band round your avatar."], ["badge", "Badges", "The colour of your seat plate."]] as [slot, title, sub]}
     <section class="grp">
@@ -87,6 +92,7 @@
   .wrap { max-width: 720px; margin: 0 auto; }
   .head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
   h1 { margin: 0; font-size: 26px; }
+  .review { margin-left: auto; font-weight: 700; font-size: 13px; }
   .bal { font-weight: 800; font-variant-numeric: tabular-nums; color: var(--gold-ink); font-size: 17px; display: inline-flex; align-items: center; gap: 7px; }
   .intro { margin: 6px 0 18px; max-width: 62ch; }
   .small { font-size: 12.5px; }
@@ -95,6 +101,7 @@
   .preview { display: flex; justify-content: center; padding: 22px 12px; background: var(--well); border-radius: var(--r-card); margin-bottom: 22px; }
   .plate { position: relative; display: flex; align-items: center; gap: 8px; padding: 5px 14px 5px 5px; border-radius: 16px; box-shadow: var(--shadow-card); }
   .plate > :global(*) { position: relative; z-index: 1; }   /* above the plate-spread overlay */
+  .plate.tabbed { padding-right: 44px; }                     /* a banner's end tab keeps its room */
   .plate .r1 { display: flex; gap: 7px; align-items: baseline; }
   .plate .name { font-size: 14px; font-weight: 700; color: var(--ink); }
   .plate .stack { font-size: 15px; font-weight: 700; color: var(--money); font-variant-numeric: tabular-nums; }

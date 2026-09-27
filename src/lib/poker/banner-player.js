@@ -4,6 +4,7 @@
 // band closes back to a line. Its material says what it is: logo blue for a call, charcoal for a
 // knockout, gold for a champion, the new metal for your unlock. DOM + Web Animations.
 import { ringSvg, ringBox, plateStyle, METALS, CHESS, mix } from "../cosmetics.js";
+import { TAB_ASPECT } from "../banner.js";
 import { coinSvg } from "./chips.js";
 import { initials, avColor } from "../initials.js";
 import { SPRINT_ICON } from "./games.js";
@@ -76,8 +77,10 @@ export function playBanner(host, moment, ctx = {}) {
   const appear = (el, delay, from = "translateY(12px)") => A(el, [{ opacity: 0, transform: from }, { opacity: 1, transform: "none" }], { duration: 340, delay });
   const title = (t) => h("div", "b-title", t), caption = (t) => h("div", "b-caption", t);
   function plate(p, { av = 64, w = 300, hgt = 76, look = null } = {}) {
-    const st = plateStyle(look ?? p.badge ?? "default"), ring = look ?? p.ring ?? "default", e = h("div", "b-plate");
+    // a metal being shown off (`look`) shows bare; otherwise the player's banner lies over their metal
+    const st = plateStyle(look ?? p.badge ?? "default", look ? null : p.banner ?? null), ring = look ?? p.ring ?? "default", e = h("div", "b-plate");
     Object.assign(e.style, { width: w + "px", height: hgt + "px", background: st.bg, color: st.ink });
+    if (st.tab) e.style.paddingRight = Math.round(hgt * TAB_ASPECT + 10) + "px";   // the banner's tab keeps its room
     const over = (ringBox(av) - av) / 2;
     e.innerHTML = `<span class="av" style="width:${av}px;height:${av}px;margin-right:${Math.round(over + av * 0.2)}px"><span class="ring">${ringSvg(av, ring)}</span><span class="face" style="background:${avColor(p.name)};font-size:${Math.round(av * 0.36)}px">${initials(p.name)}</span></span><span class="txt"><b class="name" style="font-size:${Math.round(hgt * 0.3)}px">${p.name}</b></span>`;
     return e;

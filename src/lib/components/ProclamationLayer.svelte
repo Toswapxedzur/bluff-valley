@@ -30,7 +30,7 @@
       return;
     }
     if (reducedMotion()) return;
-    playing = playBanner(host, next, { me: { name: me?.displayName || me?.email || "You", ring: poker.me?.ring || "default", badge: poker.me?.badge || "default" }, onWear: wear });
+    playing = playBanner(host, next, { me: { name: me?.displayName || me?.email || "You", ring: poker.me?.ring || "default", badge: poker.me?.badge || "default", banner: poker.me?.banner ?? null }, onWear: wear });
     playing.done.then(() => { playing = null; host?.replaceChildren(); poker.proclamationQueue = [...poker.proclamationQueue]; });
   });
   onDestroy(() => playing?.stop());

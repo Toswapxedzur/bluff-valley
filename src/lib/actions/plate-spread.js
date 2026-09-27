@@ -12,6 +12,8 @@ export function plateSpread(node, bg) {
       const was = cur;
       cur = next;
       if (!was || reducedMotion()) return;
+      // the banner editor's live preview (one blob: picture after another as you drag): swap at once
+      if (was.includes('url("blob:') && next?.includes('url("blob:')) return;
       const ov = document.createElement("span");
       Object.assign(ov.style, { position: "absolute", inset: "0", borderRadius: "inherit", background: was, zIndex: "0", pointerEvents: "none" });
       node.prepend(ov);

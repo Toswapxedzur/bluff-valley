@@ -1,0 +1,194 @@
+{
+ "holdem-light": [
+  {
+   "name": "Admin",
+   "w": 153.1,
+   "h": 42.9,
+   "banner": true,
+   "tab": false,
+   "nameClipped": false
+  },
+  {
+   "name": "Johnny",
+   "w": 126.9,
+   "h": 35.5,
+   "banner": true,
+   "tab": true,
+   "nameClipped": true
+  }
+ ],
+ "big-two-light": [
+  {
+   "name": "Admin",
+   "w": 153.1,
+   "h": 42.9,
+   "banner": true,
+   "tab": false,
+   "nameClipped": false
+  },
+  {
+   "name": "Johnny",
+   "w": 126.9,
+   "h": 35.5,
+   "banner": true,
+   "tab": true,
+   "nameClipped": false
+  }
+ ],
+ "blackjack-light": [
+  {
+   "name": "House",
+   "w": 126.9,
+   "h": 35.5,
+   "banner": false,
+   "tab": false,
+   "nameClipped": false
+  },
+  {
+   "name": "Admin",
+   "w": 153.1,
+   "h": 42.9,
+   "banner": true,
+   "tab": false,
+   "nameClipped": false
+  },
+  {
+   "name": "Johnny",
+   "w": 126.9,
+   "h": 35.5,
+   "banner": true,
+   "tab": true,
+   "nameClipped": false
+  }
+ ],
+ "baccarat-light": [
+  {
+   "name": "House",
+   "w": 126.9,
+   "h": 35.5,
+   "banner": false,
+   "tab": false,
+   "nameClipped": false
+  },
+  {
+   "name": "Admin",
+   "w": 153.1,
+   "h": 42.9,
+   "banner": true,
+   "tab": false,
+   "nameClipped": false
+  },
+  {
+   "name": "Johnny",
+   "w": 126.9,
+   "h": 35.5,
+   "banner": true,
+   "tab": true,
+   "nameClipped": false
+  }
+ ],
+ "three-card-light": [
+  {
+   "name": "House",
+   "w": 126.9,
+   "h": 35.5,
+   "banner": false,
+   "tab": false,
+   "nameClipped": false
+  },
+  {
+   "name": "Admin",
+   "w": 153.1,
+   "h": 42.9,
+   "banner": true,
+   "tab": false,
+   "nameClipped": false
+  },
+  {
+   "name": "Johnny",
+   "w": 126.9,
+   "h": 35.5,
+   "banner": true,
+   "tab": true,
+   "nameClipped": false
+  }
+ ],
+ "roulette-light": [
+  {
+   "name": "House",
+   "w": 126.9,
+   "h": 35.5,
+   "banner": false,
+   "tab": false,
+   "nameClipped": false
+  },
+  {
+   "name": "Admin",
+   "w": 153.1,
+   "h": 42.9,
+   "banner": true,
+   "tab": false,
+   "nameClipped": false
+  },
+  {
+   "name": "Johnny",
+   "w": 126.9,
+   "h": 35.5,
+   "banner": true,
+   "tab": true,
+   "nameClipped": false
+  }
+ ],
+ "sic-bo-light": [
+  {
+   "name": "House",
+   "w": 126.9,
+   "h": 35.5,
+   "banner": false,
+   "tab": false,
+   "nameClipped": false
+  },
+  {
+   "name": "Admin",
+   "w": 153.1,
+   "h": 42.9,
+   "banner": true,
+   "tab": false,
+   "nameClipped": false
+  },
+  {
+   "name": "Johnny",
+   "w": 126.9,
+   "h": 35.5,
+   "banner": true,
+   "tab": true,
+   "nameClipped": false
+  }
+ ],
+ "slots-light": [
+  {
+   "name": "House",
+   "w": 126.9,
+   "h": 35.5,
+   "banner": false,
+   "tab": false,
+   "nameClipped": false
+  },
+  {
+   "name": "Admin",
+   "w": 153.1,
+   "h": 42.9,
+   "banner": true,
+   "tab": false,
+   "nameClipped": false
+  },
+  {
+   "name": "Johnny",
+   "w": 126.9,
+   "h": 35.5,
+   "banner": true,
+   "tab": true,
+   "nameClipped": false
+  }
+ ]
+}

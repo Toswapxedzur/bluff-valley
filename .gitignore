@@ -41,3 +41,6 @@ __pycache__/
 
 # Sound-library audition set (hundreds of MB of candidate clips; picks get copied into static/sfx)
 design/sfx-library/
+
+# Player-uploaded banners (BANNER_DIR default) — user data, never in git
+var/banners/

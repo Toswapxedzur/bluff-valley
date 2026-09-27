@@ -42,6 +42,19 @@
     return { top: top + "px", left: left + "px" };
   });
 
+  // "Report banner": into the admins' queue (the banner stays up until they act)
+  let reported = $state(null);
+  $effect(() => { void profilePop.userId; reported = null; });
+  async function reportBanner() {
+    if (!profile || busy) return;
+    busy = true;
+    try {
+      const r = await fetch(`/api/user/${profile.id}/report-banner`, { method: "POST" });
+      reported = r.ok ? "Reported. Thanks — an admin will look at it." : r.status === 401 ? "Sign in to report." : "Couldn't report it. Try again.";
+    } catch { reported = "Couldn't report it. Try again."; }
+    finally { busy = false; }
+  }
+
   async function act(action) {
     if (!profile || busy) return;
     busy = true;
@@ -97,6 +110,12 @@
           <a class="btn btn-sm btn-secondary" href="/u/{profile.id}">Profile</a>
         {/if}
       </div>
+      {#if profile.banner && !profile.isSelf}
+        <div class="pp-report">
+          {#if reported}<span class="muted">{reported}</span>
+          {:else}<button class="pp-link" disabled={busy} onclick={reportBanner}>Report banner</button>{/if}
+        </div>
+      {/if}
     {/if}
   </div>
 {/if}
@@ -117,4 +136,7 @@
   .pp-actions { display: flex; gap: 8px; margin-top: 4px; }
   .pp-actions .btn { flex: 1; }
   .pp-actions .pp-call { flex: 0 0 auto; }
+  .pp-report { margin-top: 10px; font-size: 12px; text-align: right; }
+  .pp-link { border: 0; background: none; padding: 0; font: inherit; color: var(--muted); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+  .pp-link:hover { color: var(--danger); }
 </style>

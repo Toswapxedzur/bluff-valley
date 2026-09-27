@@ -2,6 +2,8 @@ import { fail, redirect } from "@sveltejs/kit";
 import { query, queryOne } from "$lib/server/db.js";
 import { updateProfile } from "$lib/server/profiles.js";
 import { openReports, resolveReport } from "$lib/server/moderation.js";
+import { adminRemove } from "$lib/server/banners.js";
+import { hub } from "$lib/server/poker/hub.js";
 import {
   invalidateSession,
   promoteToAdmin,
@@ -182,6 +184,19 @@ export const actions = {
     const mediaId = String(fd.get("avatarMediaId") || "");
     await updateProfile(locals.user.id, { avatarMediaId: mediaId || null });
     return { avatarOk: true, avatarMediaId: mediaId || null };
+  },
+
+  // a banner report: take the banner down and close the report in one go
+  removeBanner: async ({ request, locals }) => {
+    if (!locals.user?.isAdmin) return fail(403, { error: "Admins only." });
+    const fd = await request.formData();
+    const userId = String(fd.get("userId") || ""), id = String(fd.get("id") || "");
+    if (userId) {
+      await adminRemove(userId, { ban: fd.get("ban") === "1" });
+      try { hub.setLooks(userId, { banner: null }); } catch { /* next sit */ }
+    }
+    if (id) await resolveReport(id);
+    return { reportResolved: true };
   },
 
   resolveReport: async ({ request, locals }) => {

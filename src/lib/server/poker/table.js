@@ -297,6 +297,7 @@ export class LiveTable {
         avatar: s.avatar ?? null,
         ring: s.ring ?? "default",
         badge: s.badge ?? "default",
+        banner: s.banner ?? null,
         stack: ep ? ep.stack : s.stack,
         committed: ep ? ep.committedThisStreet : 0,
         status: s.inHand ? (ep ? ep.status : s.status) : null,
@@ -1037,6 +1038,7 @@ export class LiveTable {
       avatar: conn.user.avatarMediaId ?? null,
       ring: conn.user.ring ?? "default",          // cosmetics: the avatar ring and the seat plate (badge)
       badge: conn.user.badge ?? "default",
+      banner: conn.user.banner ?? null,           // their own picture on the plate (banners.js)
       stack: buyin,
       sittingOut: false,
       wantsToLeave: false,

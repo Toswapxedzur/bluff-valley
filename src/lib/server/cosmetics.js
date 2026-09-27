@@ -7,6 +7,7 @@
 // hand's stack sync — and once more whenever the Cosmetics page loads, as a catch-all.
 import { query, execute } from "./db.js";
 import { LOOKS, isLook, ownedLooks, METALS } from "../cosmetics.js";
+import { bannersFor } from "./banners.js";
 
 // Who hears about a new metal (the hub registers: the player's personal "new look" banner).
 let lookNotifier = null;
@@ -68,13 +69,16 @@ export async function equip(userId, slot, look) {
   return { ...c, [slot]: look };
 }
 
-/** Equipped looks for many users at once (for seats, the lobby, the leaderboard): id → { ring, badge }. */
+/** Equipped looks for many users at once (for seats, the lobby, the leaderboard): id → { ring, badge,
+ *  banner } (banner = their live picture, or null). */
 export async function looksFor(userIds) {
   const ids = [...new Set((userIds || []).filter(Boolean))];
   if (!ids.length) return new Map();
   const rows = await query(`SELECT id, ring, badge, peak_wealth FROM user WHERE id IN (${ids.map(() => "?").join(",")})`, ids);
+  let banners = new Map();
+  try { banners = await bannersFor(ids); } catch { /* banners optional */ }
   return new Map(rows.map((r) => {
     const owned = ownedLooks(Number(r.peak_wealth));
-    return [r.id, { ring: owned.includes(r.ring) ? r.ring : "default", badge: owned.includes(r.badge) ? r.badge : "default" }];
+    return [r.id, { ring: owned.includes(r.ring) ? r.ring : "default", badge: owned.includes(r.badge) ? r.badge : "default", banner: banners.get(r.id) ?? null }];
   }));
 }

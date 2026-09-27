@@ -232,7 +232,7 @@ export class SprintPool {
         // a player (not a bot) is out: that table's players see the knockout, and it holds for it
         if (p.isHuman) {
           const seen = [...table.seats.values()].map((x) => x.userId).filter((u) => this.humanIds.has(u));
-          this._tell(seen, { kind: "knockout", name: s.name, ring: s.ring ?? "default", badge: s.badge ?? "default", place: this._activePlayers().length + 1, of: this.players.size });
+          this._tell(seen, { kind: "knockout", name: s.name, ring: s.ring ?? "default", badge: s.badge ?? "default", banner: s.banner ?? null, place: this._activePlayers().length + 1, of: this.players.size });
           table.holdUntil = Date.now() + PROCLAIM_MS.knockout;
         }
         table.seats.delete(s.seat);
@@ -271,7 +271,7 @@ export class SprintPool {
     if (top) {
       let seat = null;
       for (const t of this.tables) { seat = t.seatForUser?.(top.id) || seat; if (seat) break; }
-      this._tell(this.humanIds, { kind: "champion", name: seat?.name || "The winner", ring: seat?.ring ?? "default", badge: seat?.badge ?? "default", of: standings.length, you: top.id });
+      this._tell(this.humanIds, { kind: "champion", name: seat?.name || "The winner", ring: seat?.ring ?? "default", badge: seat?.badge ?? "default", banner: seat?.banner ?? null, of: standings.length, you: top.id });
     }
     // Toast each human their placing and clear their table view so the client
     // routes them off the felt that's about to be torn down.

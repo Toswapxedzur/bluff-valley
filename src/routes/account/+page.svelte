@@ -244,7 +244,7 @@
 
 {#if data.user.isAdmin && data.reports}
   <section class="card">
-    <div class="card-head"><h3>Reports ({data.reports.length})</h3></div>
+    <div class="card-head"><h3>Reports ({data.reports.length})</h3><a class="small" href="/cosmetics/review">Banner review</a></div>
     {#if data.reports.length === 0}
       <p class="muted small">No open reports.</p>
     {:else}
@@ -252,12 +252,27 @@
         <div class="report-row">
           <div class="report-main">
             <span><a href="/u/{r.reporter_id}">{r.reporter_name || r.reporter_email || "someone"}</a> reported <a href="/u/{r.target_id}"><b>{r.target_name || r.target_email || "a user"}</b></a></span>
-            {#if r.reason}<span class="muted small">{r.reason}</span>{/if}
+            {#if r.reason?.startsWith("banner:")}
+              <span class="muted small">Their banner (<a href="/cosmetics/review">all banners</a>):</span>
+              <img class="report-banner" src="/banner/{r.reason.slice(7)}" alt="Reported banner" loading="lazy" />
+            {:else if r.reason}<span class="muted small">{r.reason}</span>{/if}
           </div>
+          <div class="report-acts">
+          {#if r.reason?.startsWith("banner:")}
+            <form method="POST" action="?/removeBanner" use:enhance>
+              <input type="hidden" name="id" value={r.id} /><input type="hidden" name="userId" value={r.target_id} />
+              <button class="btn btn-sm btn-secondary" type="submit">Remove banner</button>
+            </form>
+            <form method="POST" action="?/removeBanner" use:enhance>
+              <input type="hidden" name="id" value={r.id} /><input type="hidden" name="userId" value={r.target_id} /><input type="hidden" name="ban" value="1" />
+              <button class="btn btn-sm btn-secondary" type="submit">Remove and bar</button>
+            </form>
+          {/if}
           <form method="POST" action="?/resolveReport" use:enhance>
             <input type="hidden" name="id" value={r.id} />
-            <button class="btn btn-sm btn-secondary" type="submit">Resolve</button>
+            <button class="btn btn-sm btn-secondary" type="submit">{r.reason?.startsWith("banner:") ? "Keep it" : "Resolve"}</button>
           </form>
+          </div>
         </div>
       {/each}
     {/if}
@@ -266,12 +281,12 @@
 
 {#if data.user.isAdmin && data.allUsers}
   <section class="card">
-    <div class="card-head"><h3>Admin \u2014 grant / adjust chips</h3></div>
+    <div class="card-head"><h3>Admin — grant / adjust chips</h3></div>
     <form method="POST" action="?/adjustChips" class="adjust-form">
       <label class="field">
         <span>User</span>
         <Select name="userId" bind:value={adjustUserId} block
-          options={data.allUsers.map((u) => ({ value: u.id, label: `${u.email}${u.display_name ? ` (${u.display_name})` : ""} \u2014 ${chips(u.chips)} chips` }))} />
+          options={data.allUsers.map((u) => ({ value: u.id, label: `${u.email}${u.display_name ? ` (${u.display_name})` : ""} — ${chips(u.chips)} chips` }))} />
       </label>
       <label class="field">
         <span>Amount (negative to remove)</span>
@@ -284,7 +299,7 @@
   </section>
 
   <section class="card">
-    <div class="card-head"><h3>Admin \u2014 promote a user</h3></div>
+    <div class="card-head"><h3>Admin — promote a user</h3></div>
     <form method="POST" action="?/promote">
       <label class="field">
         <span>User</span>
@@ -316,6 +331,10 @@
   .avatar-controls { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
   .report-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 0; }
   .report-main { display: flex; flex-direction: column; gap: 2px; font-size: 13.5px; }
+  .report-row { flex-wrap: wrap; }
+  .report-row form { margin: 0; }
+  .report-acts { display: flex; gap: 8px; flex-wrap: wrap; }
+  .report-banner { width: 197px; height: 55px; object-fit: cover; border-radius: 9px; background: var(--well); margin-top: 4px; }
   .wallet .balance-row {
     display: flex; align-items: center; justify-content: space-between;
     gap: 16px; flex-wrap: wrap;
