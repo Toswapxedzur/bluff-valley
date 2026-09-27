@@ -8,6 +8,7 @@
   import { getContext, untrack } from "svelte";
   import { plateStyle, ringBox } from "$lib/cosmetics.js";
   import { plateSpread } from "$lib/actions/plate-spread.js";
+  import { cueAt } from "$lib/poker/table-audio.js";
 
   // The one seat badge every game uses: avatar · name · stack · status line, with
   // the player's cards fanned underneath. Layout is the same for every game; games
@@ -70,6 +71,13 @@
     });
   });
   $effect(() => () => stopDraw());
+
+  // My own hand goes out (a bust, a fold): a knock with its shake
+  let wasLost = untrack(() => lost);
+  $effect(() => {
+    const now = !!lost;
+    untrack(() => { if (now && !wasLost && isMine) cueAt("bust", performance.now() + 20); wasLost = now; });
+  });
 
   // My turn starts: one glow laps my ring (then its gems count the clock down)
   let glowKey = $state(0), wasToAct = false;

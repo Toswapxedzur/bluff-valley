@@ -23,3 +23,6 @@ Picked by the owner 2026-09-25 in the Sound Lab.
 * low-thud: "Freesound - Pounding Cards On Table (HogantheLogan)" (Freesound, Creative Commons 0)
 * stamp-hit: "Martial arts fast punch" (Mixkit, Mixkit licence (free, no credit))
 * coin-shower: "Freesound - Coins spill.wav (daddy_z)" (Freesound, Creative Commons 0)
+* bust: "card shove 2" (Kenney, CC0)
+* reel-spin: "fishing reel fast" (BigSoundBank, CC0)
+* reveal-hit: "card place 3" (Kenney, CC0) + the clay-chip few clip (coin-few-1, credited above)

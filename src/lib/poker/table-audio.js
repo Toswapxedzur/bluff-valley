@@ -30,7 +30,10 @@ export const TABLE_SOUNDS = {
   ringSet:    { files: ["ring-set"], gain: 0.8, onHit: true },     // a new ring lands on an avatar
   lowThud:    { files: ["low-thud"], gain: 0.9, onHit: true },     // the suck-out's jolt, a knocked-out plate, a banner opening
   stampHit:   { files: ["stamp-hit"], gain: 1, onHit: true },      // a jackpot's multiplier slamming in
-  coinShower: { files: ["coin-shower"], gain: 0.7 }                // a jackpot's coin fountain
+  coinShower: { files: ["coin-shower"], gain: 0.7 },               // a jackpot's coin fountain
+  bust:       { files: ["bust"], gain: 0.9, onHit: true },         // my own hand busts (the shake) — round 2 picks
+  reelSpin:   { files: ["reel-spin"], gain: 0.7 },                 // the slot reels spinning, until the first stops
+  revealHit:  { files: ["reveal-hit"], gain: 1, onHit: true }      // a rare hand's name appearing
 };
 /** Coin tier by how many coins land: 1 · 2–4 · 5+. */
 export const coinTier = (count) => (count >= 5 ? "pile" : count >= 2 ? "few" : "one");
