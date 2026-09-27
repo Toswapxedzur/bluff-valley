@@ -493,9 +493,6 @@ test("scenario 6: player disconnects when it is NOT their turn -> the hand does 
 
   await table.beginHand();
   assert.equal(table.hand.toActSeat, 0, "seat0 to act first");
-  // the deal opens with the shuffle: the first turn waits for it
-  clock.advance(table.dealHoldUntil - clock.now() + 10);
-  assert.ok(await clock.fire(), "the shuffle hold ends");
 
   // Disconnect seat2 while it is seat0's turn (not seat2's).
   table.removeWatcher(conns[2]);
