@@ -439,7 +439,10 @@ export class LiveTable {
     // A jackpot's moment plays its own spin, so it replaces the table's.
     const moment = this.result ? detectMoment(this.publicView()) : null;
     const spin = this.result && moment?.kind !== "jackpot" ? resolveMs(this.config.variant) : 0;
-    const delay = (this.result && animatesConfig(this.config) ? SHUFFLE_HAND_DELAY_MS : NEW_HAND_DELAY_MS + spin) + (moment?.ms ?? 0);
+    let delay = (this.result && animatesConfig(this.config) ? SHUFFLE_HAND_DELAY_MS : NEW_HAND_DELAY_MS + spin) + (moment?.ms ?? 0);
+    // a banner moment someone is watching (a Sprint going live, a knockout): hold until it ends
+    const hold = Math.max(this.holdUntil || 0, this.tournament?.holdUntil || 0) - Date.now();
+    if (hold > delay) delay = hold;
     this.startTimer = this.setTimer(() => {
       this.startTimer = null;
       return this._run(() => this.beginHand());

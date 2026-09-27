@@ -6,7 +6,11 @@
 // wallet credit, a cash-out (a staked bot's winnings reach its funder), a received transfer, and each
 // hand's stack sync — and once more whenever the Cosmetics page loads, as a catch-all.
 import { query, execute } from "./db.js";
-import { LOOKS, isLook, ownedLooks } from "../cosmetics.js";
+import { LOOKS, isLook, ownedLooks, METALS } from "../cosmetics.js";
+
+// Who hears about a new metal (the hub registers: the player's personal "new look" banner).
+let lookNotifier = null;
+export function setLookNotifier(fn) { lookNotifier = fn; }
 
 export const SLOTS = ["ring", "badge"];
 
@@ -15,7 +19,9 @@ export async function bumpPeakWealth(userIds) {
   const ids = [...new Set((userIds || []).filter(Boolean))];
   if (!ids.length) return;
   const qs = ids.map(() => "?").join(",");
+  const peaks = async () => new Map((await query(`SELECT id, peak_wealth FROM user WHERE id IN (${qs})`, ids)).map((r) => [r.id, Number(r.peak_wealth) || 0]));
   try {
+    const before = lookNotifier ? await peaks() : null;
     await execute(
       `UPDATE user u LEFT JOIN (SELECT user_id, SUM(stack) AS s FROM poker_escrow WHERE user_id IN (${qs}) GROUP BY user_id) e
          ON e.user_id = u.id
@@ -23,6 +29,13 @@ export async function bumpPeakWealth(userIds) {
        WHERE u.id IN (${qs})`,
       [...ids, ...ids]
     );
+    if (before) {
+      const after = await peaks();
+      for (const [id, was] of before) {
+        const now = after.get(id) ?? was;
+        for (const m of METALS) if (m.at > was && m.at <= now) { try { lookNotifier(id, { key: m.key, name: m.name, at: m.at }); } catch { /* best-effort */ } }
+      }
+    }
   } catch { /* a missed bump is caught by the next one */ }
 }
 
