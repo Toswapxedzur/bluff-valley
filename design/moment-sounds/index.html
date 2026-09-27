@@ -42,10 +42,10 @@
 <div class="page">
   <header>
     <h1>Animation sounds</h1>
-    <p class="intro">The new sounds the animations still need. Everything that an existing sound already fits is wired in the game; these 13 have three candidates each, all unpitched, no whooshes. <b>In context</b> plays it with the game's own sounds around it, its hit landing on the animation's moment. Pick one per slot (or none), then copy your picks and send them.</p>
+    <p class="intro"><b>Round 2.</b> Your nine picks are in the game. These four had no good option, so each tries a different direction: card sounds for the bust, mechanical ratchets for the reels, natural-speed card sounds for the squeeze, and your own sounds for the reveal. <b>In context</b> plays it with the game's sounds around it (your picks included), its hit landing on the animation's moment. Pick one per slot (or none), then copy your picks and send them.</p>
   </header>
   <div class="bar">
-    <span class="count" id="count">0 / 13 picked</span>
+    <span class="count" id="count">0 / 4 picked</span>
     <span class="picked" id="summary"></span>
     <button class="btn primary" id="copy">Copy my picks</button>
     <span class="copied" id="copied" hidden>Copied</span>
@@ -55,8 +55,9 @@
 
 <script>
 (async () => {
-  const S = await (await fetch("candidates.json")).json();
-  const KEY = "bv-moment-sound-picks";
+  const ALL = await (await fetch("candidates.json")).json();
+  const S = Object.fromEntries(Object.entries(ALL).filter(([k]) => k !== "picked"));
+  const KEY = "bv-moment-sound-picks-2";
   let picks = {};
   try { picks = JSON.parse(localStorage.getItem(KEY) || "{}"); } catch { picks = {}; }
   const savePicks = () => { try { localStorage.setItem(KEY, JSON.stringify(picks)); } catch { /* fine */ } };
@@ -84,23 +85,15 @@
     }
   }
   const C = (k) => `ctx/${k}.mp3`;
-  const cand = (slot, i = 0) => S[slot].candidates[i];
+  const P = (f, lead = 0) => ({ file: `ctx/pick_${f}.mp3`, lead });   // your round-1 picks, as in the game
   // what surrounds each sound in the game (the sounds already chosen), and when its hit lands
   const CONTEXT = {
-    allInSlam: (x) => [0, 100, 200, 300].map((t) => ({ file: C("table_coin-few-1"), at: t + 380, lead: 0 })).concat({ file: x.file, at: 1150, lead: x.lead }),
     cardKnock: (x) => [{ file: C("table_card-deal"), at: 0 }, { file: C("table_card-flip"), at: 330 }, { file: C("table_card-deal"), at: 900 }, { file: x.file, at: 1350, lead: x.lead }],
-    buttonTap: (x) => [{ file: C("table_card-pile"), at: 0 }, { file: x.file, at: 760, lead: x.lead, gain: 0.6 }],
-    ballRoll: (x) => [{ file: x.file, at: 0 }, { file: cand("ballSettle").file, at: 2200, lead: cand("ballSettle").lead }],
-    ballSettle: (x) => [{ file: cand("ballRoll").file, at: 0 }, { file: x.file, at: 2200, lead: x.lead }],
     reelSpin: (x) => [{ file: x.file, at: 0 }, ...[1400, 1850, 2300].map((t) => ({ file: C("reel-1"), at: t }))],
-    medalClink: (x) => [{ file: x.file, at: 260, lead: x.lead }],
-    ringSet: (x) => [{ file: x.file, at: 560, lead: x.lead }],
-    squeeze: (x) => [{ file: C("table_card-deal"), at: 0 }, { file: x.file, at: 550 }, { file: cand("lowThud").file, at: 1700, lead: cand("lowThud").lead }],
-    lowThud: (x) => [{ file: C("table_card-flip"), at: 0 }, { file: x.file, at: 380, lead: x.lead }],
-    revealHit: (x) => [280, 430, 580, 730, 880].map((t) => ({ file: C("table_card-play"), at: t })).concat({ file: x.file, at: 1180, lead: x.lead }),
-    stampHit: (x) => [0, 450, 900].map((t) => ({ file: C("reel-1"), at: t })).concat({ file: x.file, at: 1120, lead: x.lead }, { file: cand("coinShower").file, at: 1350 }),
-    coinShower: (x) => [{ file: cand("stampHit").file, at: 0, lead: cand("stampHit").lead }, { file: x.file, at: 230 }]
+    squeeze: (x) => [{ file: C("table_card-deal"), at: 0 }, { file: x.file, at: 550 }, { ...P("low-thud", 287), at: 1700 }],
+    revealHit: (x) => [280, 430, 580, 730, 880].map((t) => ({ file: C("table_card-play"), at: t })).concat({ file: x.file, at: 1180, lead: x.lead })
   };
+
 
   // ---- the page
   const root = document.getElementById("slots");

@@ -148,7 +148,7 @@ function gameCues(prev, next, myUserId) {
   // counted as dealt cards above.
   if (!pr.outcome && nr.outcome) {
     // on the resolve's own moments (resolve-anim.js): the ball drops, the dice settle, each reel stops
-    if (WHEEL_GAMES.has(next.game)) { cues.push({ name: "shake" }); cues.push({ name: "dice", delay: RESOLVE.roulette.spin }); }
+    if (WHEEL_GAMES.has(next.game)) { cues.push({ name: "ballRoll" }); cues.push({ name: "ballSettle", delay: RESOLVE.roulette.spin }); }
     else if (DICE_GAMES.has(next.game)) { const R = RESOLVE["sic-bo"]; cues.push({ name: "shake" }); cues.push({ name: "dice", delay: R.tumble + 2 * R.every - 80 }); }
     else if (next.game === "slots") for (const t of RESOLVE.slots.stops) cues.push({ name: "reel", delay: t });
   }
@@ -187,7 +187,8 @@ const CARD_MOVES = new Set(["deal", "board", "fold", "cardPlay"]);       // the 
 const COINED = new Set(["bet", "raise", "allin", "pot", "winChips"]);   // the coins' motion plays these
 const AS_TABLE = {
   deal: ["cardLand"], board: ["flip"], fold: ["pileTap"], shuffle: ["riffle", { dur: 1200 }], cardPlay: ["cardPlay"],
-  bet: ["coins", { count: 3 }], raise: ["coins", { count: 5 }], allin: ["allIn"], pot: ["pot"], winChips: ["coins", { count: 5 }]
+  bet: ["coins", { count: 3 }], raise: ["coins", { count: 5 }], allin: ["allIn"], pot: ["pot"], winChips: ["coins", { count: 5 }],
+  ballRoll: ["ballRoll"], ballSettle: ["ballSettle"]
 };
 
 /** A cue → null (its motion plays it) | { table: name, opts } | { sfx: name, opts }.

@@ -6,6 +6,7 @@
   import { poker } from "$lib/poker/client.svelte.js";
   import { reducedMotion } from "$lib/motion.js";
   import { METALS } from "$lib/cosmetics.js";
+  import { cueAt } from "$lib/poker/table-audio.js";
 
   const TIERS = {   // [light, mid, dark] — the coin metals' ramps
     bronze: ["#eda45e", "#c1691f", "#71390c"],
@@ -26,6 +27,7 @@
     if (busy || !q.length) return;
     busy = true;
     current = q[0];
+    cueAt(current.metal ? "ringSet" : "medalClink", performance.now() + 300);   // as it slides in
     poker.achievementQueue = q.slice(1);
     setTimeout(() => { current = null; setTimeout(() => { busy = false; poker.achievementQueue = [...poker.achievementQueue]; }, 420); }, reducedMotion() ? 2600 : 3400);
   });
