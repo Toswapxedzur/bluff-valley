@@ -241,10 +241,14 @@ export class PokerHub {
     return { tables, players, leaderboard: lb, tournaments: this.tournamentRows() };
   }
 
-  /** A player changed their ring / badge (the Cosmetics page): their live connections and every
-   *  seat they hold pick it up at once, and the lobby redraws their avatar. */
+  /** A player changed their ring / badge / banner (the Cosmetics page, or an admin taking a banner
+   *  down): their live connections and every seat they hold pick it up at once, and the lobby redraws
+   *  their avatar. Only the slots given change. */
   setLooks(userId, looks) {
-    const next = { ring: looks.ring || "default", badge: looks.badge || "default" };
+    const next = {};
+    if ("ring" in looks) next.ring = looks.ring || "default";
+    if ("badge" in looks) next.badge = looks.badge || "default";
+    if ("banner" in looks) next.banner = looks.banner ?? null;
     for (const c of this.connections) if (c.user && c.user.id === userId) Object.assign(c.user, next);
     for (const t of this.tables.values()) {
       const s = t.seatForUser?.(userId);
@@ -702,7 +706,7 @@ export class PokerHub {
         case C2S.HELLO:
           conn.send(encode(S2C.HELLO_OK, {
             user: conn.user
-              ? { id: conn.user.id, name: conn.user.displayName || conn.user.email, isAdmin: conn.user.isAdmin }
+              ? { id: conn.user.id, name: conn.user.displayName || conn.user.email, isAdmin: conn.user.isAdmin, ring: conn.user.ring || "default", badge: conn.user.badge || "default", banner: conn.user.banner ?? null }
               : null
           }));
           break;

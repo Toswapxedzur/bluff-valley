@@ -9,6 +9,8 @@
 // player's highest-ever wealth (wallet + chips on tables) reaches its milestone; unlocks never lapse.
 // Design sheet: design/cosmetics/.
 
+import { bannerUrl, isRenderName, inkOnSteps } from "./banner.js";
+
 export const CHESS = { ebony: "#1C1A15", charcoal: "#3E3A31", gray: "#6E685B", white: "#FBF8EF", cream: "#F1E9D3", ivory: "#E1D3AD" };
 
 /** The metals (the coins' own colours, src/lib/poker/chips.js) at the owner's wealth milestones. */
@@ -104,17 +106,36 @@ export function ringSvg(px, look = "default", remain = 1) {
 }
 
 // ------------------------------------------------------------------ the badge (seat plate)
+const PREVIEW_URL = /^blob:https?:\/\/[a-z0-9.:-]+\/[a-f0-9-]+$/i;
 const steps = (a, b, c) => `linear-gradient(135deg, ${a} 0 34%, ${b} 34% 67%, ${c} 67% 100%)`;
 /** The seat plate in `look`: its stepped background, the ink for the name and stack, and a softer
- *  ink for the status line. Tones stay close to the metal so the text stays legible. */
-export function plateStyle(look = "default") {
+ *  ink for the status line. Tones stay close to the metal so the text stays legible.
+ *  `banner` (a player's own picture, $lib/banner.js — { l, src, ink, sub, money }) lies over the metal
+ *  as one more background layer, so the plate keeps its size and shows the metal until the picture
+ *  loads: "plate" fills it (the banner brings its own inks, checked readable by the server), "tab"
+ *  fills a fixed tab at the right end (`tab` true: the plate keeps room for it). */
+export function plateStyle(look = "default", banner = null) {
   const m = METALS.find((x) => x.key === look);
-  if (!m) return { bg: steps(CHESS.gray, CHESS.charcoal, CHESS.ebony), ink: CHESS.white, sub: CHESS.ivory, money: "#f5b60d" };
-  const dark = lum(m.base) > 0.45;
-  const ink = dark ? mix(m.lo, "#000000", 0.55) : "#ffffff";
-  return {
-    bg: steps(mix(m.base, m.hi, 0.28), m.base, mix(m.base, m.lo, 0.35)),
-    ink, money: ink,
-    sub: dark ? mix(m.lo, "#000000", 0.3) : mix(m.hi, "#ffffff", 0.4)
-  };
+  let base, stepHexes;
+  if (!m) {
+    stepHexes = [CHESS.gray, CHESS.charcoal, CHESS.ebony];
+    base = { bg: steps(...stepHexes), ink: CHESS.white, sub: CHESS.ivory, money: "#f5b60d" };
+  } else {
+    const dark = lum(m.base) > 0.45;
+    const ink = dark ? mix(m.lo, "#000000", 0.55) : "#ffffff";
+    stepHexes = [mix(m.base, m.hi, 0.28), m.base, mix(m.base, m.lo, 0.35)];
+    base = { bg: steps(...stepHexes), ink, money: ink, sub: dark ? mix(m.lo, "#000000", 0.3) : mix(m.hi, "#ffffff", 0.4) };
+  }
+  // `preview` = the editor's unsaved picture (a blob: URL made in this browser, never from the server)
+  const preview = typeof banner?.preview === "string" && PREVIEW_URL.test(banner.preview) ? banner.preview : null;
+  if (!banner || !(preview || isRenderName(banner.src))) return { ...base, tab: false };
+  const url = `url("${preview || bannerUrl(banner.src)}")`;
+  if (banner.l === "tab") {
+    // the text still sits on the metal: the player's ink only if it reads there
+    const own = /^#[0-9a-f]{6}$/i.test(banner.ink || "") && inkOnSteps(banner.ink, stepHexes);
+    const ink = own ? banner.ink : base.ink;
+    return { bg: `${url} right center / auto 100% no-repeat, ${base.bg}`, ink, sub: own ? mix(banner.ink, stepHexes[1], 0.25) : base.sub, money: base.money === base.ink ? ink : base.money, tab: true };
+  }
+  const hex = (v, d) => (/^#[0-9a-f]{6}$/i.test(v || "") ? v : d);
+  return { bg: `${url} center / cover no-repeat, ${base.bg}`, ink: hex(banner.ink, base.ink), sub: hex(banner.sub, base.sub), money: hex(banner.money, base.money), tab: false };
 }
