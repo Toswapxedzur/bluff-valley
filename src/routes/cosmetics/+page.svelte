@@ -2,7 +2,7 @@
   import { enhance } from "$app/forms";
   import Avatar from "$lib/poker/components/Avatar.svelte";
   import Chip from "$lib/poker/components/Chip.svelte";
-  import { LOOKS, plateStyle } from "$lib/cosmetics.js";
+  import { LOOKS, plateStyle, FREE_SLOTS } from "$lib/cosmetics.js";
   import { SITE_NAME } from "$lib/config.js";
   import { plateSpread } from "$lib/actions/plate-spread.js";
   import BannerEditor from "./BannerEditor.svelte";
@@ -36,9 +36,9 @@
     <span class="bal" title="Your highest wealth ever: wallet plus chips on tables"><Chip value={data.peak} size={20} /> {fmt(data.peak)}</span>
   </div>
   <p class="muted intro">
-    Everyone starts with the chess ring and badge. Reaching a wealth milestone unlocks that metal's
-    ring and badge for good. Your wealth is your wallet plus the chips on your tables, and it counts
-    your highest ever.
+    Every badge is free: pick any colour for your seat plate, or put your own picture on it. Rings
+    unlock as you get richer: reaching a wealth milestone unlocks that metal's ring for good. Your
+    wealth is your wallet plus the chips on your tables, and it counts your highest ever.
   </p>
 
   <!-- how you look at a table -->
@@ -60,7 +60,7 @@
       <div class="grp-head"><h2>{title}</h2><span class="muted small">{sub}</span></div>
       <div class="grid">
         {#each LOOKS as l (l.key)}
-          {@const has = owned.has(l.key)}
+          {@const has = FREE_SLOTS.has(slot) || owned.has(l.key)}
           {@const on = (slot === "ring" ? ring : badge) === l.key}
           <form method="POST" action="?/equip" use:enhance={equipping(slot, l.key)} class="tile" class:on class:locked={!has}>
             <input type="hidden" name="slot" value={slot} />

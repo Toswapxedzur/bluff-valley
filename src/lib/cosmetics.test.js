@@ -41,3 +41,11 @@ test("the ring is the turn clock: its gems vanish one by one, the last one fadin
   assert.match(partial, /<g opacity="0\.40">/, "the fourth is fading");
   assert.ok(ringSvg(36, "gold", 0.5).includes('fill-rule="evenodd"'), "the band itself always stays");
 });
+
+test("badges (the plate's colour) are free for everyone; rings still unlock with wealth", async () => {
+  const { ownsLook } = await import("./cosmetics.js");
+  for (const l of LOOKS) assert.equal(ownsLook("badge", l.key, 0), true, `${l.key} badge is free`);
+  assert.equal(ownsLook("ring", "gold", 0), false);
+  assert.equal(ownsLook("ring", "gold", 25_000), true);
+  assert.equal(ownsLook("badge", "no-such-metal", 0), false);
+});
