@@ -741,27 +741,56 @@ function cardTo(layer, card, a, b, { w = CW, delay = 0, dur = 420, faceDown = tr
 }
 /** Where the k-th of n cards sits in a seat's hand (a fan that grows to the right). */
 const slotAt = (seat, k, spread = 0.56) => ({ x: seat.hand.x + (k - 0.5) * seat.cw * spread, y: seat.hand.y });
-/** A column of coins (values bottom → top) at p, on layer. */
-function column(layer, values, p, size = 30) {
-  const rise = Math.max(3, Math.round(size * 0.2)), el = h("div", "ccol");
-  const hh = size + (values.length - 1) * rise;
-  Object.assign(el.style, { left: p.x - size / 2 + "px", top: p.y - hh + size / 2 + "px", width: size + "px", height: hh + "px" });
-  values.forEach((v, k) => { const c = h("div", "cc", coinSvg(v, size)); c.style.bottom = k * rise + "px"; c.dataset.v = v; el.append(c); });
-  layer.append(el);
-  return el;
-}
 const moveBy = (el, dx, dy, delay, dur = 520, easing = "cubic-bezier(.6,0,.2,1)") =>
   A(el, [{ transform: "translate(0, 0)" }, { transform: `translate(${dx}px, ${dy}px)` }], { duration: dur, delay, easing });
 /** Every coin of a column flying to a point (they sink under whatever plate is there). */
 function columnTo(col, b, delay, stagger = 45, dur = 560, lift = 60) {
-  const coins = [...col.children].reverse();
+  const coins = [...col.querySelectorAll(".cc")].reverse();
   at(delay, () => coins.forEach((c, k) => {
     const a = centre(c);
     at(k * stagger, () => { c.style.visibility = "hidden"; });
-    arc(+c.dataset.v, 30, a, b, k * stagger, dur, lift);
+    arc(+c.dataset.v, +c.dataset.s || COIN, a, b, k * stagger, dur, lift);
   }));
   return delay + coins.length * stagger + dur;
 }
+// ---- the game's own pile layout (MoneyLayer.svelte): an amount is a set of COLUMNS, one per coin
+// value, highest first; a seat's pile stands right beside its badge on the side facing the centre
+// (the most valuable column against the badge), the pot's is centred above the POT pill; columns
+// zig-zag, every second one raised. Coin size 18, like the table.
+const COIN = 18, PITCH = COIN * 0.5, RAISE = COIN * 0.6, RISE = Math.max(2, Math.round(COIN * 0.14)), GAP = 5;
+const DENOMS = [5000000, 1000000, 250000, 50000, 10000, 2500, 500, 100, 25, 5, 1];
+function breakdown(n) { const out = []; for (const d of DENOMS) if (n >= d) { out.push([d, Math.floor(n / d)]); n %= d; } return out; }
+function rectOf(el) {
+  const sr = $("#screen").getBoundingClientRect(), r = el.getBoundingClientRect(), k = sr.width / W;
+  const l = (r.left - sr.left) / k, t = (r.top - sr.top) / k, w = r.width / k, hh = r.height / k;
+  return { l, t, r: l + w, b: t + hh, cx: l + w / 2, cy: t + hh / 2 };
+}
+/** Where a seat's pile starts: beside its plate, toward the centre. */
+function seatAnchor(seat) {
+  const b = rectOf(seat.el), s = b.cx <= TC.x + 1 ? 1 : -1;
+  return { x0: s > 0 ? b.r + GAP + COIN / 2 : b.l - GAP - COIN / 2, base: b.cy + COIN * 0.55, s };
+}
+/** The pot's: columns centred over the POT pill. */
+function potAnchor(potEl, n) {
+  const b = rectOf(potEl), width = COIN + Math.max(0, n - 1) * PITCH;
+  return { x0: b.cx - width / 2 + COIN / 2, base: b.t - 4, s: 1 };
+}
+/** An amount as a pile of columns at an anchor. Returns the group (move it as one). */
+function pileOf(layer, amount, anchor) {
+  const g = h("div", "pileg");
+  breakdown(amount).forEach(([d, count], i) => {
+    const n = Math.min(count, 12), col = h("div", "ccol");
+    const x = anchor.x0 + anchor.s * i * PITCH, y = anchor.base - (i % 2 ? RAISE : 0), hh = COIN + (n - 1) * RISE;
+    Object.assign(col.style, { left: x - COIN / 2 + "px", top: y - hh + COIN / 2 + "px", width: COIN + "px", height: hh + "px", zIndex: i % 2 ? 0 : 1 });
+    for (let k = 0; k < n; k++) { const c = h("div", "cc", coinSvg(d, COIN)); c.style.bottom = k * RISE + "px"; c.dataset.v = d; c.dataset.s = COIN; col.append(c); }
+    g.append(col);
+  });
+  layer.append(g);
+  return g;
+}
+const potAt = (potEl, amount) => potAnchor(potEl, breakdown(amount).length);
+const avOf = (seat) => centre(seat.el.querySelector(".av"));
+
 function pillOn(plateEl, text, cls, delay) {
   const pl = h("div", "splate-pill " + cls, text);
   plateEl.append(pl);
@@ -785,56 +814,67 @@ const SEATS6 = () => [[P.you, 90], [P.milo, 150], [P.ivy, 210], [P.nora, 270], [
 
 // ---------------------------------------------------------------- money
 function nAllInPush() {
-  const { S, under } = scene("holdem", { seats: SEATS6(), board: ["Kd", "7c", "2h"], hands: true, pot: 2_400 });
-  const m = S.Milo;
-  const col = column(under, [10000, 2500, 2500, 2500, 500, 500, 100, 100, 100, 25, 25], m.xy, 32);
-  A(col, [{ opacity: 0 }, { opacity: 1 }], { duration: 160, delay: 250 });
-  const dx = m.spot.x - m.xy.x, dy = m.spot.y - m.xy.y;
-  A(col, [{ transform: "translate(0,0) scaleY(1)" }, { transform: `translate(${dx}px, ${dy}px) scaleY(1)`, offset: 0.82 }, { transform: `translate(${dx}px, ${dy + 3}px) scaleY(.9)`, offset: 0.9 }, { transform: `translate(${dx}px, ${dy}px) scaleY(1)` }],
-    { duration: 820, delay: 350, easing: "cubic-bezier(.6,0,.25,1)" });
-  A(m.el, [{ boxShadow: "0 0 0 0 rgba(239,68,68,0)" }, { boxShadow: "0 0 0 4px rgba(239,68,68,.85), 0 0 22px rgba(239,68,68,.5)" }, { boxShadow: "0 0 0 3px rgba(239,68,68,.7), 0 0 14px rgba(239,68,68,.35)" }], { duration: 700, delay: 1050 });
-  counter(m.el.querySelector(".stack"), P.milo.stack, 0, 350, 700);
-  pillOn(m.el, "ALL-IN", "allin", 1100);
+  const { S, under } = scene("holdem", { seats: SEATS6(), board: ["Kd", "7c", "2h"], pot: 2_400, hands: true });
+  const m = S.Milo, an = seatAnchor(m), from = avOf(m);
+  // the whole stack comes out from under the badge as one tall column …
+  const tower = h("div", "ccol"), vals = [10000, 2500, 2500, 2500, 500, 500, 500, 100, 100, 100, 100, 25, 25, 25];
+  const th = COIN + (vals.length - 1) * RISE;
+  Object.assign(tower.style, { left: from.x - COIN / 2 + "px", top: an.base - th + COIN / 2 + "px", width: COIN + "px", height: th + "px" });
+  vals.forEach((v, k) => { const c = h("div", "cc", coinSvg(v, COIN)); c.style.bottom = k * RISE + "px"; tower.append(c); });
+  under.append(tower);
+  const dx = an.x0 - from.x;
+  A(tower, [{ transform: "translate(0,0) scaleY(1)" }, { transform: `translate(${dx}px, 0) scaleY(1)`, offset: 0.8 }, { transform: `translate(${dx}px, 2px) scaleY(.9)`, offset: 0.9 }, { transform: `translate(${dx}px, 0) scaleY(1)` }],
+    { duration: 700, delay: 300, easing: "cubic-bezier(.6,0,.25,1)" });
+  // … and lands as the pile: one column per coin value
+  at(1050, () => {
+    tower.remove();
+    const g = pileOf(under, P.milo.stack, an);
+    [...g.children].forEach((col, i) => A(col, [{ transform: `translateX(${-an.s * i * PITCH}px)` }, { transform: "none" }], { duration: 220, easing: EASE }));
+  });
+  A(m.el, [{ boxShadow: "0 0 0 0 rgba(239,68,68,0)" }, { boxShadow: "0 0 0 4px rgba(239,68,68,.85), 0 0 22px rgba(239,68,68,.5)" }, { boxShadow: "0 0 0 3px rgba(239,68,68,.7), 0 0 14px rgba(239,68,68,.35)" }], { duration: 700, delay: 950 });
+  counter(m.el.querySelector(".stack"), P.milo.stack, 0, 300, 700);
+  pillOn(m.el, "ALL-IN", "allin", 1000);
 }
 function nSplitPot() {
-  const { S, under, potEl } = scene("holdem", { seats: SEATS6(), board: ["Kd", "7c", "2h", "5s", "Qc"], pot: 18_640 });
-  const left = column(under, [10000, 2500, 2500, 500, 100, 100], { x: TC.x - 22, y: TC.y + 8 }, 32);
-  const right = column(under, [2500, 2500, 2500, 500, 500, 25], { x: TC.x + 22, y: TC.y + 8 }, 32);
-  moveBy(left, -30, 0, 300, 320, EASE); moveBy(right, 30, 0, 300, 320, EASE);
-  at(700, () => { columnTo(left, centre(S.Nora.el.querySelector(".av")), 0); columnTo(right, centre(S.Theo.el.querySelector(".av")), 0); });
-  counter(S.Nora.el.querySelector(".stack"), P.nora.stack, P.nora.stack + 9_320, 1000, 700);
-  counter(S.Theo.el.querySelector(".stack"), P.theo.stack, P.theo.stack + 9_320, 1000, 700);
-  counter(potEl.querySelector("b"), 18_640, 0, 700, 800);
+  const { S, under, potEl } = scene("holdem", { seats: SEATS6(), board: ["Kd", "7c", "2h", "5s", "Qc"], pot: 18_640, hands: true });
+  const whole = pileOf(under, 18_640, potAt(potEl, 18_640));
+  // the pot breaks into two equal shares, which part …
+  const L = pileOf(under, 9_320, potAt(potEl, 9_320)), R = pileOf(under, 9_320, potAt(potEl, 9_320));
+  [L, R].forEach((g) => (g.style.visibility = "hidden"));
+  at(350, () => { whole.remove(); [L, R].forEach((g) => (g.style.visibility = "visible")); });
+  moveBy(L, -34, 0, 350, 320, EASE); moveBy(R, 34, 0, 350, 320, EASE);
+  // … and each flies to its winner, sinking under the plate
+  at(800, () => { columnTo(L, avOf(S.Nora), 0, 40); columnTo(R, avOf(S.Theo), 0, 40); });
+  counter(S.Nora.el.querySelector(".stack"), P.nora.stack, P.nora.stack + 9_320, 1100, 600);
+  counter(S.Theo.el.querySelector(".stack"), P.theo.stack, P.theo.stack + 9_320, 1100, 600);
+  counter(potEl.querySelector("b"), 18_640, 0, 800, 700);
 }
 function nHousePay() {
   const { S, under } = scene("roulette", { seats: [[null, "house"], [P.you, 90], [P.milo, 150], [P.ivy, 30], [P.theo, 330]] });
-  const bets = { You: [100, 100, 25], Milo: [500, 100], Ivy: [100, 25, 25], Theo: [500, 500] };
-  const cols = {};
-  for (const [n, v] of Object.entries(bets)) cols[n] = column(under, v, S[n].spot, 30);
-  const house = centre(S.House.el.querySelector(".av"));
-  // the House pays the winners into a column beside their own
-  const won = {};
-  for (const [n, k] of [["You", 0], ["Milo", 1]]) {
-    const beside = { x: S[n].spot.x + 36, y: S[n].spot.y };
-    won[n] = column(under, bets[n], beside, 30);
-    [...won[n].children].forEach((c, j) => { c.style.visibility = "hidden"; at(300 + k * 200 + j * 90 + 520, () => { c.style.visibility = "visible"; }); arc(+c.dataset.v, 30, house, { x: beside.x, y: beside.y - j * 6 }, 300 + k * 200 + j * 90, 520, 70); });
-  }
-  // the losers' bets go to the House
-  columnTo(cols.Ivy, house, 1200); columnTo(cols.Theo, house, 1300);
-  // then every pile goes home
-  for (const n of ["You", "Milo"]) { const home = centre(S[n].el.querySelector(".av")); columnTo(cols[n], home, 2100); columnTo(won[n], home, 2150); }
-  counter(S.You.el.querySelector(".stack"), P.you.stack, P.you.stack + 225, 2400, 500);
-  counter(S.Milo.el.querySelector(".stack"), P.milo.stack, P.milo.stack + 600, 2400, 500);
+  const bets = { You: 225, Milo: 600, Ivy: 150, Theo: 1000 };
+  const piles = {};
+  for (const [n, v] of Object.entries(bets)) piles[n] = pileOf(under, v, seatAnchor(S[n]));
+  const house = avOf(S.House);
+  // the House pays each winner into their own pile, coin by coin (1:1 here) …
+  ["You", "Milo"].forEach((n, k) => {
+    const an = seatAnchor(S[n]), coins = breakdown(bets[n]).flatMap(([d, c]) => Array(Math.min(c, 12)).fill(d));
+    coins.forEach((d, j) => arc(d, COIN, house, { x: an.x0, y: an.base }, 300 + k * 220 + j * 80, 520, 70));
+    at(300 + k * 220 + coins.length * 80 + 520, () => { piles[n].remove(); piles[n] = pileOf(under, bets[n] * 2, an); });
+  });
+  // … takes the losers' piles …
+  columnTo(piles.Ivy, house, 1300); columnTo(piles.Theo, house, 1400);
+  // … then every pile goes home, into its badge
+  at(2300, () => ["You", "Milo"].forEach((n) => columnTo(piles[n], avOf(S[n]), 0)));
+  counter(S.You.el.querySelector(".stack"), P.you.stack, P.you.stack + 450, 2600, 500);
+  counter(S.Milo.el.querySelector(".stack"), P.milo.stack, P.milo.stack + 1_200, 2600, 500);
 }
 function nAntes() {
   const seats = [[P.you, 90], [P.milo, 180], [P.ivy, 270], [P.theo, 0]];
   const { S, under, potEl } = scene("big-two", { seats, pot: 0 });
-  seats.forEach(([p], k) => {
-    const col = column(under, [100], centre(S[p.name].el.querySelector(".av")), 32);
-    columnTo(col, { x: TC.x + (k - 1.5) * 10, y: TC.y }, 300 + k * 60, 0, 560, 40);
-  });
-  at(1000, () => { const pile = column(under, [100, 100, 100, 100], TC, 32); A(pile, [{ opacity: 0 }, { opacity: 1 }], { duration: 120 }); });
-  counter(potEl.querySelector("b"), 0, 400, 900, 400);
+  const potAn = potAt(potEl, 400);
+  seats.forEach(([p], k) => arc(100, COIN, avOf(S[p.name]), { x: potAn.x0, y: potAn.base }, 300 + k * 70, 560, 50));
+  at(300 + 3 * 70 + 560, () => pileOf(under, 400, potAn));
+  counter(potEl.querySelector("b"), 0, 400, 800, 350);
 }
 
 // ---------------------------------------------------------------- cards
