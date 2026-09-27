@@ -126,9 +126,9 @@ function gameCues(prev, next, myUserId) {
   const cardsBefore = newRound ? 0 : countCards(pr), cardsAfter = countCards(nr);
   const isCardGame = cardsAfter > 0 || countCards(pr) > 0 || nr.hands || nr.dealer;
 
-  if (newRound && isCardGame) cues.push({ name: "shuffle" });
+  // (no shuffle sound here: these games show no shuffle, and a sound needs a motion behind it)
   if (cardsAfter > cardsBefore) {
-    cues.push({ name: "deal", count: Math.min(cardsAfter - cardsBefore, 10), gap: 85, delay: newRound ? 450 : 0 });
+    cues.push({ name: "deal", count: Math.min(cardsAfter - cardsBefore, 10), gap: 85, delay: 0 });
   } else {
     // Same number of cards but fewer hidden ones: a face-down card was turned over.
     const h0 = newRound ? 0 : countHidden(pr), h1 = countHidden(nr);

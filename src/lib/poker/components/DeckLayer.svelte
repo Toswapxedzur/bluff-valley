@@ -2,7 +2,7 @@
   // The canvas over the table that draws the dealer's world: the face-down deck top-left and
   // the face-up used pile top-right (each ~70% buried past the screen edge, 30% showing, just below the top bar —
   // owner's rule), every card flying between them and the seats / board, and the shuffle
-  // routine between hands. Positions come from the real DOM every frame (the seat and board
+  // routine whenever the deck runs dry. Positions come from the real DOM every frame (the seat and board
   // slots carry data-seat / data-slot / data-board-slot), so zoom and resizes never misalign.
   import { onMount } from "svelte";
   import { drawStack, drawStackShadow, W, H, T, thickness } from "$lib/poker/deck3d.js";
