@@ -150,7 +150,7 @@ function gameCues(prev, next, myUserId) {
     // on the resolve's own moments (resolve-anim.js): the ball drops, the dice settle, each reel stops
     if (WHEEL_GAMES.has(next.game)) { cues.push({ name: "ballRoll" }); cues.push({ name: "ballSettle", delay: RESOLVE.roulette.spin }); }
     else if (DICE_GAMES.has(next.game)) { const R = RESOLVE["sic-bo"]; cues.push({ name: "shake" }); cues.push({ name: "dice", delay: R.tumble + 2 * R.every - 80 }); }
-    else if (next.game === "slots") for (const t of RESOLVE.slots.stops) cues.push({ name: "reel", delay: t });
+    else if (next.game === "slots") { cues.push({ name: "reelSpin" }); for (const t of RESOLVE.slots.stops) cues.push({ name: "reel", delay: t }); }
   }
 
   // Big Two: a new combination on the centre pile (it replaces the last one, so compare contents,
@@ -188,7 +188,7 @@ const COINED = new Set(["bet", "raise", "allin", "pot", "winChips"]);   // the c
 const AS_TABLE = {
   deal: ["cardLand"], board: ["flip"], fold: ["pileTap"], shuffle: ["riffle", { dur: 1200 }], cardPlay: ["cardPlay"],
   bet: ["coins", { count: 3 }], raise: ["coins", { count: 5 }], allin: ["allIn"], pot: ["pot"], winChips: ["coins", { count: 5 }],
-  ballRoll: ["ballRoll"], ballSettle: ["ballSettle"]
+  ballRoll: ["ballRoll"], ballSettle: ["ballSettle"], reelSpin: ["reelSpin"]
 };
 
 /** A cue → null (its motion plays it) | { table: name, opts } | { sfx: name, opts }.

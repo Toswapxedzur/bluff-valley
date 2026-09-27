@@ -90,8 +90,8 @@ test("sic bo rolls dice, slots spin reels", () => {
   assert.deepEqual(names(tableSoundCues(s0, s1, "u1")), ["shake", "dice"]);
   const l0 = mk("slots", { bets: [], outcome: null, results: [] }), l1 = mk("slots", { bets: [], outcome: { reels: ["7", "7", "bar"] }, results: [] });
   const reels = tableSoundCues(l0, l1, "u1");
-  assert.deepEqual(names(reels), ["reel", "reel", "reel"], "one per reel, as each stops");
-  assert.ok(reels[0].delay < reels[1].delay && reels[1].delay < reels[2].delay, "left to right");
+  assert.deepEqual(names(reels), ["reelSpin", "reel", "reel", "reel"], "the spin, then one click per reel as each stops");
+  assert.ok(reels[1].delay < reels[2].delay && reels[2].delay < reels[3].delay, "left to right");
 });
 
 test("big two: a new combination on the pile is a play, even when it's shorter", () => {
