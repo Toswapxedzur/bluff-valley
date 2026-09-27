@@ -747,24 +747,20 @@ const slotAt = (seat, k, spread = 0.56) => ({ x: seat.hand.x + (k - 0.5) * seat.
 const moveBy = (el, dx, dy, delay, dur = 520, easing = "cubic-bezier(.6,0,.2,1)") =>
   A(el, [{ transform: "translate(0, 0)" }, { transform: `translate(${dx}px, ${dy}px)` }], { duration: dur, delay, easing });
 /** Every coin of a column flying to a point (they sink under whatever plate is there). */
-/** A pile (or a single column) leaving for a point: each COLUMN lifts off as one unit — highest
- *  value first, like the game's column flights — moving up to the "top" layer as it goes (so it rises
- *  above the coins still resting), arcs over, and sinks into the badge by shrinking at its centre. */
-function columnTo(g, b, delay, stagger = 80, dur = 560, lift = 60) {
-  const cols = g.classList.contains("ccol") ? [g] : [...g.children];
-  cols.forEach((col, i) => at(delay + i * stagger, () => {
-    const before = centre(col);
-    cur.fly.append(col);                       // same coordinate frame; drops the group's offset …
-    const after = centre(col), ox = before.x - after.x, oy = before.y - after.y;   // … so start from where it was
-    const kf = [];
-    for (let k = 0; k <= 12; k++) {
-      const t = k / 12, x = ox + (b.x - before.x) * t, y = oy + (b.y - before.y) * t - lift * 4 * t * (1 - t);
-      const sk = Math.max(0, (t - 0.72) / 0.28);
-      kf.push({ transform: `translate(${x}px, ${y}px) scale(${1 - 0.8 * sk})`, opacity: 1 - sk * 0.9, offset: t });
-    }
-    A(col, kf, { duration: dur, easing: "cubic-bezier(.45,.05,.55,.95)" });
-  }));
-  return delay + cols.length * stagger + dur;
+/** A pile (or a single column) leaving for a point, coin by coin FROM THE TOP DOWN (owner): always
+ *  the coin nothing rests on — the highest on screen, and at the same height the front row's before
+ *  the raised back row's — so no coin ever takes off from under another. Each flies over and sinks
+ *  into the badge by shrinking at its centre. */
+function columnTo(g, b, delay, stagger = 40, dur = 560, lift = 60) {
+  at(delay, () => {
+    const coins = [...g.querySelectorAll(".cc")].map((c) => ({ c, y: rectOf(c).t, back: c.parentNode.style.zIndex === "0" }));
+    coins.sort((p, q) => (Math.abs(p.y - q.y) < RISE ? p.back - q.back : p.y - q.y));
+    coins.forEach(({ c }, k) => {
+      const a = centre(c);
+      at(k * stagger, () => { c.style.visibility = "hidden"; });
+      arc(+c.dataset.v, +c.dataset.s || COIN, a, b, k * stagger, dur, lift);
+    });
+  });
 }
 // ---- the game's own pile layout (MoneyLayer.svelte): an amount is a set of COLUMNS, one per coin
 // value, highest first; a seat's pile stands right beside its badge on the side facing the centre
