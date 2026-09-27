@@ -15,6 +15,7 @@
   import ProfilePopover from "$lib/poker/components/ProfilePopover.svelte";
   import NotifBell from "$lib/poker/components/NotifBell.svelte";
   import CallOverlay from "$lib/poker/components/CallOverlay.svelte";
+  import AchievementToast from "$lib/components/AchievementToast.svelte";
 
   // Smooth slide+fade between main sections via the View Transitions API.
   // Only <main> (view-transition-name: main-content) animates — the topbar and
@@ -66,6 +67,8 @@
   // Live chip balance for the topbar pill (SSR seed + live "chips" events).
   let chips = $state(data.chips ?? 0);
   $effect(() => { chips = data.chips ?? 0; });
+  // reward coins on their way to the pill (reward-fly.js): it keeps its old number until they land
+  let pendingReward = $state(0);
 
   // Theme: dark-blue by default; the saved choice is applied pre-paint in
   // app.html, we just mirror + toggle it here.
@@ -78,8 +81,15 @@
     installUiSounds();
     theme = document.documentElement.getAttribute("data-theme") || "dark";
     const onChips = (e) => { if (typeof e.detail === "number") chips = e.detail; };
+    const onReward = (e) => {
+      const { amount, ms } = e.detail || {};
+      if (!(amount > 0) || !ms) return;
+      pendingReward += amount;
+      setTimeout(() => { pendingReward -= amount; }, ms);
+    };
     window.addEventListener("chips", onChips);
-    return () => window.removeEventListener("chips", onChips);
+    window.addEventListener("reward-fly", onReward);
+    return () => { window.removeEventListener("chips", onChips); window.removeEventListener("reward-fly", onReward); };
   });
 
   let _themeTimer = null;
@@ -148,7 +158,7 @@
     {#if data.user}
       <a class="chips-pill" href="/account" title="Your chips balance">
         <Chip value={chips} size={15} />
-        <Num value={chips} />
+        <Num value={Math.max(0, chips - pendingReward)} />
         {#if data.bonusReady}<span class="bonus-dot" title="Daily bonus ready"></span>{/if}
       </a>
       <a class="nav-tab" href="/account" aria-current={isActive("/account") ? "page" : undefined}>
@@ -183,6 +193,7 @@
 
 <ProfilePopover />
 {#if data.user}<CallOverlay />{/if}
+{#if data.user}<AchievementToast />{/if}
 
 {#if data.user && poker.myTables.length > 1}
   <div class="table-switcher" aria-label="Your tables">

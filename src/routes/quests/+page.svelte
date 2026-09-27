@@ -4,6 +4,7 @@
   import { fly } from "svelte/transition";
   import { d, DUR } from "$lib/motion.js";
   import Chip from "$lib/poker/components/Chip.svelte";
+  import { flyCoinsToWallet } from "$lib/reward-fly.js";
 
   let { data } = $props();
   let quests = $state(data.quests);
@@ -34,8 +35,10 @@
   const pct = (q) => Math.min(100, Math.round((q.progress / q.target) * 100));
 
   function claimHandler(id) {
-    return () => async ({ result, update }) => {
+    return ({ formElement }) => async ({ result, update }) => {
       if (result.type === "success" && result.data?.claimedId === id) {
+        // the reward flies from the button into the wallet (which counts up as it lands)
+        flyCoinsToWallet(formElement.querySelector("button") || formElement, result.data.reward);
         quests = quests.map((q) => (q.id === id ? { ...q, claimed: true } : q));
         if (result.data.chips != null) chips = Number(result.data.chips);
       }
@@ -82,7 +85,7 @@
                     <button class="claim" type="submit">Claim</button>
                   </form>
                 {:else if q.claimed}
-                  <span class="check" aria-hidden="true">✓</span>
+                  <span class="check" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16"><path d="M2.5 12.5l3.2-3.2 4 4 8.6-8.6 3.2 3.2L9.7 19.7z" fill="currentColor"/></svg></span>
                 {/if}
               </div>
             </div>
@@ -163,11 +166,13 @@
     background: var(--gold-ink); padding: 6px 15px; border-radius: var(--r-pill);
     transition: filter var(--dur) var(--ease); }
   .claim:hover { filter: brightness(1.08); }
-  .check { color: var(--ok); font-weight: 800; }
+  .check { display: inline-flex; animation: claimStamp 0.36s cubic-bezier(.3,1.45,.5,1) both; color: var(--ok); font-weight: 800; }
 
   .ach-cat { font-size: 11px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); margin: 14px 0 8px; }
   .ach-list { margin-bottom: 4px; }
   .ach-ico { margin-right: 2px; }
   .ach-coin { display: inline-flex; vertical-align: -3px; margin-right: 4px; }
   .ach-desc { margin-bottom: 8px; }
+  @keyframes claimStamp { from { transform: scale(1.6); opacity: 0; } to { transform: none; opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) { .check { animation: none; } }
 </style>

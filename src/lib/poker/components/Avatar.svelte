@@ -9,11 +9,32 @@
   import { initials as initial, avColor as color } from "$lib/initials.js";
   import { profilePop } from "$lib/profilePopover.svelte.js";
   import { ringSvg, ringBox } from "$lib/cosmetics.js";
+  import { untrack } from "svelte";
+  import { NORM, tween, reducedMotion } from "$lib/motion.js";
   // ringRemain (0…1): the ring as a turn clock — only that share of its gems shows
   // ringFloat: the ring takes no layout space — it hangs round the picture and may overhang whatever
   // holds it (the seat plate: owner, 2026-09-26)
   let { name = "?", id = "", mediaId = null, size = 40, href = null, userId = null, ring = null, ringRemain = 1, ringFloat = false } = $props();
-  const ringMarkup = $derived(ring ? ringSvg(size, ring, ringRemain) : "");
+  // A new ring (equipped on /cosmetics, or someone at the table changing looks — the shared norm):
+  // the old one turns away and fades while the new one draws on gem by gem, clockwise from the top.
+  let drawK = $state(1), oldRing = $state(null);
+  let prevRing = untrack(() => ring), stopDraw = () => {};
+  $effect(() => {
+    const r = ring;
+    untrack(() => {
+      if (r === prevRing) return;
+      const was = prevRing;
+      prevRing = r;
+      if (!was || !r || reducedMotion()) return;
+      stopDraw();
+      oldRing = was; drawK = 0;
+      const t1 = setTimeout(() => { oldRing = null; }, 280);
+      const t2 = setTimeout(() => { stopDraw = tween(NORM.ringDraw, (k) => { drawK = k; }); }, 250);
+      stopDraw = () => { clearTimeout(t1); clearTimeout(t2); };
+    });
+  });
+  $effect(() => () => stopDraw());
+  const ringMarkup = $derived(ring ? ringSvg(size, ring, Math.min(ringRemain, drawK)) : "");
 
   function openPop(e) {
     e.preventDefault(); e.stopPropagation();
@@ -39,7 +60,7 @@
 {/snippet}
 
 {#if ring}
-  <span class="rw" class:float={ringFloat} style="width:{ringFloat ? size : ringBox(size)}px;height:{ringFloat ? size : ringBox(size)}px;--rb:{ringBox(size)}px">{@html ringMarkup}{@render face()}</span>
+  <span class="rw" class:float={ringFloat} style="width:{ringFloat ? size : ringBox(size)}px;height:{ringFloat ? size : ringBox(size)}px;--rb:{ringBox(size)}px">{#if oldRing}<span class="old" aria-hidden="true">{@html ringSvg(size, oldRing)}</span>{/if}{@html ringMarkup}{@render face()}</span>
 {:else}
   {@render face()}
 {/if}
@@ -53,4 +74,8 @@
   .rw > :global(svg) { position: absolute; inset: 0; pointer-events: none; }
   .rw.float > :global(svg) { inset: auto; left: 50%; top: 50%; width: var(--rb); height: var(--rb); transform: translate(-50%, -50%); }
   .rw > .av { position: relative; }
+  .rw > .old { position: absolute; inset: 0; pointer-events: none; display: grid; place-items: center; animation: ringAway 0.26s ease-in both; }
+  .rw > .old > :global(svg) { width: var(--rb); height: var(--rb); flex: none; }
+  .rw:not(.float) > .old > :global(svg) { width: 100%; height: 100%; }
+  @keyframes ringAway { to { transform: rotate(50deg) scale(1.15); opacity: 0; } }
 </style>
