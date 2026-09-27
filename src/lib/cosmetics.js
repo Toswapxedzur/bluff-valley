@@ -9,7 +9,7 @@
 // player's highest-ever wealth (wallet + chips on tables) reaches its milestone; unlocks never lapse.
 // Design sheet: design/cosmetics/.
 
-import { bannerUrl, isRenderName, inkOnSteps, washRgb, MAX_WASH } from "./banner.js";
+import { bannerUrl, isRenderName, washRgb, MAX_WASH } from "./banner.js";
 
 export const CHESS = { ebony: "#1C1A15", charcoal: "#3E3A31", gray: "#6E685B", white: "#FBF8EF", cream: "#F1E9D3", ivory: "#E1D3AD" };
 
@@ -118,30 +118,21 @@ const steps = (a, b, c) => `linear-gradient(135deg, ${a} 0 34%, ${b} 34% 67%, ${
  *  ink for the status line. Tones stay close to the metal so the text stays legible.
  *  `banner` (a player's own picture, $lib/banner.js — { l, src, ink, sub, money }) lies over the metal
  *  as one more background layer, so the plate keeps its size and shows the metal until the picture
- *  loads: "plate" fills it (the banner brings its own inks), "tab"
- *  fills a fixed tab at the right end (`tab` true: the plate keeps room for it). */
+ *  loads, filling the whole plate (the banner brings its own inks). */
 export function plateStyle(look = "default", banner = null) {
   const m = METALS.find((x) => x.key === look);
-  let base, stepHexes;
+  let base;
   if (!m) {
-    stepHexes = [CHESS.gray, CHESS.charcoal, CHESS.ebony];
-    base = { bg: steps(...stepHexes), ink: CHESS.white, sub: CHESS.ivory, money: "#f5b60d" };
+    base = { bg: steps(CHESS.gray, CHESS.charcoal, CHESS.ebony), ink: CHESS.white, sub: CHESS.ivory, money: "#f5b60d" };
   } else {
     const dark = lum(m.base) > 0.45;
     const ink = dark ? mix(m.lo, "#000000", 0.55) : "#ffffff";
-    stepHexes = [mix(m.base, m.hi, 0.28), m.base, mix(m.base, m.lo, 0.35)];
-    base = { bg: steps(...stepHexes), ink, money: ink, sub: dark ? mix(m.lo, "#000000", 0.3) : mix(m.hi, "#ffffff", 0.4) };
+    base = { bg: steps(mix(m.base, m.hi, 0.28), m.base, mix(m.base, m.lo, 0.35)), ink, money: ink, sub: dark ? mix(m.lo, "#000000", 0.3) : mix(m.hi, "#ffffff", 0.4) };
   }
   // `preview` = the editor's unsaved picture (a blob: URL made in this browser, never from the server)
   const preview = typeof banner?.preview === "string" && PREVIEW_URL.test(banner.preview) ? banner.preview : null;
-  if (!banner || !(preview || isRenderName(banner.src))) return { ...base, tab: false };
+  if (!banner || !(preview || isRenderName(banner.src))) return base;
   const url = `url("${preview || bannerUrl(banner.src)}")`;
-  if (banner.l === "tab") {
-    // the text still sits on the metal: the player's ink only if it reads there
-    const own = /^#[0-9a-f]{6}$/i.test(banner.ink || "") && inkOnSteps(banner.ink, stepHexes);
-    const ink = own ? banner.ink : base.ink;
-    return { bg: `${url} right center / auto 100% no-repeat, ${base.bg}`, ink, sub: own ? mix(banner.ink, stepHexes[1], 0.25) : base.sub, money: base.money === base.ink ? ink : base.money, tab: true };
-  }
   const hex = (v, d) => (/^#[0-9a-f]{6}$/i.test(v || "") ? v : d);
   const ink = hex(banner.ink, base.ink);
   // the editor's live preview: the whole master placed by the crop (cropCss), with the player's wash
@@ -151,5 +142,5 @@ export function plateStyle(look = "default", banner = null) {
     const w = Math.min(MAX_WASH, Math.max(0, Number(banner.wash) || 0)), c = washRgb(ink).join(",");
     layer = `${w > 0 ? `linear-gradient(rgba(${c},${w}), rgba(${c},${w})), ` : ""}${url} ${banner.pos} / ${banner.size} no-repeat`;
   }
-  return { bg: `${layer}, ${base.bg}`, ink, sub: hex(banner.sub, base.sub), money: hex(banner.money, base.money), tab: false };
+  return { bg: `${layer}, ${base.bg}`, ink, sub: hex(banner.sub, base.sub), money: hex(banner.money, base.money) };
 }

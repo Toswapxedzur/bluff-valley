@@ -9,7 +9,6 @@
 import { renderBoard, renderBack } from "./composer.js";
 import { coinSvg } from "./chips.js";
 import { ringSvg, ringBox, plateStyle } from "../cosmetics.js";
-import { TAB_ASPECT } from "../banner.js";
 import { initials, avColor } from "../initials.js";
 import { WHEEL, STEP, pocketFill, wheelSvg, dieSvg, symSvg, FILL } from "./resolve-art.js";
 import { cueAt, coinTicks } from "./table-audio.js";
@@ -73,7 +72,6 @@ export function playMoment(root, moment, ctx) {
     const st = plateStyle(p.badge || "default", p.banner ?? null), ring = p.ring || "default";
     const e = h("div", "m-plate");
     Object.assign(e.style, { width: w + "px", height: hgt + "px", background: st.bg, color: st.ink });
-    if (st.tab) e.style.paddingRight = Math.round(hgt * TAB_ASPECT + 10) + "px";   // the banner's tab keeps its room
     const over = (ringBox(av) - av) / 2;
     e.innerHTML = `<span class="av" style="width:${av}px;height:${av}px;margin-right:${Math.round(over + av * 0.2)}px"><span class="ring">${ringSvg(av, ring)}</span>`
       + `<span class="face" style="background:${avColor(p.name)};font-size:${Math.round(av * 0.36)}px">${esc(initials(p.name))}</span></span>`
