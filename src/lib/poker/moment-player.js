@@ -160,6 +160,7 @@ export function playMoment(root, moment, ctx) {
     deal(4, t, t + 550, 1100);
     A(slots[4], [{ transform: "none" }, { transform: "translateY(-6px)" }, { transform: "none" }], { duration: 500, delay: t + 350, fill: "none" });
     at(t + 1100, () => shake(stage, 0, 6));
+    snd("lowThud", t + 1100);
     showPct(st[st.length - 1], t + 1150);
     at(t + 1400, () => {
       const winBest = new Set(sides.filter((x) => x.won).flatMap((x) => x.best || []));
@@ -229,7 +230,7 @@ export function playMoment(root, moment, ctx) {
       A(arm, [{ transform: "rotate(40deg)" }, { transform: `rotate(${-360 * 4}deg)` }], { duration: 2600, delay: 500, easing: "cubic-bezier(.12,.6,.25,1)" });
       A(ball, [{ transform: "translate(-50%, -140px)", offset: 0 }, { transform: "translate(-50%, -140px)", offset: 0.7 }, { transform: "translate(-50%, -112px)", offset: 0.82 }, { transform: "translate(-50%, -124px)", offset: 0.9 }, { transform: "translate(-50%, -118px)", offset: 1 }], { duration: 2600, delay: 500, easing: "linear" });
       land = 3150; stamp(pocket, land, 420);
-      sfx("shake", 500); sfx("dice", 3100);          // as the table's roulette (until its own ball sounds are picked)
+      snd("ballRoll", 500, { noLead: true }); snd("ballSettle", 3100);   // as the table's roulette
     } else if (moment.game === "sic-bo") {
       moment.outcome.dice.forEach((n, i) => {
         const d = h("div", "m-die", dieSvg(1 + i)); box.append(d);
@@ -255,6 +256,8 @@ export function playMoment(root, moment, ctx) {
       at(land + 60, () => box.querySelectorAll(".m-reel").forEach((r) => r.classList.add("hit")));
     }
     stamp(mult, land + 120, 460);
+    snd("stampHit", land + 240);
+    snd("coinShower", land + 350, { noLead: true });
     at(land + 120, () => shake(stage, 0, 6));
     appear(pay, land + 320, "scale(.8)");
     counter(pay, 0, moment.payout, land + 320, 1300, "+");

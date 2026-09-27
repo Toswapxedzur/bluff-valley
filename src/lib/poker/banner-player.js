@@ -53,6 +53,8 @@ export function playBanner(host, moment, ctx = {}) {
   host.append(veil, band);
   A(veil, [{ opacity: 0 }, { opacity: 1 }], { duration: 260 });
   A(band, [{ clipPath: "inset(50% 0% 50% 0%)" }, { clipPath: "inset(0% 0% 0% 0%)" }], { duration: 520, delay: 80, easing: "cubic-bezier(.16,.84,.3,1)" });
+  const T0 = performance.now();
+  cueAt("lowThud", T0 + 200, { gain: 0.6 });                                 // the band opening
   const kick = h("div", "b-kicker", `${game ? `<img src="${game}" width="26" height="26" alt="">` : ""}<span>${kicker}</span>`);
   inner.append(kick);
   A(kick, [{ opacity: 0, transform: "translateX(-12px)" }, { opacity: 1, transform: "none" }], { duration: 300, delay: 420 });
@@ -116,6 +118,7 @@ export function playBanner(host, moment, ctx = {}) {
     tween(800, 1200, (t) => setRing(pl, moment.ring || "default", 1 - t));
     for (let i = 0; i < 6; i++) play("tick", { delay: 800 + i * 200, volume: 0.5 });   // the gems running out: the clock's tick
     at(2150, () => A(pl, [{ transform: "none", opacity: 1, filter: "grayscale(0)" }, { transform: "translateY(26px)", opacity: 0.35, filter: "grayscale(1)" }], { duration: 520, easing: "cubic-bezier(.5,0,.75,0)" }));
+    cueAt("lowThud", T0 + 2150 + 480);                                       // the plate dropping away
     close(len - 450);
   } else if (moment.kind === "champion") {
     const pl = plate(moment, { av: 84, w: 330, hgt: 96 }), mid = h("div", "b-mid");
@@ -148,6 +151,7 @@ export function playBanner(host, moment, ctx = {}) {
     });
     A(ring, [{ opacity: 0, transform: `translateY(${-RISE + 24}px) scale(.6) rotate(-40deg)` }, { opacity: 1, transform: `translateY(${-RISE}px) scale(1) rotate(0deg)` }], { duration: 620, delay: 700, easing: SNAP });
     at(2050, () => A(ring, [{ transform: `translateY(${-RISE}px) scale(1)` }, { transform: "translateY(0) scale(1.08)", offset: 0.8 }, { transform: "translateY(0) scale(1)" }], { duration: 560, easing: "cubic-bezier(.55,0,.35,1)" }));
+    cueAt("ringSet", T0 + 2500);                                             // the new ring landing on your avatar
     at(2610, () => { setRing(pl, moment.key, 1); ring.remove(); A(pl.querySelector(".av"), [{ transform: "scale(1)" }, { transform: "scale(1.1)" }, { transform: "scale(1)" }], { duration: 340, fill: "none", easing: SNAP }); });
     at(2800, () => {
       const st = plateStyle(moment.key), ov = h("span", "b-old");

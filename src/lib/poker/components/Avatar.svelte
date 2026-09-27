@@ -11,6 +11,7 @@
   import { ringSvg, ringBox } from "$lib/cosmetics.js";
   import { untrack } from "svelte";
   import { NORM, tween, reducedMotion } from "$lib/motion.js";
+  import { cueAt } from "$lib/poker/table-audio.js";
   // ringRemain (0…1): the ring as a turn clock — only that share of its gems shows
   // ringFloat: the ring takes no layout space — it hangs round the picture and may overhang whatever
   // holds it (the seat plate: owner, 2026-09-26)
@@ -28,6 +29,7 @@
       if (!was || !r || reducedMotion()) return;
       stopDraw();
       oldRing = was; drawK = 0;
+      cueAt("ringSet", performance.now() + 250 + NORM.ringDraw);          // set as the last gem is on
       const t1 = setTimeout(() => { oldRing = null; }, 280);
       const t2 = setTimeout(() => { stopDraw = tween(NORM.ringDraw, (k) => { drawK = k; }); }, 250);
       stopDraw = () => { clearTimeout(t1); clearTimeout(t2); };
