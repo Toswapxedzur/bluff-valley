@@ -8,9 +8,11 @@
 //   x, y    where the crop sits inside the picture (0…1 along the free room), z the zoom (1 = the
 //           largest crop of the plate's shape that fits)
 //   ink     the text colour (one of INKS)
-//   wash    how strongly the picture is washed (toward black under light text, white under dark);
-//           the server raises it to the minimum that keeps the text readable, never lowers it
-// The server bakes crop + wash into one small WebP; a plate only ever draws that image.
+//   wash    an optional wash over the picture (toward black under light text, white under dark),
+//           applied exactly as the player sets it — 0 by default. The picture's brightness is never
+//           changed for them (owner, 2026-09-27).
+// The server bakes crop + wash into one small WebP; a plate draws that image. The editor's preview
+// draws the master itself with CSS (cropCss) so dragging costs nothing.
 
 // the plate's shape (my own plate: 164 × 46, the others 136 × 38 — the same 3.6 : 1) and the tab's
 // (26 × 38 at an opponent's plate; its width follows the plate's height)
@@ -99,12 +101,6 @@ export function readability(pixels, inkHexStr, wash) {
 }
 export const readable = (r) => r.p10 >= MIN_P10 && r.median >= MIN_MEDIAN;
 
-/** The least wash (≥ `wanted`, in 0.05 steps) that makes the text readable over these pixels. */
-export function minWash(pixels, inkHexStr, wanted = 0) {
-  for (let w = Math.round(wanted * 20) / 20; w <= MAX_WASH + 1e-9; w = Math.round((w + 0.05) * 100) / 100)
-    if (readable(readability(pixels, inkHexStr, w))) return w;
-  return MAX_WASH;
-}
 
 /** The softer ink (status line, clock) and the stack's colour, for text over these (washed) pixels. */
 export function inksFor(pixels, inkHexStr, wash) {
@@ -122,6 +118,13 @@ export function inksFor(pixels, inkHexStr, wash) {
 export function inkOnSteps(inkHexStr, stepHexes) {
   const l = lumHex(inkHexStr);
   return stepHexes.every((s) => contrast(l, lumHex(s)) >= MIN_P10) && stepHexes.some((s) => contrast(l, lumHex(s)) >= MIN_MEDIAN);
+}
+
+/** The crop as CSS for the whole picture drawn as a background of a box of the crop's shape:
+ *  background-size and background-position (a percentage position lines the crop up exactly). */
+export function cropCss(w, h, aspect, s) {
+  const b = cropBox(w, h, aspect, s);
+  return { size: `${((w / b.width) * 100).toFixed(3)}% auto`, pos: `${(s.x * 100).toFixed(3)}% ${(s.y * 100).toFixed(3)}%` };
 }
 
 /** A render's file name → its public URL. */

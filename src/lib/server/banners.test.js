@@ -4,7 +4,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import sharp from "sharp";
-import { PLATE_PX, TAB_PX, readability, regionLums, readable } from "../banner.js";
+import { PLATE_PX, TAB_PX } from "../banner.js";
 
 const dir = mkdtempSync(join(tmpdir(), "banners-"));
 process.env.BANNER_DIR = dir;
@@ -12,19 +12,25 @@ const { renderBanner, readRender } = await import("./banners.js");
 
 const solid = (w, h, c) => sharp({ create: { width: w, height: h, channels: 3, background: c } }).webp().toBuffer();
 
-test("a plate banner is cut to the plate's size, washed until white text reads, and saved by content", async () => {
+test("a plate banner is cut to the plate's size, keeps the picture's brightness, and is saved by content", async () => {
   const master = await solid(1600, 900, { r: 250, g: 250, b: 250 });
   const r = await renderBanner(master, { layout: "plate", ink: "white" });
   assert.match(r.src, /^[a-f0-9]{32}\.webp$/);
-  assert.ok(r.wash > 0.3, `washed ${r.wash}`);
+  assert.equal(r.wash, 0, "never dimmed on the player's behalf");
   const buf = await readRender(r.src);
   assert.ok(buf && buf.length < 60_000, "small");
   const out = await sharp(buf).raw().toBuffer({ resolveWithObject: true });
   assert.deepEqual([out.info.width, out.info.height], PLATE_PX);
-  // the saved picture itself (after WebP) still reads with the ink the server chose
-  assert.ok(readable(readability(regionLums(out.data, out.info.width, out.info.height, out.info.channels), r.ink, 0)));
+  assert.ok(out.data[0] > 240, `still white: ${out.data[0]}`);
   // the same input gives the same file
   assert.equal((await renderBanner(master, { layout: "plate", ink: "white" })).src, r.src);
+});
+
+test("the player's own wash is applied exactly as set", async () => {
+  const r = await renderBanner(await solid(1600, 900, { r: 250, g: 250, b: 250 }), { layout: "plate", ink: "white", wash: 0.4 });
+  assert.equal(r.wash, 0.4);
+  const out = await sharp(await readRender(r.src)).raw().toBuffer({ resolveWithObject: true });
+  assert.ok(Math.abs(out.data[0] - 150) <= 4, `250 washed 40% toward black = 150, got ${out.data[0]}`);
 });
 
 test("a dark picture under light text needs no wash; the stack stays gold", async () => {

@@ -15,7 +15,7 @@ import sharp from "sharp";
 import { query, queryOne, execute } from "./db.js";
 import {
   normalize, cropBox, inkHex, PLATE_ASPECT, TAB_ASPECT, PLATE_PX, TAB_PX,
-  regionLums, minWash, inksFor, washRgb, isRenderName
+  regionLums, inksFor, washRgb, isRenderName
 } from "../banner.js";
 
 export const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;   // owner-approved default
@@ -92,7 +92,7 @@ export async function ingest(userId, buf) {
   return { file: { id, w: out.info.width, h: out.info.height } };
 }
 
-/** Cut a banner from a master: crop, wash (raised until the text reads), encode.
+/** Cut a banner from a master: crop, the player's own wash (never more), encode.
  *  → { src, layout, ink, sub, money, wash } */
 export async function renderBanner(master, settingsIn) {
   const s = normalize(settingsIn);
@@ -102,12 +102,9 @@ export async function renderBanner(master, settingsIn) {
   const box = cropBox(meta.width, meta.height, plate ? PLATE_ASPECT : TAB_ASPECT, s);
   const { data } = await sharp(master).extract(box).resize(W, H, { fit: "fill" }).removeAlpha().raw().toBuffer({ resolveWithObject: true });
   const ink = inkHex(s.ink);
-  let wash = s.wash, inks = { ink, sub: null, money: null };
-  if (plate) {
-    const px = regionLums(data, W, H, 3);
-    wash = minWash(px, ink, s.wash);
-    inks = inksFor(px, ink, wash);
-  }
+  // the picture keeps its brightness: only the player's wash, exactly as set (owner, 2026-09-27)
+  const wash = s.wash;
+  const inks = plate ? inksFor(regionLums(data, W, H, 3), ink, wash) : { ink, sub: null, money: null };
   if (wash > 0) {
     const w = washRgb(ink);
     for (let i = 0; i < data.length; i += 3) for (let c = 0; c < 3; c++) data[i + c] = Math.round(data[i + c] + (w[c] - data[i + c]) * wash);

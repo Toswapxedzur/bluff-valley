@@ -9,7 +9,7 @@
 // player's highest-ever wealth (wallet + chips on tables) reaches its milestone; unlocks never lapse.
 // Design sheet: design/cosmetics/.
 
-import { bannerUrl, isRenderName, inkOnSteps } from "./banner.js";
+import { bannerUrl, isRenderName, inkOnSteps, washRgb, MAX_WASH } from "./banner.js";
 
 export const CHESS = { ebony: "#1C1A15", charcoal: "#3E3A31", gray: "#6E685B", white: "#FBF8EF", cream: "#F1E9D3", ivory: "#E1D3AD" };
 
@@ -112,12 +112,13 @@ export function ringSvg(px, look = "default", remain = 1) {
 
 // ------------------------------------------------------------------ the badge (seat plate)
 const PREVIEW_URL = /^blob:https?:\/\/[a-z0-9.:-]+\/[a-f0-9-]+$/i;
+const CROP_SIZE = /^\d{1,4}(\.\d+)?% auto$/, CROP_POS = /^\d{1,3}(\.\d+)?% \d{1,3}(\.\d+)?%$/;
 const steps = (a, b, c) => `linear-gradient(135deg, ${a} 0 34%, ${b} 34% 67%, ${c} 67% 100%)`;
 /** The seat plate in `look`: its stepped background, the ink for the name and stack, and a softer
  *  ink for the status line. Tones stay close to the metal so the text stays legible.
  *  `banner` (a player's own picture, $lib/banner.js — { l, src, ink, sub, money }) lies over the metal
  *  as one more background layer, so the plate keeps its size and shows the metal until the picture
- *  loads: "plate" fills it (the banner brings its own inks, checked readable by the server), "tab"
+ *  loads: "plate" fills it (the banner brings its own inks), "tab"
  *  fills a fixed tab at the right end (`tab` true: the plate keeps room for it). */
 export function plateStyle(look = "default", banner = null) {
   const m = METALS.find((x) => x.key === look);
@@ -142,5 +143,13 @@ export function plateStyle(look = "default", banner = null) {
     return { bg: `${url} right center / auto 100% no-repeat, ${base.bg}`, ink, sub: own ? mix(banner.ink, stepHexes[1], 0.25) : base.sub, money: base.money === base.ink ? ink : base.money, tab: true };
   }
   const hex = (v, d) => (/^#[0-9a-f]{6}$/i.test(v || "") ? v : d);
-  return { bg: `${url} center / cover no-repeat, ${base.bg}`, ink: hex(banner.ink, base.ink), sub: hex(banner.sub, base.sub), money: hex(banner.money, base.money), tab: false };
+  const ink = hex(banner.ink, base.ink);
+  // the editor's live preview: the whole master placed by the crop (cropCss), with the player's wash
+  // as a flat layer on top — nothing to encode or decode while they drag
+  let layer = `${url} center / cover no-repeat`;
+  if (preview && CROP_SIZE.test(banner.size || "") && CROP_POS.test(banner.pos || "")) {
+    const w = Math.min(MAX_WASH, Math.max(0, Number(banner.wash) || 0)), c = washRgb(ink).join(",");
+    layer = `${w > 0 ? `linear-gradient(rgba(${c},${w}), rgba(${c},${w})), ` : ""}${url} ${banner.pos} / ${banner.size} no-repeat`;
+  }
+  return { bg: `${layer}, ${base.bg}`, ink, sub: hex(banner.sub, base.sub), money: hex(banner.money, base.money), tab: false };
 }
