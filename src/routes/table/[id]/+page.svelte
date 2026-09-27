@@ -240,10 +240,11 @@
 <div class="tablepage">
   {#if bank}<MoneyLayer {bank} />{/if}
   {#if view && layout === "poker"}<ButtonGlide {view} />{/if}
-  {#if motion.cards}<CardLayer motion={motion.cards} />{/if}
+  <!-- the shuffle is a moment: the table blurs behind the deck while it plays (Hold'em's DeckLayer, or
+       the other card games' CardLayer — both sit above this veil) -->
+  {#if dealer?.shuffling || motion.cardShuffling}<div class="shuffle-veil" aria-hidden="true" transition:fade={{ duration: d(DUR.base) }}></div>{/if}
+  {#if motion.cards}<CardLayer motion={motion.cards} onShuffling={(on) => (motion.cardShuffling = on)} />{/if}
   {#if motion.moment}{#key motion.moment.id}<MomentLayer moment={motion.moment} {view} />{/key}{/if}
-  <!-- the shuffle is a moment: the table blurs behind the deck while it plays -->
-  {#if dealer?.shuffling}<div class="shuffle-veil" aria-hidden="true" transition:fade={{ duration: d(DUR.base) }}></div>{/if}
   {#if dealer}<DeckLayer {dealer} />{/if}
   <!-- slim overlay strip: no site bar on a table -->
   <div class="hud">

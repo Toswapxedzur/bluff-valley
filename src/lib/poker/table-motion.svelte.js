@@ -17,6 +17,7 @@ class TableMotion {
   dealer = $state(null);
   bank = $state(null);
   cards = $state(null);     // the other card games' motion (CardLayer): not Hold'em, which has the dealer
+  cardShuffling = $state(false);   // CardLayer is playing a shuffle: the table blurs behind it
   moment = $state(null);    // a full-screen moment playing (moments.js): { kind, ms, id, ... }
 }
 
@@ -45,7 +46,11 @@ export function tableMotion(src) {
   $effect(() => {
     const v = src.view;
     const on = !!v && !reducedMotion() && tableLayout(v.game || v.config?.variant) !== "poker";
-    untrack(() => { if (!on) m.cards = null; else if (!m.cards) m.cards = new CardMotion(); });
+    untrack(() => {
+      if (!on) { m.cards = null; m.cardShuffling = false; return; }
+      if (!m.cards) m.cards = new CardMotion();
+      m.cards.onView(v);
+    });
   });
 
   // a hand / round just ended on a big event: its full-screen moment (everyone at the table at once)
