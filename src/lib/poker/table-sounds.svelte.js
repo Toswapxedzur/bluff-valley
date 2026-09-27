@@ -69,7 +69,8 @@ export function tableSounds(src) {
   let prevStatus = null;
   $effect(() => {
     const st = src.view?.tournament?.status ?? null;
-    if (prevStatus && st === "running" && prevStatus !== "running") play("fanfare");
+    const sprint = src.view?.tournament?.kind === "sprint";           // its banner plays the fanfare, on "Go"
+    if (prevStatus && st === "running" && prevStatus !== "running" && !sprint) play("fanfare");
     prevStatus = st;
   });
 }

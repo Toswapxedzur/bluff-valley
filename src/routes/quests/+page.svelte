@@ -39,6 +39,8 @@
       if (result.type === "success" && result.data?.claimedId === id) {
         // the reward flies from the button into the wallet (which counts up as it lands)
         flyCoinsToWallet(formElement.querySelector("button") || formElement, result.data.reward);
+        play("reward");                                // the same chime as the daily bonus
+        play("check", { delay: 60 });                  // the check stamping in: a knock
         quests = quests.map((q) => (q.id === id ? { ...q, claimed: true } : q));
         if (result.data.chips != null) chips = Number(result.data.chips);
       }

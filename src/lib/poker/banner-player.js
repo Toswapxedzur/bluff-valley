@@ -8,6 +8,8 @@ import { coinSvg } from "./chips.js";
 import { initials, avColor } from "../initials.js";
 import { SPRINT_ICON } from "./games.js";
 import { PROCLAIM_MS } from "./proclamations.js";
+import { play } from "../sfx.js";
+import { cueAt, coinTicks } from "./table-audio.js";
 
 const W = 1120;
 const EASE = "cubic-bezier(.22,.61,.36,1)", SNAP = "cubic-bezier(.3,1.45,.5,1)", INOUT = "cubic-bezier(.65,0,.35,1)";
@@ -96,6 +98,9 @@ export function playBanner(host, moment, ctx = {}) {
     A(icon, [{ opacity: 0, transform: "translateY(-80px)" }, { opacity: 1, transform: "none" }], { duration: 480, delay: 430, easing: SNAP });
     A(icon, [{ transform: "rotate(0)" }, { transform: "rotate(-8deg)" }, { transform: "rotate(5deg)" }, { transform: "rotate(0)" }], { duration: 360, delay: 1000, fill: "none" });
     mid.querySelectorAll("div").forEach((e, i) => appear(e, 700 + i * 180));
+    // 3 · 2 · 1 tick like the turn clock; the fanfare is the "Go"
+    [0, 1, 2].forEach((i) => play("tick", { delay: 1300 + i * 620 }));
+    play("fanfare", { delay: 1300 + 3 * 620 });
     ["3", "2", "1", "Go"].forEach((n, i) => at(1300 + i * 620, () => {
       const e = h("span", n === "Go" ? "go" : "", n);
       count.replaceChildren(e);
@@ -109,6 +114,7 @@ export function playBanner(host, moment, ctx = {}) {
     appear(pl, 450, "scale(.92)");
     mid.querySelectorAll("div").forEach((e, i) => appear(e, 1100 + i * 220));
     tween(800, 1200, (t) => setRing(pl, moment.ring || "default", 1 - t));
+    for (let i = 0; i < 6; i++) play("tick", { delay: 800 + i * 200, volume: 0.5 });   // the gems running out: the clock's tick
     at(2150, () => A(pl, [{ transform: "none", opacity: 1, filter: "grayscale(0)" }, { transform: "translateY(26px)", opacity: 0.35, filter: "grayscale(1)" }], { duration: 520, easing: "cubic-bezier(.5,0,.75,0)" }));
     close(len - 450);
   } else if (moment.kind === "champion") {
@@ -121,6 +127,9 @@ export function playBanner(host, moment, ctx = {}) {
     at(2150, () => A(pl.querySelector(".av"), [{ transform: "scale(1)" }, { transform: "scale(1.12)" }, { transform: "scale(1)" }], { duration: 380, fill: "none", easing: SNAP }));
     mid.querySelectorAll("div").forEach((e, i) => appear(e, 1300 + i * 240));
     at(2100, () => rain(40, 0));
+    play("fanfare", { delay: 450 });
+    const t0 = performance.now();
+    for (let i = 0; i < 8; i++) cueAt("coins", t0 + 2300 + i * 130, { count: 3, gain: 0.45 });   // the coins raining down
     close(len - 450);
   } else if (personal) {
     // a ring of the new metal appears above your avatar, comes down over the old one; then the plate takes the metal

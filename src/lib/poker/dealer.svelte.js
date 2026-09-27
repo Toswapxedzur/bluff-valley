@@ -98,7 +98,7 @@ export class Dealer {
       // a full-screen moment (moments.js) plays first; the highlight and the collection wait for it
       const wait = detectMoment(next)?.ms ?? 0;
       this._takeOver(next, privates);
-      if (this.highlight) this.highlight.t0 = t + wait;
+      if (this.highlight) { this.highlight.t0 = t + wait; this.cues.push({ t: t + wait + 160, name: "pileTap", gain: 0.5 }); }
       this._at(t + wait + DEAL.showdownHold, () => this._collect());
     }
   }

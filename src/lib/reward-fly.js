@@ -4,6 +4,8 @@
 // its old number until the coins arrive, then counts up ("reward-fly" event → +layout.svelte).
 import { coinSvg } from "$lib/poker/chips.js";
 import { NORM, reducedMotion } from "$lib/motion.js";
+import { coinTicks } from "$lib/poker/table-audio.js";
+import { play } from "$lib/sfx.js";
 
 const PAGE_COIN = 22;
 
@@ -35,6 +37,8 @@ export function flyCoinsToWallet(fromEl, amount) {
     }
     c.animate(kf, { duration: NORM.coinDur, delay: i * NORM.coinGap, easing: "cubic-bezier(.45,.05,.55,.95)", fill: "both" });
   }
+  coinTicks(performance.now() + NORM.coinDur, n, NORM.coinGap);
+  play("coins", { delay: lastLand });
   setTimeout(() => {
     layer.remove();
     pill.animate([{ transform: "scale(1)" }, { transform: "scale(1.1)" }, { transform: "scale(1)" }], { duration: 300, easing: "cubic-bezier(.3,1.45,.5,1)" });
