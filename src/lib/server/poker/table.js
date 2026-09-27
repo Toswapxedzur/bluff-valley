@@ -710,7 +710,7 @@ export class LiveTable {
     }));
     // Run-it-twice: expose every run's board so the client can show both.
     const boards = hand.result?.runItTwice ? (hand.result.runs || []).map((r) => [...r.board]) : null;
-    return { type: "showdown", board: [...hand.board], boards, winners, revealed };
+    return { type: "showdown", board: [...hand.board], boards, winners, revealed, runout: hand.result?.runout || null };
   }
 
   async finishHand() {
