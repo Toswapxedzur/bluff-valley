@@ -31,7 +31,7 @@
   import CardLayer from "$lib/poker/components/CardLayer.svelte";
   import MomentLayer from "$lib/poker/components/MomentLayer.svelte";
   import { dev } from "$app/environment";
-  import { MOMENT_MS } from "$lib/poker/moments.js";
+  import { MOMENT_MS, allInMs } from "$lib/poker/moments.js";
 
   let { data } = $props();
   // Reactive: a River Sprint fold-teleport navigates /table/A -> /table/B on the
@@ -174,6 +174,8 @@
     const a = seats[0].seat, others = seats.slice(1).map((s, i) => ({ seat: s.seat, cards: 2 + i * 3, pays: 100 * (2 + i * 3) }));
     const sample = {
       monsterPot: { kind: "monsterPot", seat: a, amount: 18640, won: 18640, bb: 93 },
+      allIn: seats[1] ? { kind: "allIn", from: 0, board: ["Kd", "7c", "2h", "5s", "Qc"], stages: [{ board: 0, pct: { [a]: 46, [seats[1].seat]: 54 } }, { board: 3, pct: { [a]: 92, [seats[1].seat]: 8 } }, { board: 4, pct: { [a]: 95, [seats[1].seat]: 5 } }, { board: 5, pct: { [a]: 0, [seats[1].seat]: 100 } }],
+        players: [{ seat: a, cards: ["Ah", "Kh"], best: null, won: false }, { seat: seats[1].seat, cards: ["Qs", "Qd"], best: ["Qs", "Qd", "Qc", "Kd", "7c"], handName: "Three of a Kind", won: true }] } : null,
       rare: { kind: "rare", seat: a, cards: ["9s", "9h", "9d", "9c", "Kh"], name: "Four of a Kind", royal: false, game: "holdem" },
       royal: { kind: "rare", seat: a, cards: ["Ts", "Js", "Qs", "Ks", "As"], name: "Royal Flush", royal: true, game: "holdem" },
       roulette: { kind: "jackpot", seat: a, game: "roulette", outcome: { pocket: 17 }, mult: 35, bet: 200, payout: 7000 },
@@ -182,7 +184,7 @@
       bigTwo: { kind: "bigTwo", seat: a, pile: ["8s", "8h", "8d", "Kc", "Kh"], pot: others.reduce((x, o) => x + o.pays, 0), others }
     }[k];
     if (!sample) return;
-    const ms = k === "royal" ? MOMENT_MS.royal : MOMENT_MS[sample.kind];
+    const ms = k === "royal" ? MOMENT_MS.royal : k === "allIn" ? allInMs(0) : MOMENT_MS[sample.kind];
     setTimeout(() => { motion.moment = { ...sample, ms, id: "dev" }; setTimeout(() => { motion.moment = null; }, ms + 60); }, 800);
   });
   const bank = $derived(motion.bank);

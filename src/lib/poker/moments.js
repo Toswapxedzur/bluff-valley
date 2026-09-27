@@ -13,6 +13,8 @@ export const MOMENT_MS = {
   jackpot: 5600,
   bigTwo: 4400
 };
+/** The all-in showdown's length: the players' cards, then each street still to come (the river slower). */
+export const allInMs = (from) => 1900 + (from === 0 ? 3 : from === 3 ? 2 : 1) * 1600 + 700 + 1500;
 export const MONSTER_BB = 50;        // a pot of this many big blinds is a monster
 export const JACKPOT_X = 25;         // a payout of this many times the bet is a jackpot
 
@@ -48,6 +50,14 @@ export function detectMoment(view) {
     if (!r || r.type !== "showdown") return null;
     const winners = new Map();
     for (const w of r.winners || []) winners.set(w.seat, (winners.get(w.seat) || 0) + (w.amount || 0));
+    // everyone was all-in with cards to come: the run-out, street by street, with the win chances
+    if (r.runout && (r.revealed || []).length >= 2 && !r.boards) {
+      const winSet = new Set(winners.keys());
+      return {
+        kind: "allIn", ms: allInMs(r.runout.from), from: r.runout.from, stages: r.runout.stages, board: [...(r.board || [])],
+        players: r.revealed.map((h) => ({ seat: h.seat, cards: [...h.holeCards], best: h.best ? [...h.best] : null, handName: h.handName, won: winSet.has(h.seat) }))
+      };
+    }
     // a winner's four of a kind or better
     for (const h of r.revealed || []) {
       if (!winners.has(h.seat) || !h.best) continue;

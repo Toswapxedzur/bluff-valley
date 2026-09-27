@@ -106,7 +106,65 @@ export function playMoment(root, moment, ctx) {
   const who = (seat) => ctx.seat(seat) || { name: "Player", ring: "default", badge: "default", stack: 0 };
 
   // ---- the moments
-  if (moment.kind === "monsterPot") {
+  if (moment.kind === "allIn") {
+    content.classList.add("m-colc");
+    const CW = 76, head = title("All in", "small"), row = h("div", "m-allrow");
+    const sides = moment.players.map((pl) => {
+      const q = who(pl.seat), col = h("div", "m-side"), hand = h("div", "m-hand");
+      const els = pl.cards.map(() => { const e = h("div", "m-card", renderBack(CW)); e.dataset.w = CW; hand.append(e); return e; });
+      const pc = h("div", "m-pct", "");
+      const pp = plate(q, { av: 40, w: 196, hgt: 50 });
+      col.append(pp, hand, pc);
+      return { ...pl, col, pp, els, pc };
+    });
+    const board = h("div", "m-board"), slots = [0, 1, 2, 3, 4].map(() => { const s = h("div", "m-slot"); board.append(s); return s; });
+    const half = Math.ceil(sides.length / 2);
+    sides.slice(0, half).forEach((x) => row.append(x.col)); row.append(board); sides.slice(half).forEach((x) => row.append(x.col));
+    const cap = caption("");
+    content.append(head, row, cap);
+    stamp(head, 450);
+    sides.forEach((x, i) => appear(x.col, 560, i < half ? "translateX(-40px)" : "translateX(40px)"));
+    const flip = (el, face, delay, dur = NORM.flip) => {
+      A(el, [{ transform: "scaleX(1)" }, { transform: "scaleX(0.02)" }], { duration: dur / 2, delay, easing: "ease-in", fill: "none" });
+      at(delay + dur / 2, () => { el.innerHTML = renderBoard(face, +el.dataset.w); A(el, [{ transform: "scaleX(0.02)" }, { transform: "scaleX(1)" }], { duration: dur / 2, easing: "ease-out", fill: "none" }); });
+    };
+    sides.forEach((x, i) => x.els.forEach((e, j) => flip(e, x.cards[j], 1000 + (i * 2 + j) * 80)));
+    // the board as it stood when everyone was all-in, then each street
+    const boardEls = [];
+    for (let i = 0; i < moment.from; i++) { const e = h("div", "m-card", renderBoard(moment.board[i], CW)); e.dataset.w = CW; slots[i].append(e); boardEls[i] = e; }
+    const showPct = (stage, when) => at(when, () => sides.forEach((x) => {
+      const v = stage.pct[x.seat] ?? 0, from = +(x.pc.dataset.v ?? v);
+      x.pc.dataset.v = v;
+      tween(0, 420, (t) => { x.pc.textContent = Math.round(from + (v - from) * t) + "%"; });
+    }));
+    const st = moment.stages;
+    showPct(st[0], 1450);
+    sides.forEach((x) => appear(x.pc, 1450, "scale(.7)"));
+    const deal = (i, delay, turnAt, dur = NORM.flip) => {
+      const e = h("div", "m-card", renderBack(CW)); e.dataset.w = CW; slots[i].append(e); boardEls[i] = e;
+      A(e, [{ opacity: 0, transform: "translateY(-70px) rotate(-6deg)" }, { opacity: 1, transform: "none" }], { duration: 300, delay });
+      flip(e, moment.board[i], turnAt, dur);
+    };
+    let t = 1900, k = 1;
+    if (moment.from === 0) { [0, 1, 2].forEach((i) => deal(i, t + i * 80, t + 450 + i * 90)); showPct(st[k++], t + 1050); t += 1600; }
+    if (moment.from <= 3) { deal(3, t, t + 500); showPct(st[k++], t + 900); t += 1600; }
+    // the river: a slow squeeze
+    deal(4, t, t + 550, 1100);
+    A(slots[4], [{ transform: "none" }, { transform: "translateY(-6px)" }, { transform: "none" }], { duration: 500, delay: t + 350, fill: "none" });
+    at(t + 1100, () => shake(stage, 0, 6));
+    showPct(st[st.length - 1], t + 1150);
+    at(t + 1400, () => {
+      const winBest = new Set(sides.filter((x) => x.won).flatMap((x) => x.best || []));
+      for (const x of sides) {
+        if (x.won) markWinner(x.pp); else A(x.col, [{ opacity: 1, filter: "grayscale(0)" }, { opacity: 0.42, filter: "grayscale(.4)" }], { duration: 400 });
+        x.els.forEach((e, j) => { if (x.won && winBest.has(x.cards[j])) A(e, [{ transform: "none" }, { transform: "translateY(-12px)" }], { duration: 300, easing: SNAP }); });
+      }
+      boardEls.forEach((e, i) => { if (!e) return; if (winBest.has(moment.board[i])) A(e, [{ transform: "none" }, { transform: "translateY(-12px)" }], { duration: 300, delay: i * 40, easing: SNAP }); else A(e, [{ opacity: 1 }, { opacity: 0.42 }], { duration: 300 }); });
+      const w = sides.filter((x) => x.won);
+      cap.textContent = w.length > 1 ? `Split pot — ${w.map((x) => who(x.seat).name).join(" & ")}` : w.length ? `${who(w[0].seat).name} wins${w[0].handName ? " with " + w[0].handName.toLowerCase() : ""}` : "";
+      appear(cap, 0);
+    });
+  } else if (moment.kind === "monsterPot") {
     content.classList.add("m-row");
     const p = who(moment.seat), pl = plate({ ...p, stack: Math.max(0, p.stack - moment.won) });
     const mid = h("div", "m-col"), num = h("div", "m-bignum money", "0");

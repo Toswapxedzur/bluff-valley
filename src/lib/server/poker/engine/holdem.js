@@ -5,6 +5,7 @@
 // variant-independent.
 import { getVariant } from "./variants.js";
 import { bestFive } from "./evaluator.js";
+import { runoutOf } from "./runout.js";
 
 const BETTING_STREETS = new Set(["preflop", "flop", "turn", "river"]);
 const ACTION_TYPES = new Set(["fold", "check", "call", "bet", "raise", "allin"]);
@@ -362,8 +363,14 @@ function finishTransition(state, events, afterSeat) {
       settleRunItTwice(state, events, state.runItTwiceRuns || 2);
       return;
     }
+    const from = state.board.length;
     runOutBoard(state, events);
     settleShowdown(state, events);
+    // the all-in showdown's win chances, street by street (the full-screen moment shows them)
+    if (from < 5 && state.result) {
+      try { state.result.runout = runoutOf(nonFoldedPlayers(state).map((p) => ({ seat: p.seat, holeCards: [...p.holeCards] })), state.board, from); }
+      catch { /* a display extra: never let it break a hand */ }
+    }
     return;
   }
 
