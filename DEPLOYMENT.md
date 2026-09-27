@@ -336,13 +336,13 @@ npm run build
 rsync -az --delete \
   --exclude=node_modules/ --exclude=.svelte-kit/ --exclude=.git --exclude=.git/ \
   --exclude=.venv/ --exclude=.idea/ --exclude=.DS_Store --exclude='smoke-*.sqlite*' \
-  --exclude=.env --exclude='.env.*' --exclude=var/ \
+  --exclude=.env --exclude='.env.*' --exclude=var/ --exclude=design/ \
   -e ssh ./ hk:/opt/bluffing-valley/
 ssh hk 'cd /opt/bluffing-valley && npm ci --omit=dev && sudo systemctl restart bluffing-valley'
 ```
 
 Dry-run with `--dry-run --itemize-changes` first; `--delete` is safe because the
-excludes protect `node_modules`/`.env`/`.venv`/`var/` (box-only). When other work is
+excludes protect `node_modules`/`.env`/`.venv`/`var/` (box-only) and skip `design/` (~75 MB of audition audio the app never serves). When other work is
 in progress in the checkout, deploy from a clean `git worktree` of the commit instead
 (`--exclude=.git` also skips a worktree's `.git` file).
 
