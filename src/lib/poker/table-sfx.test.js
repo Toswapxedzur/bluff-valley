@@ -89,7 +89,9 @@ test("sic bo rolls dice, slots spin reels", () => {
   const s0 = mk("sic-bo", { bets: [], outcome: null, results: [] }), s1 = mk("sic-bo", { bets: [], outcome: { dice: [1, 2, 3] }, results: [] });
   assert.deepEqual(names(tableSoundCues(s0, s1, "u1")), ["shake", "dice"]);
   const l0 = mk("slots", { bets: [], outcome: null, results: [] }), l1 = mk("slots", { bets: [], outcome: { reels: ["7", "7", "bar"] }, results: [] });
-  assert.deepEqual(names(tableSoundCues(l0, l1, "u1")), ["reel"]);
+  const reels = tableSoundCues(l0, l1, "u1");
+  assert.deepEqual(names(reels), ["reel", "reel", "reel"], "one per reel, as each stops");
+  assert.ok(reels[0].delay < reels[1].delay && reels[1].delay < reels[2].delay, "left to right");
 });
 
 test("big two: a new combination on the pile is a play, even when it's shorter", () => {

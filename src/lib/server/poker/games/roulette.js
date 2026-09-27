@@ -48,7 +48,7 @@ function betOptions() {
 function outcomeView(state) {
   const { pocket, color } = state.outcome;
   const cap = color[0].toUpperCase() + color.slice(1);
-  return { headline: pocket === 0 ? "0 — zero" : `${pocket} ${cap}` };
+  return { headline: pocket === 0 ? "0 — zero" : `${pocket} ${cap}`, pocket, color };
 }
 
 export const roulette = bankedBetGame({

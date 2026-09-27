@@ -48,7 +48,7 @@ function betOptions() {
 function outcomeView(state) {
   const { dice, sum, triple } = state.outcome;
   const tag = triple ? "Triple!" : sum >= 4 && sum <= 10 ? "Small" : "Big";
-  return { headline: `🎲 ${dice.join(" · ")}  = ${sum} · ${tag}` };
+  return { headline: `${dice.join(" · ")}  = ${sum} · ${tag}`, dice: [...dice] };
 }
 
 export const sicBo = bankedBetGame({
