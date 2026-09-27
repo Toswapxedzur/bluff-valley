@@ -9,7 +9,7 @@
 // cards fly to the used pile; then the full shuffle routine plays, every hand — the server
 // waits long enough between hands for it.
 
-import { routineMs } from "./deck-routine.js";
+import { QUICK, routineMs } from "./deck-routine.js";
 
 /** The tables that get the dealt / shuffled deck: Hold'em, two hole cards each. */
 export const ANIMATED_VARIANTS = new Set(["holdem"]);
@@ -36,34 +36,18 @@ export const DEAL = {
   collectSpan: 700,
   collectFlight: 420
 };
-// ---- the deck across hands (owner, 2026-09-27: "shuffle when the deck runs out completely, at the
-// instant the deck needs to deal a card"). The deck is NOT reshuffled after every hand: used cards pile
-// up top-right, the deck deals on down, and only when it's empty and a card is still needed is the
-// used pile shuffled into a new deck — right there, mid-deal if need be — then dealing carries on.
-// Shared by the server (it holds the table's next turn while the shuffle plays) and the page.
-export const DECK_SIZE = 52;
-/**
- * Draw n cards from a deck of `left`, with `onTable` cards out on the table (in hands / on the board —
- * not in the deck, not in the used pile). → { left, shuffle: null | { before, used, after } }: `before`
- * cards come off the old deck, then the `used` pile is shuffled into the new deck, then `after` more.
- */
-export function drawFromDeck(left, n, onTable) {
-  if (n <= left) return { left: left - n, shuffle: null };
-  const before = left, used = DECK_SIZE - onTable - before, after = n - before;
-  return { left: used - after, shuffle: { before, used, after } };
-}
-/** How long a table holds its next turn for a shuffle in the middle of a deal of cards `every` apart. */
-export function shuffleHoldMs(sh, every = DEAL.every) {
-  return sh.before * every + routineMs(sh.used) + sh.after * every + DEAL.flight + 250;
-}
-/** From the result to the table being clear (hold the result, collect everything to the used pile). */
-export function collectionMs(cards) {
-  return DEAL.showdownHold + DEAL.collectEvery + Math.max(0, cards - 1) * collectEvery(cards) + DEAL.collectFlight + 30;
-}
-
 /** Spacing between collection launches for n cards (the whole collection launches within 0.7 s). */
 export const collectEvery = (n) => (n > 1 ? Math.min(DEAL.collectEvery, DEAL.collectSpan / (n - 1)) : 0);
 
+/** Time from the end of a hand to the deck being ready again: hold + collect + routine. */
+export function turnaroundMs(cardsOnTable) {
+  const routine = routineMs(52, QUICK);   // the everyday shuffle: no cuts
+  // (the leftover deck's packet flies alongside; the table's cards start one beat after it)
+  return DEAL.showdownHold + DEAL.collectEvery + Math.max(0, cardsOnTable - 1) * collectEvery(cardsOnTable) + DEAL.collectFlight + 30 + routine;
+}
+/** Between-hands pause on an animated table: the worst case (a full 10-seat Hold'em table plus
+ *  the board, or 9 seats of 5-card Omaha) with slack for network latency. */
+export const SHUFFLE_HAND_DELAY_MS = 8_000;
 
 /**
  * Deal order: seats holding cards, clockwise (increasing seat number) starting from the seat
