@@ -86,8 +86,9 @@ function middlePath(Wz, zMid, zFin, zoom) {
  * (top-left), centre = where the shuffle happens; all footprint centres in table units (a card
  * is 60 wide at normal size). Returns { duration, phases, frameAt(t), finalOrder, layout, cuts }.
  */
-export function buildRoutine({ start, end, centre, seed = 1, zoom = ZOOM, timing = TIMING } = {}) {
+export function buildRoutine({ start, end, centre, seed = 1, zoom = ZOOM, timing = TIMING, ids = FULL_DECK } = {}) {
   end = end || start;
+  const DECK = ids.slice(), N = DECK.length;      // the cards being shuffled (the used pile: owner, 2026-09-27)
   const r = rng(seed);
   const Tm = timing;
   const Wz = W * zoom;
@@ -98,19 +99,19 @@ export function buildRoutine({ start, end, centre, seed = 1, zoom = ZOOM, timing
   const pileC = { fx: centre.fx, fy: centre.fy - zoom * H * 0.55 };   // the apex, toward the deck spots
 
   // ---- plan the cards (deterministic for a seed) ----
-  let order = FULL_DECK.slice();                          // top → bottom, face-down frame
+  let order = DECK.slice();                          // top → bottom, face-down frame
   const cuts = [];
   for (let i = 0; i < Tm.cuts; i++) {
     // a different random middle section each pass: top 20–40%, middle 25–40%, bottom the rest (≥ 20%)
-    const a = Math.round(COUNT * (0.2 + 0.2 * r()));
-    const m = Math.min(COUNT - a - Math.round(COUNT * 0.2), Math.round(COUNT * (0.25 + 0.15 * r())));
+    const a = Math.round(N * (0.2 + 0.2 * r()));
+    const m = Math.min(N - a - Math.round(N * 0.2), Math.round(N * (0.25 + 0.15 * r())));
     const top = order.slice(0, a), middle = order.slice(a, a + m), bottom = order.slice(a + m);
     const zMid = thickness(bottom.length), zFin = thickness(top.length + bottom.length);
     const path = middlePath(Wz, zMid, zFin, zoom);
     cuts.push({ top, middle, bottom, zMid, zFin, path, tClear: mjInverse(path.clear), tTouch: mjInverse(path.touch) });
     order = middle.concat(top, bottom);                  // the middle section ends on top
   }
-  const half = Math.round(COUNT / 2);
+  const half = Math.round(N / 2);
   const splitA = order.slice(0, half), splitB = order.slice(half);   // top half left, bottom half right
   // the shuffle: alternating runs of 1–3 cards from the tops of the two piles
   const qa = splitA.slice(), qb = splitB.slice(), launches = [];
@@ -162,7 +163,7 @@ export function buildRoutine({ start, end, centre, seed = 1, zoom = ZOOM, timing
     if (tt < fly.t1) {
       // face-up (θ = π) → face-down (θ = 2π), travelling from the top-right and growing
       const k = u(fly), m = mj(k), st = flipState(k, { theta0: Math.PI });
-      stacks.push({ ids: FULL_DECK, theta: st.theta, fx: lerp(start.fx, centre.fx, m), fy: lerp(start.fy, centre.fy, m), rise: st.lift - thickness(COUNT) / 2, scale: lerp(1, zoom, m) });
+      stacks.push({ ids: DECK, theta: st.theta, fx: lerp(start.fx, centre.fx, m), fy: lerp(start.fy, centre.fy, m), rise: st.lift - thickness(N) / 2, scale: lerp(1, zoom, m) });
       return out(stacks);
     }
     // the middle-section cuts (and the rests between them)
@@ -171,7 +172,7 @@ export function buildRoutine({ start, end, centre, seed = 1, zoom = ZOOM, timing
       const i = cutPhases.findIndex((p) => tt < p.t1);
       const p = cutPhases[i];
       if (tt < p.t0) {                                 // settle / pause before this pass
-        const ids = i === 0 ? FULL_DECK : (() => { const c = cuts[i - 1]; return c.middle.concat(c.top, c.bottom); })();
+        const ids = i === 0 ? DECK : (() => { const c = cuts[i - 1]; return c.middle.concat(c.top, c.bottom); })();
         stacks.push({ ids, fx: centre.fx, fy: centre.fy, ...z });
         return out(stacks);
       }
@@ -229,6 +230,13 @@ export function buildRoutine({ start, end, centre, seed = 1, zoom = ZOOM, timing
   }
 
   return { duration, phases, frameAt, finalOrder, cuts, layout: { start, end, centre, pileA, pileB, pileC, Wz } };
+}
+
+/** How long the routine takes for n cards (the server holds a table's next turn this long). */
+export function routineMs(n = COUNT, timing = TIMING) {
+  const T = timing;
+  return T.flyIn + T.settle + T.cuts * T.cutPass + (T.cuts - 1) * T.cutGap + T.beforeSplit + T.split + T.beforeShuffle
+    + Math.max(0, n - 1) * T.launchEvery + T.flight + T.beforeReturn + T.flyBack;
 }
 
 // painter's order: farther (smaller footprint y, lower) first; lifted cards come nearer

@@ -57,12 +57,12 @@ test("players joining and leaving", () => {
 // ---- non-poker games ----
 const bj = (round, extra = {}) => ({ id: "b1", game: "blackjack", handNo: 1, result: null, seats: [seat(1, "u1"), seat(2, "u2")], round, ...extra });
 
-test("blackjack: new round shuffles and deals every card; a hit deals one", () => {
+test("blackjack: a new round deals every card (no shuffle sound: none shows); a hit deals one", () => {
   const a = bj({ phase: "bet", hands: [], dealer: { cards: [] } }, { handNo: 1 });
   const b = bj({ phase: "act", hands: [{ seat: 1, cards: ["Ah", "9d"] }, { seat: 2, cards: ["5c", "5s"] }], dealer: { cards: ["Kd", "X"] } }, { handNo: 2 });
   const cues = tableSoundCues(a, b, "u1");
-  assert.deepEqual(names(cues), ["shuffle", "deal"]);
-  assert.equal(cues[1].count, 6);
+  assert.deepEqual(names(cues), ["deal"]);
+  assert.equal(cues[0].count, 6);
   const c = bj({ ...b.round, hands: [{ seat: 1, cards: ["Ah", "9d", "2c"] }, b.round.hands[1]] }, { handNo: 2 });
   assert.deepEqual(names(tableSoundCues(b, c, "u1")), ["deal"]);
 });
@@ -114,5 +114,5 @@ test("routing: a moving card or coin sounds on its landing, not on the diff", as
   assert.deepEqual(routeCue({ name: "join" }, moving), { sfx: "join", opts: { count: 1, gap: undefined, delay: undefined, volume: undefined } });
   assert.equal(routeCue({ name: "cardPlay", count: 3 }, moving).table, "cardPlay", "without the card layer the pile plays its sound");
   assert.equal(routeCue({ name: "cardPlay", count: 3 }, { dealt: true }), null, "the card layer's play sounds on its landing");
-  assert.equal(routeCue({ name: "shuffle" }, { dealt: true }).table, "riffle", "the card layer doesn't shuffle: the sound still plays");
+  assert.equal(routeCue({ name: "shuffle" }, { cards: true }), null, "Hold'em's dealer plays its own riffle with the shuffle");
 });
