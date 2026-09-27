@@ -14,11 +14,14 @@ rhombus rings + stepped plates (`cosmetics.js`), game icons (`static/games`).
 - Local preview: `.claude/launch.json` entry `moments` (port 4186). Frames for review can be
   captured with headless Chrome (the Browser pane throttles animations while hidden).
 
-The shared frame: the table dims under a veil (it never moves), a band in the logo's three tilted
-steps wipes in along the logo's slant, the moment plays on it, a thick bar along its foot drains
-for the pause, then the band wipes out right. The band's material shows the size of the event:
-logo blue, silver / gold for rarer, charcoal for a knockout, the new metal for a personal unlock.
+Owner's rule (2026-09-27): **gameplay** moments (shuffle, all-in showdown, monster pot, rare hand,
+jackpot, Big Two out) only BLUR the table and play over it. **Proclamations** (cosmetics, personal
+news, tournament calls: Sprint go, knockout, champion) also get the BANNER — the logo's three tilted
+steps — which opens smoothly from its centre line, carries a drain bar for the pause, and closes
+back to a line. Coin flights pass under the plates (won coins sink into the badge); celebration
+coins (rain, fountains) fly behind the content. A new look: a ring of the new metal appears above
+the avatar, comes down and covers the old ring.
 
-Moments: all-in showdown · monster pot · rare hand (quads / straight flush / royal / Three Card) ·
+Moments: shuffle (stand-in cards) · all-in showdown · monster pot · rare hand (quads / straight flush / royal / Three Card) ·
 jackpot (slots / roulette / sic bo) · Big Two out · Sprint go · knockout · champion · new look
 (personal — nobody waits). Slot symbols are placeholders; no sounds yet.
