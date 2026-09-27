@@ -2,7 +2,8 @@
   import { enhance } from "$app/forms";
   import Avatar from "$lib/poker/components/Avatar.svelte";
   import Chip from "$lib/poker/components/Chip.svelte";
-  import { LOOKS, plateStyle, FREE_SLOTS } from "$lib/cosmetics.js";
+  import { LOOKS, plateStyle, FREE_SLOTS, CUSTOM } from "$lib/cosmetics.js";
+  import { tick } from "svelte";
   import { SITE_NAME } from "$lib/config.js";
   import SeatBadge from "$lib/poker/components/SeatBadge.svelte";
   import BannerEditor from "./BannerEditor.svelte";
@@ -11,8 +12,23 @@
   let ring = $state(data.ring);
   let badge = $state(data.badge);
   let error = $state(null);
-  // the banner the preview draws: the editor's unsaved picture while you edit, else the live one
-  let shown = $state(data.banner.live);
+  // the custom badge (owner, 2026-09-27): the player's banner is the Badges grid's last tile — Edit
+  // opens the editor in the left column, Wear puts it on (saving wears it too), and a metal takes it off
+  let bannerData = $state(data.banner);        // what the editor reopens from (updated on save / delete)
+  let saved = $derived(bannerData.live);       // the saved banner, worn or not
+  let editing = $state(false), editShown = $state(null), editorEl = $state(null);
+  // the preview: the editor's unsaved picture while editing, else the banner — only while worn
+  let shown = $derived(editing ? editShown : badge === CUSTOM ? saved : null);
+  async function openEditor() {
+    editing = true;
+    await tick();
+    editorEl?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
+  function onBannerSaved(b, snap) {
+    bannerData = { ...bannerData, ...snap };
+    if (b) badge = CUSTOM;                       // saving wears it
+    else if (badge === CUSTOM) badge = "default"; // deleting a worn banner falls back to Chess
+  }
 
   const owned = new Set(data.owned);
   const fmt = (n) => Number(n).toLocaleString("en-US");
@@ -61,7 +77,11 @@
         <span class="muted small cap">Twice the size</span>
         <div class="big"><SeatBadge seat={other} seatNo={3} /></div>
       </section>
-      <BannerEditor initial={data.banner} onShow={(b) => (shown = b)} />
+      {#if editing}
+        <div bind:this={editorEl}>
+          <BannerEditor initial={bannerData} onShow={(b) => (editShown = b)} onLive={onBannerSaved} onClose={() => (editing = false)} />
+        </div>
+      {/if}
     </div>
 
     <!-- right: the rings and badges -->
@@ -94,6 +114,28 @@
             {/if}
           </form>
         {/each}
+        {#if slot === "badge"}
+          <!-- the last badge: the player's own banner -->
+          {@const on = badge === CUSTOM}
+          <div class="tile custom" class:on class:editing>
+            <div class="swatch">
+              {#if saved}<span class="mini" style={plateVars(plateStyle("default", saved))}><b>Aa</b><i>12,480</i></span>
+              {:else}<span class="mini blank" aria-hidden="true">+</span>{/if}
+            </div>
+            <div class="nm">Custom</div>
+            <div class="cbtns">
+              {#if on}
+                <span class="state wearing">Wearing</span>
+              {:else if saved}
+                <form method="POST" action="?/equip" use:enhance={equipping("badge", CUSTOM)}>
+                  <input type="hidden" name="slot" value="badge" /><input type="hidden" name="look" value={CUSTOM} />
+                  <button class="state wear" type="submit">Wear</button>
+                </form>
+              {/if}
+              <button class="state edit" type="button" onclick={openEditor} disabled={editing}>{saved ? "Edit" : "Create"}</button>
+            </div>
+          </div>
+        {/if}
       </div>
     </section>
   {/each}
@@ -147,6 +189,13 @@
   .wearing { color: var(--accent); }
   .wear { border: 0; cursor: pointer; background: var(--accent); color: var(--on-accent, #fff); padding: 5px 14px; border-radius: var(--r-pill); font: inherit; font-size: 12px; font-weight: 700; }
   .wear:hover { filter: brightness(1.08); }
+  .custom .cbtns { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+  .custom .cbtns form { margin: 0; }
+  .edit { border: 0; cursor: pointer; background: var(--surface-2); color: var(--text); padding: 5px 14px; border-radius: var(--r-pill); font: inherit; font-size: 11.5px; font-weight: 700; box-shadow: var(--shadow-card); }
+  .edit:hover:not(:disabled) { filter: brightness(1.12); }
+  .edit:disabled { opacity: 0.5; cursor: default; }
+  .custom.editing { box-shadow: 0 0 0 2px var(--accent-soft), var(--shadow-card); }
+  .mini.blank { width: 70px; justify-content: center; font-size: 20px; font-weight: 700; color: var(--muted); box-shadow: inset 0 0 0 2px var(--well); background: transparent; }
   .lock { color: var(--muted); font-weight: 600; display: grid; line-height: 1.25; }   /* two fixed lines in every locked tile */
   .lock b { color: var(--text); font-weight: 800; font-size: 12.5px; }
   .bar { width: 80%; height: 5px; background: var(--well); border-radius: var(--r-pill); overflow: hidden; }
