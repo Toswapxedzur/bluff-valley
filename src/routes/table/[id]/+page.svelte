@@ -29,6 +29,9 @@
   import MoneyLayer from "$lib/poker/components/MoneyLayer.svelte";
   import ButtonGlide from "$lib/poker/components/ButtonGlide.svelte";
   import CardLayer from "$lib/poker/components/CardLayer.svelte";
+  import MomentLayer from "$lib/poker/components/MomentLayer.svelte";
+  import { dev } from "$app/environment";
+  import { MOMENT_MS } from "$lib/poker/moments.js";
 
   let { data } = $props();
   // Reactive: a River Sprint fold-teleport navigates /table/A -> /table/B on the
@@ -159,6 +162,29 @@
     get view() { return view; }, get mySeatNo() { return mySeat?.seat ?? null; }, get privates() { return privates; }
   });
   const dealer = $derived(motion.dealer);
+  // DEV ONLY: ?moment=monsterPot|rare|royal|roulette|sic-bo|slots|bigTwo plays a sample moment with this
+  // table's players (moments are rare in real play; this is how they get checked). Compiled out of builds.
+  let devMomentDone = false;
+  $effect(() => {
+    if (!dev || !view || devMomentDone) return;
+    const k = new URLSearchParams(location.search).get("moment");
+    const seats = (view.seats || []).filter((s) => s.userId != null);
+    if (!k || !seats.length) return;
+    devMomentDone = true;
+    const a = seats[0].seat, others = seats.slice(1).map((s, i) => ({ seat: s.seat, cards: 2 + i * 3, pays: 100 * (2 + i * 3) }));
+    const sample = {
+      monsterPot: { kind: "monsterPot", seat: a, amount: 18640, won: 18640, bb: 93 },
+      rare: { kind: "rare", seat: a, cards: ["9s", "9h", "9d", "9c", "Kh"], name: "Four of a Kind", royal: false, game: "holdem" },
+      royal: { kind: "rare", seat: a, cards: ["Ts", "Js", "Qs", "Ks", "As"], name: "Royal Flush", royal: true, game: "holdem" },
+      roulette: { kind: "jackpot", seat: a, game: "roulette", outcome: { pocket: 17 }, mult: 35, bet: 200, payout: 7000 },
+      "sic-bo": { kind: "jackpot", seat: a, game: "sic-bo", outcome: { dice: [5, 5, 5] }, mult: 30, bet: 200, payout: 6000 },
+      slots: { kind: "jackpot", seat: a, game: "slots", outcome: { reels: ["diamond", "diamond", "diamond"] }, mult: 100, bet: 200, payout: 20000 },
+      bigTwo: { kind: "bigTwo", seat: a, pile: ["8s", "8h", "8d", "Kc", "Kh"], pot: others.reduce((x, o) => x + o.pays, 0), others }
+    }[k];
+    if (!sample) return;
+    const ms = k === "royal" ? MOMENT_MS.royal : MOMENT_MS[sample.kind];
+    setTimeout(() => { motion.moment = { ...sample, ms, id: "dev" }; setTimeout(() => { motion.moment = null; }, ms + 60); }, 800);
+  });
   const bank = $derived(motion.bank);
 
   // --- transient toast ---
@@ -213,6 +239,9 @@
   {#if bank}<MoneyLayer {bank} />{/if}
   {#if view && layout === "poker"}<ButtonGlide {view} />{/if}
   {#if motion.cards}<CardLayer motion={motion.cards} />{/if}
+  {#if motion.moment}{#key motion.moment.id}<MomentLayer moment={motion.moment} {view} />{/key}{/if}
+  <!-- the shuffle is a moment: the table blurs behind the deck while it plays -->
+  {#if dealer?.shuffling}<div class="shuffle-veil" aria-hidden="true" transition:fade={{ duration: d(DUR.base) }}></div>{/if}
   {#if dealer}<DeckLayer {dealer} />{/if}
   <!-- slim overlay strip: no site bar on a table -->
   <div class="hud">
@@ -345,6 +374,7 @@
 <style>
   .tablepage { position: relative; display: flex; flex-direction: column; height: 100vh; height: 100dvh; overflow: hidden; }
 
+  .shuffle-veil { position: absolute; inset: 0; z-index: 5; pointer-events: none; background: rgba(6, 10, 22, 0.35); backdrop-filter: blur(7px) saturate(.85); -webkit-backdrop-filter: blur(7px) saturate(.85); }
   .hud { position: absolute; top: 0; left: 0; right: 0; z-index: 6; display: flex; align-items: center; gap: 12px; padding: 10px 14px; pointer-events: none; }
   .hud > * { pointer-events: auto; }
   .back { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 999px; background: var(--surface); color: var(--text); text-decoration: none; font-size: 22px; line-height: 1; box-shadow: var(--shadow-card); }

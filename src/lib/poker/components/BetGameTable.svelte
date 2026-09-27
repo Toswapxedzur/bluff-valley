@@ -7,6 +7,7 @@
   import { tableSeats, outcomeOf, fmt, signed, deltaKind } from "$lib/poker/table-seats.js";
   import Resolve from "./Resolve.svelte";
   import { resolveMs } from "$lib/poker/resolve-anim.js";
+  import { detectMoment } from "$lib/poker/moments.js";
   import { reducedMotion } from "$lib/motion.js";
 
   // Bet-selection games (Baccarat, Roulette, Sic Bo, Slots): the
@@ -18,10 +19,12 @@
   const outcome = $derived(round.outcome || null);
   // Roulette / Sic Bo / Slots: the wheel, dice or reels play first; the result (headline, lines,
   // winner marks — and the coins, in the bank) waits until they land (resolve-anim.js)
-  const spins = $derived(!!outcome && resolveMs(view?.game) > 0 && (outcome.pocket != null || outcome.dice || outcome.reels));
+  // a jackpot plays as a full-screen moment, spin and all: the table's own spin steps aside for it
+  const jackpot = $derived(outcome ? detectMoment(view)?.kind === "jackpot" : false);
+  const spins = $derived(!!outcome && !jackpot && resolveMs(view?.game) > 0 && (outcome.pocket != null || outcome.dice || outcome.reels));
   let landedFor = $state(null);
   $effect(() => {
-    const key = view?.handNo, o = outcome, ms = spins && !reducedMotion() ? resolveMs(view?.game) : 0;
+    const key = view?.handNo, o = outcome, ms = reducedMotion() ? 0 : jackpot ? detectMoment(view).ms : spins ? resolveMs(view?.game) : 0;
     if (!o) return;
     if (!ms) { landedFor = key; return; }
     const id = setTimeout(() => { landedFor = key; }, ms);
@@ -48,7 +51,7 @@
     <div class="outcome">
       {#if outcome}
         {#if spins}{#key view?.handNo}<Resolve game={view.game} {outcome} />{/key}{/if}
-        {#if landed || !spins}<div class="headline" transition:fade={{ duration: d(DUR.base) }}>{outcome.headline}</div>{/if}
+        {#if landed || (!spins && !jackpot)}<div class="headline" transition:fade={{ duration: d(DUR.base) }}>{outcome.headline}</div>{/if}
         {#if outcome.hands}
           <div class="ohands">
             {#each outcome.hands as h}
