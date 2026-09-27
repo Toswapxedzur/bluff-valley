@@ -5,7 +5,6 @@
   // The preview is instant (owner: "the image feels laggy"): the plates and the crop frame draw the
   // master itself with CSS, placed by the crop (cropCss) — nothing is encoded while you drag. On Save
   // the server cuts the same crop ($lib/banner.js) and the banner is live on every seat at once.
-  import SeatBadge from "$lib/poker/components/SeatBadge.svelte";
   import {
     normalize, cropBox, inkHex, INKS, PLATE_ASPECT, PLATE_PX, MAX_WASH, MAX_ZOOM,
     regionLums, inksFor, washRgb, cropCss
@@ -13,7 +12,9 @@
 
   import { untrack } from "svelte";
 
-  let { me, wealth = 0, ring = "default", badge = "default", initial: initialIn, onLive = () => {} } = $props();
+  // onShow(banner): what the page's seat preview should draw now — this unsaved picture while editing,
+  // else the live banner (the preview itself lives on the page, beside the rings and badges)
+  let { initial: initialIn, onLive = () => {}, onShow = () => {} } = $props();
   const initial = untrack(() => initialIn);   // the page's load: the editor's starting point, read once
 
   const MAX_BYTES = 5 * 1024 * 1024;
@@ -158,18 +159,12 @@
     if (m) { e.preventDefault(); nudge(...m); }
   }
 
-  // the seats in the preview: yours (to act, the clock running) and how others see you
   let banner = $derived(
     !img ? live
     : masterUrl && crop ? { l: "plate", preview: masterUrl, size: crop.size, pos: crop.pos, wash: s.wash, ink: inks.ink, sub: inks.sub, money: inks.money }
     : live
   );
-  let deadline = $state(Date.now() + 25_000);
-  $effect(() => { const id = setInterval(() => { deadline = Date.now() + 25_000; }, 25_000); return () => clearInterval(id); });
-  const LONG = "Maximilian_the_Great";
-  let mine = $derived({ seat: 1, userId: me.id, name: me.name, avatar: me.avatarMediaId, ring, badge, banner, stack: wealth, connected: true, isToAct: true, isButton: true, status: null, lastAction: null, committed: 0 });
-  let other = $derived({ ...mine, seat: 2, name: LONG, isToAct: false, isButton: false, isBB: true, lastAction: "Raise 400" });
-  let folded = $derived({ ...mine, seat: 3, isToAct: false, isButton: false, status: "folded", lastAction: "Fold" });
+  $effect(() => { onShow(banner); });
   const pct = (v) => `${Math.round(v * 100)}%`;
 </script>
 
@@ -183,8 +178,7 @@
     <p class="warn" role="alert">You can't upload banners.{#if live} You can still take your current one off.{/if}</p>
   {/if}
 
-  <div class="be-grid">
-    <div class="be-controls">
+  <div class="be-controls">
       {#if !banned}
         <label class="drop" class:over={dragOver} class:has={!!img}
           ondragover={(e) => { e.preventDefault(); dragOver = true; }} ondragleave={() => (dragOver = false)} ondrop={onDrop}>
@@ -238,32 +232,15 @@
           <button type="button" class="btn btn-secondary" disabled={!!busy} onclick={remove}>{busy === "remove" ? "Removing…" : "Remove banner"}</button>
         {/if}
       </div>
-    </div>
-
-    <div class="be-preview" style="--plate-w:136px;--plate-w-mine:164px">
-      <span class="muted small cap">Your seat</span>
-      <div class="seatbox"><SeatBadge seat={mine} isMine deadline={deadline} seatNo={1} /></div>
-      <span class="muted small cap">What others see</span>
-      <div class="seatbox"><SeatBadge seat={other} seatNo={2} /></div>
-      <div class="seatbox"><SeatBadge seat={folded} seatNo={3} /></div>
-      <span class="muted small cap">Twice the size</span>
-      <div class="seatbox big"><SeatBadge seat={other} seatNo={4} /></div>
-    </div>
   </div>
 </section>
 
 <style>
-  .be { margin-bottom: 26px; }
+  .be { margin: 0; }
   .be-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
   .be-head h2 { margin: 0; font-size: 15px; }
   .small { font-size: 12.5px; }
-  .be-grid { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 16px; align-items: start; }
-  @media (max-width: 640px) { .be-grid { grid-template-columns: minmax(0, 1fr); } .be-preview { order: -1; } }
   .be-controls { display: flex; flex-direction: column; gap: 14px; background: var(--surface); border-radius: var(--r-card); box-shadow: var(--shadow-card); padding: 14px; }
-  .be-preview { display: flex; flex-direction: column; align-items: center; gap: 8px; background: var(--well); border-radius: var(--r-card); padding: 16px 12px 22px; }
-  .cap { align-self: flex-start; margin-top: 4px; }
-  .seatbox { padding: 6px 0 6px 12px; }
-  .seatbox.big { zoom: 2; padding: 4px 0 2px 8px; }
 
   .drop { position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 18px 12px; border-radius: var(--r-card);
     background: var(--well); cursor: pointer; text-align: center; transition: box-shadow var(--dur) var(--ease); }
