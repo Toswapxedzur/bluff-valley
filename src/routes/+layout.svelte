@@ -124,7 +124,7 @@
     { href: "/quests", label: "Quests", show: !!data.user },
     { href: "/cosmetics", label: "Cosmetics", show: !!data.user },
     { href: "/sprint", label: "Sprint", show: true, icon: SPRINT_ICON },
-    // /data = Bluffing Valley's own data hub (your history, others' in-game history, player search).
+    // /data = Bluff Valley's own data hub (your history, others' in-game history, player search).
     { href: "/data", label: "Data", show: true },
     // Hidden from everyone incl. the owner (2026-09-05): blog + casino.org tooling
     // (/casino-data, /contribute). Routes 404 too — see $lib/server/owner-only.js.

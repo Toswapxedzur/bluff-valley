@@ -1,5 +1,5 @@
 /// <reference types="@sveltejs/kit" />
-// Bluffing Valley service worker — makes the site installable (PWA) and keeps the
+// Bluff Valley service worker — makes the site installable (PWA) and keeps the
 // shell + immutable build assets available offline. Strategy:
 //   * build assets + app icons + manifest + offline page: precached at
 //     install, cache-first (build names are content-hashed; a deploy changes

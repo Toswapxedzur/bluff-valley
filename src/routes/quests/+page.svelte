@@ -49,7 +49,7 @@
   }
 </script>
 
-<svelte:head><title>Quests — Bluffing Valley</title></svelte:head>
+<svelte:head><title>Quests — Bluff Valley</title></svelte:head>
 
 <div class="wrap">
   <div class="head">

@@ -1,7 +1,7 @@
 {
-  "name": "Bluffing Valley",
-  "short_name": "Bluffing Valley",
-  "description": "Bluffing Valley — a private poker and casino room: Hold'em, Omaha, Stud, banked games, replays and stats.",
+  "name": "Bluff Valley",
+  "short_name": "Bluff Valley",
+  "description": "Bluff Valley — a private poker and casino room: Hold'em, Omaha, Stud, banked games, replays and stats.",
   "id": "/",
   "start_url": "/",
   "scope": "/",
