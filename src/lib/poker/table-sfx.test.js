@@ -13,11 +13,11 @@ test("first snapshot is silent", () => {
   assert.deepEqual(tableSoundCues(null, base(), "u1"), []);
 });
 
-test("new hand: shuffle then a deal burst, nothing else", () => {
+test("new hand: a deal burst, nothing else (no shuffle: only a dry deck shuffles)", () => {
   const a = base(), b = { ...base(), handNo: 4, seats: [seat(1, "u1", { lastAction: "SB" }), seat(2, "u2", { lastAction: "BB" }), seat(3, "u3")] };
   const cues = tableSoundCues(a, b, "u1");
-  assert.deepEqual(names(cues), ["shuffle", "deal"]);
-  assert.equal(cues[1].count, 6);
+  assert.deepEqual(names(cues), ["deal"]);
+  assert.equal(cues[0].count, 6);
 });
 
 test("betting actions map from lastAction labels; blinds are silent", () => {
@@ -114,5 +114,4 @@ test("routing: a moving card or coin sounds on its landing, not on the diff", as
   assert.deepEqual(routeCue({ name: "join" }, moving), { sfx: "join", opts: { count: 1, gap: undefined, delay: undefined, volume: undefined } });
   assert.equal(routeCue({ name: "cardPlay", count: 3 }, moving).table, "cardPlay", "without the card layer the pile plays its sound");
   assert.equal(routeCue({ name: "cardPlay", count: 3 }, { dealt: true }), null, "the card layer's play sounds on its landing");
-  assert.equal(routeCue({ name: "shuffle" }, { cards: true }), null, "Hold'em's dealer plays its own riffle with the shuffle");
 });
