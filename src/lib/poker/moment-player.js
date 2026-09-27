@@ -18,6 +18,8 @@ import { play } from "../sfx.js";
 export const W = 1120, H = 700;
 const NORM = { flip: 280, coinDur: 560, coinGap: 45, momentCoin: 40 };
 const EASE = "cubic-bezier(.22,.61,.36,1)", SNAP = "cubic-bezier(.3,1.45,.5,1)", INOUT = "cubic-bezier(.65,0,.35,1)";
+// player names are theirs to choose: never let one become markup
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 const h = (tag, cls = "", html = "") => { const e = document.createElement(tag); if (cls) e.className = cls; if (html) e.innerHTML = html; return e; };
 const fmt = (n) => Math.round(n).toLocaleString("en-US");
 
@@ -52,8 +54,9 @@ export function playMoment(root, moment, ctx) {
   const stamp = (el, delay, duration = 380) => A(el, [{ opacity: 0, transform: "scale(1.5)" }, { opacity: 1, transform: "scale(1)" }], { duration, delay, easing: SNAP });
   const shake = (el, delay, amp = 5) => A(el, [{ transform: "none" }, { transform: `translate(${amp}px, ${-amp / 2}px)` }, { transform: `translate(${-amp}px, ${amp / 3}px)` }, { transform: `translate(${amp / 2}px, 0)` }, { transform: "none" }], { duration: 260, delay, fill: "none" });
   const markWinner = (el) => el.classList.add("won");
-  const title = (text, cls = "") => h("div", "m-title " + cls, text);
-  const caption = (text) => h("div", "m-caption", text);
+  const text = (tag, cls, t) => { const e = h(tag, cls); e.textContent = t; return e; };
+  const title = (t, cls = "") => text("div", "m-title " + cls, t);
+  const caption = (t) => text("div", "m-caption", t);
   const cardEl = (c, w) => { const e = h("div", "m-card", renderBoard(c, w)); e.dataset.w = w; return e; };
   const coin = (v, size, layer) => { const c = h("div", "m-coin", coinSvg(v, size)); layer.append(c); return c; };
   function centre(el) {
@@ -73,8 +76,8 @@ export function playMoment(root, moment, ctx) {
     if (st.tab) e.style.paddingRight = Math.round(hgt * TAB_ASPECT + 10) + "px";   // the banner's tab keeps its room
     const over = (ringBox(av) - av) / 2;
     e.innerHTML = `<span class="av" style="width:${av}px;height:${av}px;margin-right:${Math.round(over + av * 0.2)}px"><span class="ring">${ringSvg(av, ring)}</span>`
-      + `<span class="face" style="background:${avColor(p.name)};font-size:${Math.round(av * 0.36)}px">${initials(p.name)}</span></span>`
-      + `<span class="txt"><b class="name" style="font-size:${Math.round(hgt * 0.3)}px">${p.name}</b><span class="stack" style="color:${st.money};font-size:${Math.round(hgt * 0.26)}px">${fmt(stack)}</span></span>`;
+      + `<span class="face" style="background:${avColor(p.name)};font-size:${Math.round(av * 0.36)}px">${esc(initials(p.name))}</span></span>`
+      + `<span class="txt"><b class="name" style="font-size:${Math.round(hgt * 0.3)}px">${esc(p.name)}</b><span class="stack" style="color:${st.money};font-size:${Math.round(hgt * 0.26)}px">${fmt(stack)}</span></span>`;
     return e;
   }
   /** One coin arcing from a to b (screen coords); it sinks into a badge by shrinking at the end. */
