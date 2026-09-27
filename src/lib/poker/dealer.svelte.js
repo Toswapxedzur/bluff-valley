@@ -15,7 +15,6 @@ import { detectMoment } from "./moments.js";
 import { buildRoutine } from "./deck-routine.js";
 import { COUNT, FULL_DECK } from "./deck3d.js";
 
-const ALL_CARDS = [..."23456789TJQKA"].flatMap((r) => [..."shdc"].map((u) => r + u));
 const now = () => (typeof performance !== "undefined" ? performance.now() : Date.now());
 
 export class Dealer {
@@ -24,7 +23,7 @@ export class Dealer {
   ownRevealed = $state(true);        // my cards: false = show backs (just landed), true = flipped up
   boardShown = $state(0);            // board slots showing a card (face-down until boardFaceUp)
   boardFaceUp = $state(0);
-  tableHidden = $state(false);       // collection + routine: every hand and the board are on the canvas
+  tableHidden = $state(false);       // the collection: every hand and the board are on the canvas
   shuffling = $state(false);         // the shuffle routine is playing: the table blurs behind the deck (a moment)
 
   // ---- drawn by the layer ----
@@ -33,7 +32,9 @@ export class Dealer {
   faces = new Map();                 // visual id → card string, when the card is public
   flights = [];                      // { id, from, to, t0, dur, faceUp, arc, onLand }
   held = [];                         // cards the canvas holds in place: { id, at, faceUp, until }
-  routine = null;                    // { R, t0, faceId } while the shuffle routine plays
+  // the deck deals down across hands; only when it runs dry with a card still to deal is the used
+  // pile shuffled into a new deck, right there mid-deal (owner, 2026-09-27; the server's deckLeft)
+  routine = null;                    // { R, t0, face, onDone } while the shuffle routine plays
   // the showdown: the five cards that made the winning hand(s) lift, the rest dim (the shared norms)
   highlight = null;                  // { win: Set of visual ids, t0 } while the result is held
   // sound cues, announced as each motion starts: { t, name, at?, gain?, dur? } where t is the frame
@@ -57,6 +58,7 @@ export class Dealer {
   /** First view (joining a table): no animation — what's already out is simply there. */
   init(view) {
     this.deck = FULL_DECK.slice();
+    this.used = [];
     for (const s of view.seats || []) {
       if (!s.inHand || !s.hasCards) continue;
       if (s.status === "folded") { this._mucked.add(s.seat); continue; }
@@ -64,7 +66,9 @@ export class Dealer {
       this._landed.set(s.seat, this.holeCount);
     }
     (view.board || []).forEach((c, i) => { const id = this.deck.pop(); this.faces.set(id, c); this._boardIds[i] = id; });
-    this.used = [];
+    // what the server says is left in the deck; the rest lie face-down on the used pile
+    const left = view.deckLeft ?? this.deck.length;
+    while (this.deck.length > left) this.used.unshift(this.deck.pop());
     this.boardShown = this.boardFaceUp = (view.board || []).length;
   }
 
@@ -72,7 +76,7 @@ export class Dealer {
   onView(prev, next, privates) {
     const t = now();
     if (next.handNo != null && next.handNo !== prev.handNo && (next.seats || []).some((s) => s.hasCards)) {
-      this._newHand(next, t);
+      this._newHand(next, t, prev.deckLeft);
       return;
     }
     // folds: their cards go to the used pile (face-up only if they were public: mine)
@@ -87,9 +91,13 @@ export class Dealer {
     }
     // new board cards: from the deck, face-down; the flop flips together once all three land
     const pb = (prev.board || []).length, nb = (next.board || []).length;
+    if (nb > pb) this._syncDeck(prev.deckLeft);
     if (nb > pb && !next.result) this._dealBoard(next.board, pb, nb, t);
     else if (nb > pb) {   // an all-in run-out arrives with the result: the cards are simply there
-      for (let i = pb; i < nb; i++) { const id = this._take(); this.faces.set(id, next.board[i]); this._boardIds[i] = id; }
+      for (let i = pb; i < nb; i++) {
+        if (!this.deck.length) this._refillQuietly();
+        const id = this._take(); this.faces.set(id, next.board[i]); this._boardIds[i] = id;
+      }
       this.boardShown = this.boardFaceUp = nb;
     }
     // the hand is over: the canvas takes every card over where it lies (a hand won without a
@@ -104,8 +112,9 @@ export class Dealer {
   }
 
   // ---------------------------------------------------------------- phases
-  _newHand(view, t) {
-    // a routine still playing (a slow network, a hidden tab): finish it now
+  _newHand(view, t, deckLeft) {
+    // a routine still playing (a slow network, a hidden tab): finish it now (its deal is abandoned)
+    if (this.routine) this.routine.onDone = null;
     this._finishRoutine();
     this.flights = [];
     this.held = [];
@@ -118,15 +127,17 @@ export class Dealer {
     this._mucked = new Set();
     this.tableHidden = false;
     this.boardShown = this.boardFaceUp = 0;
-    if (this.deck.length < COUNT) { this.deck = FULL_DECK.slice(); this.used = []; }
+    // between hands every card is in the deck or on the used pile (a collection cut short lands now)
+    const inDeck = new Set(this.deck);
+    this.used = [...this.used.filter((id) => !inDeck.has(id)), ...FULL_DECK.filter((id) => !inDeck.has(id) && !this.used.includes(id))];
+    this._syncDeck(deckLeft);
     const order = dealOrder(view.seats || [], view.buttonSeat);
     const plan = planDeal(order, this.holeCount);
     for (const s of order) { this._seatIds.set(s, []); this._landed.set(s, 0); }
     this.hiddenSeats = new Set(order);
     // my cards fly face-down; the DOM hand flips them after landing (no canvas face needed)
     this.ownRevealed = !order.includes(this.mySeat);
-    for (const p of plan) {
-      this._at(t + p.t0, () => {
+    this._dealChain(t, plan.map((p) => ({ dt: p.t0, fn: () => {
         const id = this._take();
         this._seatIds.get(p.seat)[p.slot] = id;
         const at = { kind: "seat", seat: p.seat, slot: p.slot };
@@ -138,8 +149,22 @@ export class Dealer {
           if (this._pendingMuck.has(p.seat)) this._muck(p.seat, this._pendingMuck.get(p.seat), now());
           else this._showSeat(p.seat);
         });
-      });
-    }
+    } })));
+  }
+
+  /** Deal step by step (each at its `dt` from `t`); when the deck is empty with a card still to
+   *  deal, the used pile is shuffled into a new deck first and the rest follow, spacing kept. */
+  _dealChain(t, steps, i = 0) {
+    if (i >= steps.length) return;
+    this._at(t + steps[i].dt, () => {
+      if (!this.deck.length && this.used.length) {
+        const resume = () => this._dealChain(now() - steps[i].dt, steps, i);
+        if (this._startRoutine(resume)) return;
+        this._refillQuietly();
+      }
+      steps[i].fn();
+      this._dealChain(t, steps, i + 1);
+    });
   }
 
   _showSeat(seat) {
@@ -154,8 +179,9 @@ export class Dealer {
 
   _dealBoard(board, from, to, t) {
     let landed = 0;
+    const steps = [];
     for (let i = from; i < to; i++) {
-      this._at(t + (i - from) * DEAL.boardEvery, () => {
+      steps.push({ dt: (i - from) * DEAL.boardEvery, fn: () => {
         const id = this._take();
         this.faces.set(id, board[i]);
         this._boardIds[i] = id;
@@ -168,8 +194,9 @@ export class Dealer {
             this.cues.push({ t: now() + DEAL.flipAfterLand, name: "flip", at: { kind: "board" } });
           }
         });
-      });
+      } });
     }
+    this._dealChain(t, steps);
   }
 
   _muck(seat, known, t) {
@@ -215,18 +242,8 @@ export class Dealer {
 
   _collect() {
     this.highlight = null;
+    // every card on the table goes to the used pile; the deck stays as it is for the next hand
     const cards = this.held.slice(), t = now(), gap = collectEvery(cards.length);
-    // what's left of the deck goes too, turning over as one packet onto the bottom of the pile
-    // (the shuffle starts from all 52); its bottom card shows as it lands — an unseen card
-    const rest = this.deck.slice();
-    this.deck = [];
-    if (rest.length) {
-      const seen = new Set([...this.faces.values()]);
-      const bottom = rest[rest.length - 1];
-      const unseen = ALL_CARDS.filter((c) => !seen.has(c));
-      this.faces.set(bottom, unseen[Math.floor(Math.random() * unseen.length)]);
-      this._fly({ id: bottom, ids: rest, from: { kind: "deck" }, to: { kind: "used" }, dur: DEAL.collectFlight + 180, flip: true, arc: 34, cue: { name: "pileTap" } }, () => this.used.unshift(...rest));
-    }
     cards.forEach((c, i) => {
       this._at(t + DEAL.collectEvery + i * gap, () => {
         this.held = this.held.filter((h) => h !== c);
@@ -234,27 +251,48 @@ export class Dealer {
         this._fly({ id: c.id, from: c.at, to: { kind: "used" }, dur: DEAL.collectFlight, faceUp: c.faceUp, cue: { name: "pileTap", gain: Math.max(0.35, 1 - i * 0.07) } }, () => this.used.push(c.id));
       });
     });
-    this._at(t + DEAL.collectEvery + Math.max(0, cards.length - 1) * gap + DEAL.collectFlight + 30, () => this._startRoutine());
   }
 
-  _startRoutine() {
-    if (!this.geom) return;
+  /** The deck ran dry: the used pile flies in, is cut, riffled and squared into the new deck,
+   *  then `onDone` carries on dealing. False when there's no canvas to play it on. */
+  _startRoutine(onDone) {
+    if (!this.geom || !this.used.length) return false;
     const { usedSpot, deckSpot, centre } = this.geom;
-    const R = buildRoutine({ start: usedSpot, end: deckSpot, centre, seed: this._seed++ });
+    const R = buildRoutine({ start: usedSpot, end: deckSpot, centre, seed: this._seed++, ids: this.used });
     // the face showing as the used pile leaves: the top of the pile, if it is public
     const topId = this.used[this.used.length - 1];
-    this.routine = { R, t0: now(), face: this.faces.get(topId) ?? null };
+    this.routine = { R, t0: now(), face: this.faces.get(topId) ?? null, onDone };
     this.shuffling = true;
     // one continuous riffle for the shuffle phase (the third pile building up)
     const shuffle = R.phases.find((p) => p.name === "shuffle");
     if (shuffle) this.cues.push({ t: this.routine.t0 + shuffle.t0, name: "riffle", dur: shuffle.t1 - shuffle.t0 });
     this.used = [];
     this.deck = [];
+    return true;
   }
 
   _finishRoutine() {
-    if (this.routine) { this.deck = this.routine.R.finalOrder.slice(); this.routine = null; this.used = []; }
+    const r = this.routine;
     this.shuffling = false;
+    if (!r) return;
+    this.deck = r.R.finalOrder.slice();
+    this.routine = null;
+    r.onDone?.();
+  }
+
+  // no canvas (or an all-in run-out that arrives with the result): the pile becomes the deck unseen
+  _refillQuietly() {
+    const ids = this.used.slice();
+    for (let i = ids.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [ids[i], ids[j]] = [ids[j], ids[i]]; }
+    this.deck = ids;
+    this.used = [];
+  }
+
+  /** Match the server's count of cards left in the deck (a missed view, a join mid-shoe). */
+  _syncDeck(left) {
+    if (left == null || this.routine) return;
+    while (this.deck.length > left) this.used.unshift(this.deck.pop());
+    while (this.deck.length < left && this.used.length) this.deck.push(this.used.shift());
   }
 
   // ---------------------------------------------------------------- clock
@@ -264,8 +302,7 @@ export class Dealer {
     while (this._queue.length && this._queue[0].t <= t) this._queue.shift().fn();
     for (const f of this.flights) if (!f.done && t >= f.t0 + f.dur) { f.done = true; f.onLand?.(); }
     this.flights = this.flights.filter((f) => !f.done);
-    // the routine ends with the deck back in its corner; the collected cards stay hidden until
-    // the next hand arrives (the table still holds the old result until then)
+    // the routine ends with the new deck in its corner, and the deal it interrupted carries on
     if (this.routine && t - this.routine.t0 >= this.routine.R.duration) this._finishRoutine();
   }
   /** Is anything moving (the layer keeps animating while true)? */
