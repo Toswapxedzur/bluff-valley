@@ -15,7 +15,7 @@ import { standardDeck } from "../engine/cards.js";
 
 export const DEFAULTS = {
   minBet: 1,
-  decks: 1,                // shoe size (reshuffled each round in this build)
+  decks: 1,                // shoe size (a real shoe: reshuffled at the cut card — runtime.js)
   dealerHitsSoft17: false, // false = dealer stands on soft 17
   blackjackPays: "3:2",    // "3:2" | "6:5"
   surrender: false,        // allow late surrender (forfeit half after the deal)
@@ -23,7 +23,7 @@ export const DEFAULTS = {
 };
 
 // A single 52-card deck, or an N-deck shoe. Duplicate cards are fine — blackjack
-// only cares about rank values, and we reshuffle each round.
+// only cares about rank values.
 function shoe(decks = 1) {
   const one = standardDeck();
   if (decks <= 1) return one;
@@ -166,6 +166,9 @@ export const blackjack = {
   usesBanker: true,
   minPlayers: 1,           // one player + the banker is a game
   deck: (config) => shoe(config?.decks ?? 1),
+  // dealt from a shoe that lasts across rounds, reshuffled when the cut card comes out (75% dealt)
+  // or when what's left might not cover a round (runtime.js — real casino rules, owner 2026-09-27)
+  shoe: { penetration: 0.75, perRound: (hands) => hands * 6 },
 
   // ctx: { players:[{seat,userId,stack}], bankerSeat, deck, config }
   startRound(ctx) {

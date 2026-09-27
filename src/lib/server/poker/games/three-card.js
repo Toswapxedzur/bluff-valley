@@ -95,6 +95,7 @@ function finish(state) {
 
 export const threeCard = {
   key: "three-card",
+  shuffleEveryRound: true,   // a fresh shuffle before every round, as in a casino (runtime.js)
   name: "Three Card Poker",
   family: "banked",
   usesBanker: true,

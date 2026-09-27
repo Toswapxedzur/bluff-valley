@@ -22,6 +22,7 @@ import { encode, S2C } from "../../poker/protocol.js";
 import { MatchRecorder } from "./recorder.js";
 import { shuffle } from "./engine/index.js";
 import { LiveTable, ACTION_TIMEOUT_MS, DISCONNECT_GRACE_MS } from "./table.js";
+import { shuffleHoldMs } from "../../poker/card-motion.js";
 
 export class GameTable extends LiveTable {
   constructor(config, hub, deps = {}) {
@@ -32,6 +33,36 @@ export class GameTable extends LiveTable {
     // column doubles as the minimum bet for banked games.
     this.gameConfig = { minBet: this.config.smallBlind, ...(deps.gameConfig || {}) };
     this.bankerSeat = null; // set when a banker sits (usesBanker games)
+    // The deck, by the real game's rules (owner, 2026-09-27): a shoe game (Blackjack, Baccarat) deals
+    // from one shoe across rounds and reshuffles at the cut card; Three Card / Big Two shuffle before
+    // every round. `shuffle` tells the page to play it; the round's first turn waits for it.
+    this.shoe = null;        // { cards, pos } — shoe games only
+    this.shuffle = null;     // { no, full, cards } — the latest shuffle
+    this._shuffleNo = 0;
+    this.dealHoldUntil = 0;
+    this.roundNo = 0;        // counts this table's rounds (handNo only moves when a hand is stored)
+  }
+
+  /** The deck for a new round, and whether it starts with a shuffle ({ full } = the shoe's, with cuts). */
+  _deckForRound(hands) {
+    const g = this.game;
+    if (!g.shoe) {
+      const deck = shuffle(g.deck(this.gameConfig), this.rng);
+      return { deck, shuffled: g.shuffleEveryRound ? { full: false, cards: deck.length } : null };
+    }
+    let shuffled = null, s = this.shoe;
+    if (!s || s.pos >= s.cards.length * g.shoe.penetration || s.cards.length - s.pos < g.shoe.perRound(hands)) {
+      s = this.shoe = { cards: shuffle(g.deck(this.gameConfig), this.rng), pos: 0 };
+      shuffled = { full: true, cards: s.cards.length };
+    }
+    // a round that outruns the shoe carries on into the discards, shuffled (as a dealer would)
+    return { deck: s.cards.slice(s.pos).concat(shuffle(s.cards.slice(0, s.pos), this.rng)), shuffled };
+  }
+
+  /** Someone is looking at this table (bots don't watch the shuffle, so a bot-only table never waits). */
+  _humanWatching() {
+    for (const c of this.watchers) if (!c.isBot) return true;
+    return false;
   }
 
   // Enough to start: (banked) a funded, connected banker + minPlayers others;
@@ -66,7 +97,7 @@ export class GameTable extends LiveTable {
         roundSeats.push({ seat: banker.seat, userId: banker.userId, stack: banker.stack });
       }
     }
-    const deck = shuffle(this.game.deck(this.gameConfig), this.rng);
+    const { deck, shuffled } = this._deckForRound(roundSeats.length);
 
     let round;
     try {
@@ -80,6 +111,11 @@ export class GameTable extends LiveTable {
 
     this.hand = round;
     this.handNo = handNo;
+    this.roundNo += 1;
+    if (shuffled) {
+      this.shuffle = { no: ++this._shuffleNo, ...shuffled };
+      if (this._humanWatching()) this.dealHoldUntil = this.now() + shuffleHoldMs({ full: shuffled.full, dealsAtStart: !!this.game.dealsAtStart });
+    }
     this._handStartedAt = this.now();
     this.result = null;
 
@@ -107,8 +143,10 @@ export class GameTable extends LiveTable {
       if (s) { s.inHand = true; s.stackAtHandStart = s.stack; }
     }
 
-    this.sendAllPrivates();
+    // the new round's view first, then each player's own cards: the page sees the new round (and its
+    // shuffle) before any new face arrives, so last round's cards are never mistaken for this round's
     this.broadcast();
+    this.sendAllPrivates();
     this.hub?.onTableChanged?.(this);
     await this.promptActor();
   }
@@ -117,6 +155,20 @@ export class GameTable extends LiveTable {
     if (!this.hand) return;
     if (this.game.isComplete(this.hand) || this.game.actorSeat(this.hand) === null) {
       await this.finishHand();
+      return;
+    }
+    // the round opened with a shuffle on everyone's screen: the first turn waits for it
+    const hold = this.dealHoldUntil - this.now();
+    if (hold > 0) {
+      // (the hold lives in the turn clock's slot: an action or the round ending clears it the same way)
+      this.clearActionTimer();
+      const gen = this._actionGen;
+      this.actionDeadline = null;
+      this.actionTimer = this.setTimer(() => {
+        this.actionTimer = null;
+        return this._run(() => { if (this._actionGen === gen) return this.promptActor(); });
+      }, hold + 5);
+      this.broadcast();
       return;
     }
     const seatNo = this.game.actorSeat(this.hand);
@@ -174,6 +226,11 @@ export class GameTable extends LiveTable {
 
     // Apply per-seat deltas (players + banker), which sum to zero, then mirror
     // post-round stacks into escrow so a crash refunds actual results.
+    // the shoe moves on by the cards this round used (past its end: the discards were used too — start afresh)
+    if (this.shoe) {
+      this.shoe.pos += round.deckPos || 0;
+      if (this.shoe.pos > this.shoe.cards.length) this.shoe = null;
+    }
     const deltas = this.game.settle(round);
     const escrowSnaps = [];
     for (const d of deltas) {
@@ -278,12 +335,15 @@ export class GameTable extends LiveTable {
       rules: this.gameConfig, // house-rule knobs (blackjack: soft17, pays, decks, …)
       phase: this.hand || this.result ? "running" : "waiting",
       handNo: this.handNo,
+      roundNo: this.roundNo,
       bankerSeat: this.bankerSeat,
       toActSeat: this.hand ? this.game.actorSeat(this.hand) : null,
       actionDeadline: this.hand ? this.actionDeadline : null,
       seats,
       round,
-      result: this.result ?? null
+      result: this.result ?? null,
+      shuffle: this.shuffle,                                         // the latest shuffle (the page plays it once)
+      shoeLeft: this.shoe ? this.shoe.cards.length - this.shoe.pos : null
     };
   }
 

@@ -49,6 +49,8 @@ function finish(state, winnerSeat) {
 
 export const bigTwo = {
   key: "big-two",
+  shuffleEveryRound: true,   // every round deals the whole deck, so every round starts with a shuffle
+  dealsAtStart: true,        // … and the deal follows it at once (no betting first)
   name: "Big Two",
   family: "shedding",
   usesBanker: false,

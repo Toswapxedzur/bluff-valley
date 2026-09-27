@@ -126,3 +126,44 @@ test("a player standing pat beats a busting dealer for even money (banked)", asy
   const dP1 = table.seats.get(1).stack - startP1;
   assert.equal(dHouse + dP1, 0, "banker delta exactly offsets the player delta");
 });
+
+test("blackjack deals from one shoe across rounds and reshuffles only at the cut card (real casino rules)", async () => {
+  const wallet = makeWallet({ house: 10000, p1: 1000 });
+  const table = makeTable(wallet, 0xC7);
+  const banker = makeConn("house"); table.addWatcher(banker); await table.sit(banker, 0, 3000); table.bankerSeat = 0;
+  const p1 = makeConn("p1"); table.addWatcher(p1); await table.sit(p1, 1, 1000);
+  const log = [];
+  for (let r = 0; r < 12; r += 1) {
+    const usedBefore = table.shoe ? table.shoe.pos : null;
+    await table.beginHand();
+    const no = table.shuffle?.no;
+    log.push({ usedBefore, shuffled: no !== log[log.length - 1]?.no, no, full: table.shuffle?.full });
+    while (table.hand) {
+      const seat = blackjack.actorSeat(table.hand);
+      const menu = blackjack.legalActions(table.hand);
+      await table.act(seat === 1 ? p1 : banker, menu.actions.some((a) => a.type === "bet") ? { type: "bet", amount: 20 } : { type: "stand" });
+    }
+    assert.ok(table.publicView().shoeLeft >= 0);
+  }
+  assert.equal(log[0].shuffled, true, "the first round opens a new shoe");
+  assert.ok(log.every((l) => l.full), "a shoe shuffle is the full one (with the cuts)");
+  const reshuffles = log.slice(1).filter((l) => l.shuffled);
+  const kept = log.slice(1).filter((l) => !l.shuffled);
+  assert.ok(kept.length >= 4, "most rounds deal on from the same shoe");
+  assert.ok(reshuffles.length >= 1, "the shoe is reshuffled when it runs low");
+  // a reshuffle only once the cut card is out (75% of 52 dealt) or too few are left for a round
+  for (const l of reshuffles) assert.ok(l.usedBefore >= 52 * 0.75 || 52 - l.usedBefore < 2 * 6, `reshuffled with only ${l.usedBefore} dealt`);
+  for (const l of kept) assert.ok(l.usedBefore < 52 * 0.75, `kept dealing past the cut card (${l.usedBefore} dealt)`);
+});
+
+test("three card poker and big two shuffle before every round (the quick shuffle)", async () => {
+  const { threeCard } = await import("./games/three-card.js");
+  const { bigTwo } = await import("./games/big-two.js");
+  for (const game of [threeCard, bigTwo]) {
+    const t = new GameTable({ ...CFG, id: game.key, variant: game.key }, null, { wallet: makeWallet({}), store: makeStore(), game, now: () => 1, setTimer: () => 0, clearTimer: () => {}, rng: mulberry32(3), autoStart: false });
+    const seen = [];
+    for (let r = 0; r < 3; r += 1) { const { shuffled } = t._deckForRound(2); seen.push(shuffled); }
+    assert.ok(seen.every((s) => s && s.full === false), `${game.key}: a quick shuffle every round`);
+    assert.equal(t.shoe, null);
+  }
+});

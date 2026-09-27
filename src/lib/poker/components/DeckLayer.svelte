@@ -7,27 +7,12 @@
   import { onMount } from "svelte";
   import { drawStack, drawStackShadow, W, H, T, thickness } from "$lib/poker/deck3d.js";
   import { renderBack, renderBoard } from "$lib/poker/composer.js";
+  import { toImage } from "$lib/poker/card-image.js";
 
   let { dealer } = $props();
   let canvas;
 
-  // ---- card art: composer SVG → image (SVG images can't fetch, so /deck-parts hrefs are inlined)
-  const svgCache = new Map();
-  async function toImage(markup, px = 480) {
-    let svg = markup.match(/<svg[\s\S]*<\/svg>/)[0];
-    for (const [, file] of svg.matchAll(/href="\/deck-parts\/([^"]+)"/g)) {
-      if (!svgCache.has(file)) {
-        const txt = await (await fetch(`/deck-parts/${file}`)).text();
-        svgCache.set(file, "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(txt))));
-      }
-      svg = svg.replaceAll(`href="/deck-parts/${file}"`, `href="${svgCache.get(file)}"`);
-    }
-    svg = svg.replace(/width="\d+" height="\d+"/, `width="${px}" height="${Math.round((px * H) / W)}"`);
-    const img = new Image();
-    img.src = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml" }));
-    await img.decode();
-    return img;
-  }
+  // ---- card art (card-image.js)
   let back = null;
   const lastSeen = new Map();
   const faceImgs = new Map(), loading = new Set();

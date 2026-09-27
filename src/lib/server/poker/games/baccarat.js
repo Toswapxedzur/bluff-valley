@@ -70,7 +70,8 @@ function outcomeView(state) {
   };
 }
 
-export const baccarat = bankedBetGame({
+// dealt from a shoe that lasts across rounds, reshuffled when the cut card comes out (runtime.js)
+export const baccarat = Object.assign(bankedBetGame({
   key: "baccarat",
   name: "Baccarat",
   deck: () => shoe(1),
@@ -80,4 +81,4 @@ export const baccarat = bankedBetGame({
   resolve,
   settleBet,
   outcomeView
-});
+}), { shoe: { penetration: 0.75, perRound: () => 6 } });
