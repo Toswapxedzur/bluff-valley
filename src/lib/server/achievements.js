@@ -11,6 +11,7 @@
 // pure (DB only); `unlockAndReward` layers chip payouts on top for the real call
 // sites, keeping the reward path out of the unit-tested core.
 
+import { ACHIEVEMENTS_ON } from "../config.js";
 import * as realDb from "./db.js";
 import * as realWallet from "./wallet.js";
 import { REASON } from "./wallet.js";
@@ -110,7 +111,8 @@ export async function unlock(userId, keys, db = realDb) {
 // unlock() + pay each newly-earned badge's one-time chip reward. Payout is
 // best-effort and keyed `ach:<key>` in the ledger for traceability. Used by the
 // live call sites (hub, account); tests exercise the pure `unlock` instead.
-export async function unlockAndReward(userId, keys, db = realDb, wallet = realWallet) {
+export async function unlockAndReward(userId, keys, db = realDb, wallet = realWallet, enabled = ACHIEVEMENTS_ON) {
+  if (!enabled) return [];                          // achievements are switched off (config.js)
   const fresh = await unlock(userId, keys, db);
   for (const key of fresh) {
     const reward = BY_KEY.get(key)?.reward || 0;
@@ -124,7 +126,8 @@ export async function unlockAndReward(userId, keys, db = realDb, wallet = realWa
 
 // The full catalog annotated with this user's unlocked state (+ progress toward
 // locked laddered badges when `ctx` supplies handsPlayed / streak), for the grid.
-export async function listForUser(userId, db = realDb, ctx = {}) {
+export async function listForUser(userId, db = realDb, ctx = {}, enabled = ACHIEVEMENTS_ON) {
+  if (!enabled) return [];                          // achievements are switched off (config.js)
   const rows = await db.query(
     "SELECT achievement, unlocked_at FROM user_achievement WHERE user_id = ?",
     [userId]

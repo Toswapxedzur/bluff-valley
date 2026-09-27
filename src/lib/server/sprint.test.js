@@ -147,6 +147,6 @@ test("finishRound pays a human champion when they top the field", async () => {
   assert.equal(prizeCredits.length, 1);
   assert.equal(prizeCredits[0].u, "a");
   assert.equal(prizeCredits[0].a, out.pool); // single paid place gets the whole pool
-  // Champion also earns the event badges (achievement_reward credits present).
-  assert.ok(w.credits.some((c) => c.r === REASON.ACHIEVEMENT_REWARD));
+  // Event badges: achievements are switched off for now (config ACHIEVEMENTS_ON), so no badge payout.
+  assert.ok(!w.credits.some((c) => c.r === REASON.ACHIEVEMENT_REWARD));
 });

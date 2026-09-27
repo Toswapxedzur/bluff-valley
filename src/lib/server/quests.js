@@ -21,18 +21,22 @@ import { REASON } from "./wallet.js";
 // objective = the event type recordEvent() is called with. Keep objective
 // strings stable — they're matched against, not persisted per-row, but the
 // quest `id`s ARE persisted in quest_progress, so those must stay stable.
+// The basic shape (owner, 2026-09-27): daily / weekly / monthly only, three each —
+// play, win, and show up. River Sprint quests were dropped (a Sprint needs a field
+// of players; with few players they were chores).
 export const QUESTS = [
-  // --- daily (small, fast, reset every UTC day) ---
-  { id: "d_play_10",   period: "daily",   objective: "hands_played", target: 10,  reward: 500,  title: "Play 10 hands" },
-  { id: "d_win_3",     period: "daily",   objective: "pots_won",     target: 3,   reward: 500,  title: "Win 3 pots" },
-  { id: "d_login",     period: "daily",   objective: "daily_login",  target: 1,   reward: 200,  title: "Claim your daily reward" },
-  // --- weekly (medium, reset every ISO week) ---
-  { id: "w_play_150",  period: "weekly",  objective: "hands_played", target: 150, reward: 3000, title: "Play 150 hands this week" },
-  { id: "w_win_40",    period: "weekly",  objective: "pots_won",     target: 40,  reward: 3000, title: "Win 40 pots this week" },
-  { id: "w_sprint_3",  period: "weekly",  objective: "sprint_enter", target: 3,   reward: 4000, title: "Enter 3 River Sprints" },
-  // --- monthly (the big one — usually points at the event) ---
-  { id: "m_play_600",  period: "monthly", objective: "hands_played", target: 600, reward: 12000, title: "Play 600 hands this month" },
-  { id: "m_sprint_win", period: "monthly", objective: "sprint_cash", target: 1,   reward: 15000, title: "Cash in a River Sprint" },
+  // --- daily (small, fast) ---
+  { id: "d_play_10",   period: "daily",   objective: "hands_played", target: 10,  reward: 500,   title: "Play 10 hands" },
+  { id: "d_win_3",     period: "daily",   objective: "pots_won",     target: 3,   reward: 500,   title: "Win 3 pots" },
+  { id: "d_login",     period: "daily",   objective: "daily_login",  target: 1,   reward: 200,   title: "Claim your daily reward" },
+  // --- weekly (Monday to Sunday) ---
+  { id: "w_play_100",  period: "weekly",  objective: "hands_played", target: 100, reward: 3000,  title: "Play 100 hands" },
+  { id: "w_win_25",    period: "weekly",  objective: "pots_won",     target: 25,  reward: 3000,  title: "Win 25 pots" },
+  { id: "w_days_5",    period: "weekly",  objective: "day_played",   target: 5,   reward: 3000,  title: "Play on 5 different days" },
+  // --- monthly ---
+  { id: "m_play_400",  period: "monthly", objective: "hands_played", target: 400, reward: 12000, title: "Play 400 hands" },
+  { id: "m_win_100",   period: "monthly", objective: "pots_won",     target: 100, reward: 12000, title: "Win 100 pots" },
+  { id: "m_days_20",   period: "monthly", objective: "day_played",   target: 20,  reward: 12000, title: "Play on 20 different days" },
 ];
 
 const BY_ID = new Map(QUESTS.map((q) => [q.id, q]));
@@ -40,11 +44,13 @@ export const PERIODS = ["daily", "weekly", "monthly"];
 
 // ------------------------------------------------------------- period keys
 //
-// Bucket a timestamp into the reset window for a period. UTC throughout so the
-// boundary is stable regardless of server locale. daily → 'YYYY-MM-DD',
-// monthly → 'YYYY-MM', weekly → ISO-8601 week 'YYYY-Www'.
-export function periodKey(period, at = Date.now()) {
-  const d = new Date(at);
+// Bucket a timestamp into the reset window for a period, in China time (UTC+8, no
+// daylight saving — owner, 2026-09-27: resets at midnight where the players are).
+// daily → 'YYYY-MM-DD', monthly → 'YYYY-MM', weekly → ISO-8601 week 'YYYY-Www'.
+export const TZ_OFFSET_MS = 8 * 3600_000;
+const DAY_MS = 86_400_000;
+export function periodKey(period, at = Date.now(), offset = TZ_OFFSET_MS) {
+  const d = new Date(at + offset);                // read with UTC getters = China wall-clock
   const y = d.getUTCFullYear();
   const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
   const dd = String(d.getUTCDate()).padStart(2, "0");
@@ -64,6 +70,16 @@ export function periodKey(period, at = Date.now()) {
     return `${isoYear}-W${String(week).padStart(2, "0")}`;
   }
   return "all";
+}
+
+/** When the current `period` ends (the next China-time midnight / Monday / 1st), epoch ms. */
+export function nextReset(period, at = Date.now()) {
+  const local = at + TZ_OFFSET_MS, dayStart = Math.floor(local / DAY_MS) * DAY_MS;
+  let next;
+  if (period === "daily") next = dayStart + DAY_MS;
+  else if (period === "weekly") next = dayStart + (7 - ((new Date(dayStart).getUTCDay() + 6) % 7)) * DAY_MS;
+  else { const d = new Date(local); next = Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1); }
+  return next - TZ_OFFSET_MS;
 }
 
 // ------------------------------------------------------------- writes
@@ -90,6 +106,25 @@ export async function recordEvent(userId, objective, amount = 1, db = realDb, at
   }
 }
 
+/** A finished hand for one human seat: hands / pots / chips, plus "a day played" the first
+ *  time they play on a (China-time) day — a hidden per-day marker row, `_day`, makes that
+ *  count once however many hands follow. Best-effort, never throws. */
+export async function recordHand(userId, { won = false, net = 0 } = {}, db = realDb, at = Date.now()) {
+  if (!userId) return;
+  try {
+    const res = await db.execute(
+      `INSERT IGNORE INTO quest_progress (user_id, quest_id, period_key, progress, updated_at) VALUES (?, '_day', ?, 1, ?)`,
+      [userId, periodKey("daily", at), at]
+    );
+    if ((res?.affectedRows ?? 0) === 1) await recordEvent(userId, "day_played", 1, db, at);
+  } catch { /* best-effort */ }
+  await recordEvent(userId, "hands_played", 1, db, at);
+  if (won) {
+    await recordEvent(userId, "pots_won", 1, db, at);
+    if (net > 0) await recordEvent(userId, "chips_won", net, db, at);
+  }
+}
+
 // ------------------------------------------------------------- reads
 //
 // The full catalog annotated with this user's current-period progress, for the
@@ -109,7 +144,7 @@ export async function activeQuestsFor(userId, db = realDb, at = Date.now()) {
     return {
       id: q.id, period: q.period, title: q.title, objective: q.objective,
       target: q.target, reward: q.reward, progress,
-      done: progress >= q.target, claimed, periodKey: pk,
+      done: progress >= q.target, claimed, periodKey: pk, resetsAt: nextReset(q.period, at),
     };
   });
 }

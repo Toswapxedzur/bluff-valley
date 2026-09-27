@@ -3,12 +3,13 @@
   import { slidingIndicator } from "$lib/actions/slider.js";
   import HistoryFeed from "$lib/poker/components/HistoryFeed.svelte";
   import Chip from "$lib/poker/components/Chip.svelte";
+  import { ACHIEVEMENTS_ON } from "$lib/config.js";
   let { data } = $props();
 
   const FILTERS = [
     { key: "all", label: "All" },
     { key: "money", label: "Chips" },
-    { key: "achievements", label: "Achievements" },
+    ...(ACHIEVEMENTS_ON ? [{ key: "achievements", label: "Achievements" }] : []),   // switched off for now
     { key: "friends", label: "Friends" },
   ];
   function setFilter(k) { goto(`/history?filter=${k}`, { keepFocus: true, noScroll: true }); }

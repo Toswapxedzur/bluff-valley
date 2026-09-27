@@ -11,15 +11,17 @@
   let chips = $state(data.chips);
 
   const PERIOD_LABELS = { daily: "Daily", weekly: "Weekly", monthly: "Monthly" };
-  const PERIOD_SUB = {
-    daily: "Resets every day",
-    weekly: "Resets every Monday",
-    monthly: "Resets on the 1st",
-  };
+  // "Resets in 5 h 12 m" — midnight China time (daily), Monday (weekly), the 1st (monthly)
+  let now = $state(Date.now());
+  $effect(() => { const t = setInterval(() => (now = Date.now()), 30_000); return () => clearInterval(t); });
+  function resetsIn(at) {
+    const m = Math.max(1, Math.ceil((at - now) / 60_000)), dd = Math.floor(m / 1440), h = Math.floor((m % 1440) / 60), mm = m % 60;
+    return "Resets in " + (dd ? `${dd} d ${h} h` : h ? `${h} h ${mm} m` : `${mm} m`);
+  }
   const ORDER = ["daily", "weekly", "monthly"];
   const groups = $derived(
     ORDER
-      .map((p) => ({ period: p, label: PERIOD_LABELS[p], sub: PERIOD_SUB[p], items: quests.filter((q) => q.period === p) }))
+      .map((p) => { const items = quests.filter((q) => q.period === p); return { period: p, label: PERIOD_LABELS[p], items, resetsAt: items[0]?.resetsAt }; })
       .filter((g) => g.items.length)
   );
 
@@ -58,13 +60,13 @@
       <Chip value={chips} size={20} /> {fmt(chips)}
     </div>
   </div>
-  <p class="muted intro">Complete objectives to earn chips. Progress tracks as you play — come back for a fresh set each day.</p>
+  <p class="muted intro">Complete objectives to earn chips. Progress tracks as you play; the daily set refreshes at midnight (China time).</p>
 
   {#each groups as g (g.period)}
     <section class="grp">
       <div class="grp-head">
         <h2>{g.label}</h2>
-        <span class="muted small">{g.sub}</span>
+        <span class="muted small">{g.resetsAt ? resetsIn(g.resetsAt) : ""}</span>
       </div>
       <div class="list">
         {#each g.items as q, i (q.id)}
@@ -97,7 +99,12 @@
     </section>
   {/each}
 
-  {#if achievements.length}
+  {#if !achievements.length}
+    <section class="grp">
+      <div class="grp-head"><h2>Achievements</h2></div>
+      <p class="muted empty">Achievements are on the way.</p>
+    </section>
+  {:else}
     <section class="grp">
       <div class="grp-head">
         <h2>Achievements</h2>
@@ -140,6 +147,7 @@
 </div>
 
 <style>
+  .empty { margin: 0; padding: 18px 16px; border-radius: var(--r-card, 14px); background: var(--surface); text-align: center; }
   .wrap { max-width: 640px; margin: 0 auto; }
   .head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
   h1 { margin: 0; font-size: 26px; }

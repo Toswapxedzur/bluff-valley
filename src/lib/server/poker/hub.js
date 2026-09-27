@@ -19,7 +19,7 @@ import {
 import { getBalance } from "../wallet.js";
 import { setLookNotifier } from "../cosmetics.js";
 import { unlockAndReward, handAchievements, achievementInfo } from "../achievements.js";
-import { recordEvent as recordQuestEvent } from "../quests.js";
+import { recordHand as recordQuestHand } from "../quests.js";
 import { areFriends } from "../friends.js";
 import { sendMessage, markRead } from "../dm.js";
 import * as convo from "../conversations.js";
@@ -295,12 +295,8 @@ export class PokerHub {
           const info = achievementInfo(key);
           if (info) for (const c of this.connsForUser(s.userId)) c.send(encode(S2C.ACHIEVEMENT, info));
         }
-        // Quest progress (best-effort — recordQuestEvent swallows its own errors).
-        await recordQuestEvent(s.userId, "hands_played", 1);
-        if (won) {
-          await recordQuestEvent(s.userId, "pots_won", 1);
-          if ((s.net ?? 0) > 0) await recordQuestEvent(s.userId, "chips_won", s.net);
-        }
+        // Quest progress (best-effort — recordHand swallows its own errors).
+        await recordQuestHand(s.userId, { won, net: s.net ?? 0 });
       }
     } catch { /* achievements + quests are best-effort; never disrupt the table */ }
   }
