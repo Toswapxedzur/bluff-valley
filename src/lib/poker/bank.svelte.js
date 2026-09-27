@@ -13,6 +13,7 @@
 
 import { Money } from "./coin-motion.js";
 import { resolveMs } from "./resolve-anim.js";
+import { detectMoment } from "./moments.js";
 import { isBanked, isShedding } from "./games.js";
 
 const now = () => (typeof performance !== "undefined" ? performance.now() : Date.now());
@@ -101,6 +102,7 @@ export class Bank {
       }
     }
     if (result) {
+      t += detectMoment(next)?.ms ?? 0;          // a full-screen moment plays first
       m.sweep(t);
       const shares = [...won].filter(([, a]) => a > 0).map(([seat, amount]) => ({ seat, amount }));
       if (shares.length) m.award(shares, t);
@@ -122,7 +124,9 @@ export class Bank {
       else if (dw < 0 && !settled) m.giveBack(s.seat, -dw, t);          // a wager pulled back
     }
     if (!settled) return;
-    t += resolveMs(next.game);                    // the wheel / dice / reels land first
+    // the wheel / dice / reels land first — or the full-screen moment (a jackpot's plays its own spin)
+    const moment = detectMoment(next);
+    t += moment ? moment.ms + (moment.kind === "jackpot" ? 0 : resolveMs(next.game)) : resolveMs(next.game);
     for (const r of next.round?.results || []) {
       if (r.outcome === "banker" || r.seat == null) continue;
       if (r.delta > 0) m.bet(r.seat, r.delta, t, "house");               // the House pays onto the pile
@@ -141,6 +145,7 @@ export class Bank {
       return;
     }
     if (next.result && !prev.result) {
+      t += detectMoment(next)?.ms ?? 0;          // Big Two's finish plays first
       const winner = next.round?.winner;
       const r = (next.round?.results || []).find((x) => x.seat === winner);
       const ante = next.config?.minBet ?? next.config?.smallBlind ?? 1;

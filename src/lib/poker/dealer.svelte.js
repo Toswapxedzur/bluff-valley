@@ -11,6 +11,7 @@
 // Cards keep a visual id (1..52, their own edge strip) and, when public, their face.
 
 import { DEAL, HOLE_COUNT, collectEvery, dealOrder, planDeal } from "./deal-anim.js";
+import { detectMoment } from "./moments.js";
 import { buildRoutine } from "./deck-routine.js";
 import { COUNT, FULL_DECK } from "./deck3d.js";
 
@@ -24,6 +25,7 @@ export class Dealer {
   boardShown = $state(0);            // board slots showing a card (face-down until boardFaceUp)
   boardFaceUp = $state(0);
   tableHidden = $state(false);       // collection + routine: every hand and the board are on the canvas
+  shuffling = $state(false);         // the shuffle routine is playing: the table blurs behind the deck (a moment)
 
   // ---- drawn by the layer ----
   deck = FULL_DECK.slice();          // visual ids, top → bottom
@@ -93,8 +95,11 @@ export class Dealer {
     // the hand is over: the canvas takes every card over where it lies (a hand won without a
     // showdown vanishes from the seats right now), holds the result, then collects
     if (!prev.result && next.result) {
+      // a full-screen moment (moments.js) plays first; the highlight and the collection wait for it
+      const wait = detectMoment(next)?.ms ?? 0;
       this._takeOver(next, privates);
-      this._at(t + DEAL.showdownHold, () => this._collect());
+      if (this.highlight) this.highlight.t0 = t + wait;
+      this._at(t + wait + DEAL.showdownHold, () => this._collect());
     }
   }
 
@@ -239,6 +244,7 @@ export class Dealer {
     // the face showing as the used pile leaves: the top of the pile, if it is public
     const topId = this.used[this.used.length - 1];
     this.routine = { R, t0: now(), face: this.faces.get(topId) ?? null };
+    this.shuffling = true;
     // one continuous riffle for the shuffle phase (the third pile building up)
     const shuffle = R.phases.find((p) => p.name === "shuffle");
     if (shuffle) this.cues.push({ t: this.routine.t0 + shuffle.t0, name: "riffle", dur: shuffle.t1 - shuffle.t0 });
@@ -248,6 +254,7 @@ export class Dealer {
 
   _finishRoutine() {
     if (this.routine) { this.deck = this.routine.R.finalOrder.slice(); this.routine = null; this.used = []; }
+    this.shuffling = false;
   }
 
   // ---------------------------------------------------------------- clock
