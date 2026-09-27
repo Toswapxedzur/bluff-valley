@@ -24,6 +24,11 @@
   .mbtn, .vbtn, .tool { padding: 8px 14px; border-radius: 999px; background: var(--surface); color: var(--text); font-weight: 700; font-size: 14px; }
   .mbtn:hover, .vbtn:hover, .tool:hover { background: var(--surface-2); }
   .mbtn.on { background: var(--accent); color: #fff; }
+  .grp { font-size: 11px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; color: var(--faint); margin: 0 4px 0 8px; }
+  .grp:first-child { margin-left: 0; }
+  .mshuf { flex-direction: column; gap: 18px; }
+  .deck { position: relative; width: 84px; height: 109px; }
+  .deck .dc { position: absolute; left: 0; top: 0; line-height: 0; }
   .vbtn { font-size: 13px; padding: 6px 12px; background: var(--well); color: var(--muted); }
   .vbtn.on { background: var(--accent-soft); color: var(--text); box-shadow: 0 0 0 2px var(--accent); }
   .tools { margin-left: auto; display: flex; gap: 8px; }
@@ -66,6 +71,9 @@
   #overlay .band button { pointer-events: auto; }
   .veil { position: absolute; inset: 0; background: rgba(6, 10, 22, .66); backdrop-filter: blur(3px); }
   .veil.light { background: rgba(6, 10, 22, .45); }
+  .veil.blur { background: rgba(6, 10, 22, .5); backdrop-filter: blur(9px) saturate(.8); }
+  .stage { position: absolute; inset: 0; color: var(--ink); }
+  .stage .content { inset: 40px 40px; }
   .band { position: absolute; left: 0; width: 1120px; box-shadow: 0 30px 80px rgba(0,0,0,.45); overflow: hidden; }
   .kicker { position: absolute; left: 30px; top: 20px; display: flex; align-items: center; gap: 10px; font-size: 13px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; color: var(--sub); }
   .pausebar { position: absolute; left: 30px; right: 30px; bottom: 18px; display: flex; align-items: center; gap: 12px; }
@@ -80,6 +88,12 @@
   .bignum { font-family: var(--f-display); font-weight: 800; font-size: 84px; line-height: 1; font-variant-numeric: tabular-nums; letter-spacing: -1px; }
   .sheen { position: absolute; top: -20%; left: 0; width: 22%; height: 140%; background: rgba(255,255,255,.42); pointer-events: none; mix-blend-mode: soft-light; }
   .fxback { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+  .fly { position: absolute; inset: 0; pointer-events: none; z-index: 2; }
+  .content .plate { z-index: 3; }   /* above the flights: won coins sink under the badge */
+  .newring { position: absolute; line-height: 0; z-index: 4; filter: drop-shadow(0 10px 14px rgba(0,0,0,.3)); }
+  .money { color: var(--gold-ink); }
+  .band .money { color: inherit; }
+  .title.tier-silver { color: #dfe5ef; } .title.tier-gold { color: #f5c542; }
   .fx { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
   .coin { position: absolute; left: 0; top: 0; line-height: 0; will-change: transform; }
 
@@ -137,11 +151,12 @@
   /* E4 */
   .e4-left { position: relative; }
   .e4-coin { position: absolute; left: 38px; top: 50%; margin: -75px 0 0 -75px; line-height: 0; }   /* over the avatar: it shrinks into the ring */
+  .e4 { align-items: flex-end; padding-bottom: 22px; }   /* the plate sits low: the new ring appears in the space above it */
   .e4-mid { max-width: 580px; }
   .e4-mid .title { font-size: 52px; }
   .btns { display: flex; gap: 10px; margin-top: 6px; }
   .btns button { padding: 11px 20px; border-radius: 12px; font-weight: 800; font-size: 15px; }
-  .btns .wear { background: var(--ink); color: #fff; }
+  .btns .wear { background: var(--ink); color: var(--on-ink); }
   .btns .later { background: color-mix(in srgb, var(--ink) 14%, transparent); color: var(--ink); }
 
   /* ---- the spec ---- */
@@ -157,7 +172,7 @@
 <div class="page">
   <header>
     <h1>Table moments</h1>
-    <p>The full-screen animations for big events. Each one dims the table, runs a band in the logo's three tilted steps across it, and pauses play for everyone until the bar along the band's foot runs out. Pick a moment to play it; “Slow” helps to inspect the timing.</p>
+    <p>The full-screen animations for big events; play pauses for everyone while one runs. <b>Gameplay</b> moments just blur the table and play over it. <b>Proclamations</b> — tournament calls, cosmetics, personal news — also bring the banner in the logo's tilted steps, with a bar along its foot that drains for the pause. Pick a moment to play it; “Slow” helps to inspect the timing.</p>
   </header>
   <div class="controls">
     <div class="row" id="moments"></div>
@@ -166,8 +181,8 @@
   <div id="screenwrap"><div id="screen"><div id="table"></div><div id="overlay"></div></div></div>
   <section id="spec"></section>
   <ul class="rules">
-    <li>The same frame every time: veil → band wipes in along the logo's slant → the moment → band wipes out. The table under it never moves.</li>
-    <li>The band's material says how big the event is: logo blue for most, silver / gold as it gets rarer, charcoal for a knockout, your new metal for an unlock.</li>
+    <li>Gameplay: the table blurs (it never moves), the moment plays over it, the blur lifts.</li>
+    <li>Proclamations: the table dims, the banner opens smoothly from its centre line, the moment plays, the banner closes back to a line. Its material says what it is: logo blue for a call, gold for a champion, charcoal for a knockout, your new metal for an unlock.</li>
     <li>Not shown here yet: sounds, and the reduced-motion version (the band simply fades in with the result, no flights).</li>
   </ul>
 </div>
