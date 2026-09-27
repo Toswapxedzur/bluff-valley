@@ -16,6 +16,7 @@
   import NotifBell from "$lib/poker/components/NotifBell.svelte";
   import CallOverlay from "$lib/poker/components/CallOverlay.svelte";
   import AchievementToast from "$lib/components/AchievementToast.svelte";
+  import ProclamationLayer from "$lib/components/ProclamationLayer.svelte";
 
   // Smooth slide+fade between main sections via the View Transitions API.
   // Only <main> (view-transition-name: main-content) animates — the topbar and
@@ -194,6 +195,7 @@
 <ProfilePopover />
 {#if data.user}<CallOverlay />{/if}
 {#if data.user}<AchievementToast />{/if}
+{#if data.user}<ProclamationLayer me={data.user} />{/if}
 
 {#if data.user && poker.myTables.length > 1}
   <div class="table-switcher" aria-label="Your tables">

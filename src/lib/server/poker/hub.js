@@ -17,6 +17,7 @@ import {
   handsPlayedByUser
 } from "./store.js";
 import { getBalance } from "../wallet.js";
+import { setLookNotifier } from "../cosmetics.js";
 import { unlockAndReward, handAchievements, achievementInfo } from "../achievements.js";
 import { recordEvent as recordQuestEvent } from "../quests.js";
 import { areFriends } from "../friends.js";
@@ -43,6 +44,8 @@ const isQuickPlayTable = (t) => t.config.variant === "holdem" && !t.isTournament
 
 export class PokerHub {
   constructor() {
+    // a metal unlocked by peak wealth: that player's own "new look" banner, wherever they are
+    setLookNotifier((userId, look) => { for (const c of this.connsForUser(userId)) c.send(encode(S2C.MOMENT, { kind: "newLook", ...look })); });
     this.tables = new Map();        // tableId -> LiveTable (in-memory only)
     this.connections = new Set();   // all live connections
     this.lobbySubs = new Set();     // connections subscribed to the lobby

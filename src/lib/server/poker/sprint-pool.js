@@ -21,6 +21,7 @@ import { LiveTable } from "./table.js";
 import { encode, S2C } from "../../poker/protocol.js";
 import { rankStandings } from "../sprint-core.js";
 import { roundHumans } from "../sprint.js";
+import { PROCLAIM_MS } from "../../poker/proclamations.js";
 
 export class SprintPool {
   constructor(hub, opts = {}) {
@@ -89,6 +90,10 @@ export class SprintPool {
     }
 
     this._running = true;
+    // the round goes live: every player's "Sprint — go" banner, and every table holds its first deal
+    // until it ends (tables read holdUntil through table.tournament)
+    this.holdUntil = Date.now() + PROCLAIM_MS.sprintGo;
+    this._tell(this.humanIds, { kind: "sprintGo", players: this.players.size });
     this._clock = this.setTimer(() => this._buzzer(), this.durationMs);
     const done = new Promise((resolve) => { this._resolve = resolve; });
     await this._pump();
@@ -224,6 +229,12 @@ export class SprintPool {
       if (!p) { table.seats.delete(s.seat); continue; }
       if ((s.stack || 0) <= 0) {
         p.busted = true; p.bustAt = this.now(); p.stack = 0; p.seated = false;
+        // a player (not a bot) is out: that table's players see the knockout, and it holds for it
+        if (p.isHuman) {
+          const seen = [...table.seats.values()].map((x) => x.userId).filter((u) => this.humanIds.has(u));
+          this._tell(seen, { kind: "knockout", name: s.name, ring: s.ring ?? "default", badge: s.badge ?? "default", place: this._activePlayers().length + 1, of: this.players.size });
+          table.holdUntil = Date.now() + PROCLAIM_MS.knockout;
+        }
         table.seats.delete(s.seat);
         if (!p.isHuman) { try { this.botConns.get(s.userId)?.detach(); } catch { /* noop */ } }
       } else {
@@ -255,6 +266,13 @@ export class SprintPool {
     this._running = false;
     if (this._clock) { try { clearTimeout(this._clock); } catch { /* injected */ } this._clock = null; }
     const standings = this._standings();
+    // the winner at the buzzer: everyone's champion banner (it plays site-wide — the tables close now)
+    const top = standings[0];
+    if (top) {
+      let seat = null;
+      for (const t of this.tables) { seat = t.seatForUser?.(top.id) || seat; if (seat) break; }
+      this._tell(this.humanIds, { kind: "champion", name: seat?.name || "The winner", ring: seat?.ring ?? "default", badge: seat?.badge ?? "default", of: standings.length, you: top.id });
+    }
     // Toast each human their placing and clear their table view so the client
     // routes them off the felt that's about to be torn down.
     const placeById = new Map(standings.map((s) => [s.id, s.place]));
@@ -269,6 +287,11 @@ export class SprintPool {
     }
     this._teardown();
     if (this._resolve) { const r = this._resolve; this._resolve = null; r(standings); }
+  }
+
+  /** Send a banner moment (proclamations.js) to these players, on every page they have open. */
+  _tell(userIds, moment) {
+    for (const uid of userIds) for (const conn of (this.hub.connsForUser?.(uid) || [])) { try { conn.send(encode(S2C.MOMENT, moment)); } catch { /* conn gone */ } }
   }
 
   _teardown() {

@@ -5,6 +5,7 @@
   // The medal is a placeholder until the achievement medals are designed.
   import { poker } from "$lib/poker/client.svelte.js";
   import { reducedMotion } from "$lib/motion.js";
+  import { METALS } from "$lib/cosmetics.js";
 
   const TIERS = {   // [light, mid, dark] — the coin metals' ramps
     bronze: ["#eda45e", "#c1691f", "#71390c"],
@@ -12,8 +13,9 @@
     gold: ["#ffe485", "#f5b60d", "#8f6503"],
     none: ["#FBF8EF", "#E1D3AD", "#6E685B"]
   };
-  const medal = (tier) => {
-    const [l, m, dk] = TIERS[tier] || TIERS.none;
+  const medal = (tier, metalKey) => {
+    const mt = metalKey && METALS.find((x) => x.key === metalKey);
+    const [l, m, dk] = mt ? [mt.hi, mt.base, mt.lo] : TIERS[tier] || TIERS.none;
     return `<svg viewBox="0 0 60 60" width="44" height="44" aria-hidden="true"><polygon points="30,4 56,30 30,56 4,30" fill="${dk}"/><polygon points="30,4 4,30 30,30" fill="${l}"/><polygon points="30,4 56,30 30,30" fill="${m}"/><polygon points="4,30 30,56 30,30" fill="${m}"/><polygon points="30,15 45,30 30,45 15,30" fill="${dk}" opacity=".35"/></svg>`;
   };
 
@@ -31,9 +33,9 @@
 
 {#if current}
   <div class="achv" class:quiet={reducedMotion()} role="status">
-    {@html medal(current.tier)}
+    {@html medal(current.tier, current.metal)}
     <div class="txt">
-      <div class="k">Achievement{current.tier ? ` · ${current.tier[0].toUpperCase()}${current.tier.slice(1)}` : ""}</div>
+      <div class="k">{current.metal ? "New look" : `Achievement${current.tier ? ` · ${current.tier[0].toUpperCase()}${current.tier.slice(1)}` : ""}`}</div>
       <b>{current.name}</b>
       <div class="sub">{current.desc}{current.reward ? ` · +${current.reward.toLocaleString()} chips` : ""}</div>
     </div>
