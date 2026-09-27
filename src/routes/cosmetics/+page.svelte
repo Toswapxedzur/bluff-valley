@@ -4,20 +4,20 @@
   import Chip from "$lib/poker/components/Chip.svelte";
   import { LOOKS, plateStyle, FREE_SLOTS } from "$lib/cosmetics.js";
   import { SITE_NAME } from "$lib/config.js";
-  import { plateSpread } from "$lib/actions/plate-spread.js";
+  import SeatBadge from "$lib/poker/components/SeatBadge.svelte";
   import BannerEditor from "./BannerEditor.svelte";
 
   let { data } = $props();
   let ring = $state(data.ring);
   let badge = $state(data.badge);
   let error = $state(null);
-  let banner = $state(data.banner.live);   // the banner that is live on my seat
+  // the banner the preview draws: the editor's unsaved picture while you edit, else the live one
+  let shown = $state(data.banner.live);
 
   const owned = new Set(data.owned);
   const fmt = (n) => Number(n).toLocaleString("en-US");
   const short = (n) => (n >= 1e6 ? `${n / 1e6}M` : n >= 1e3 ? `${n / 1e3}K` : String(n));
   const progress = (at) => Math.min(100, Math.round(((data.peak || 0) / at) * 100));
-  const plate = $derived(plateStyle(badge, banner));
   const plateVars = (p) => `background:${p.bg};--ink:${p.ink};--sub:${p.sub};--money:${p.money}`;
 
   // equip without a reload; the server re-checks the unlock
@@ -25,6 +25,13 @@
     if (result.type === "success") { error = null; if (slot === "ring") ring = look; else badge = look; }
     else if (result.type === "failure") error = result.data?.error || "Couldn't equip that.";
   };
+
+  // the one preview of how you look (left column, beside the rings and badges it shows off): your
+  // own seat with the clock running, and the smaller seat everyone else sees, then that one at 2×
+  let deadline = $state(Date.now() + 25_000);
+  $effect(() => { const id = setInterval(() => { deadline = Date.now() + 25_000; }, 25_000); return () => clearInterval(id); });
+  let mine = $derived({ seat: 1, userId: data.me.id, name: data.me.name, avatar: data.me.avatarMediaId, ring, badge, banner: shown, stack: data.wealth, connected: true, isToAct: true, isButton: true, status: null, lastAction: null, committed: 0 });
+  let other = $derived({ ...mine, seat: 2, isToAct: false, isButton: false, isBB: true, lastAction: "Raise 400" });
 </script>
 
 <svelte:head><title>Cosmetics — {SITE_NAME}</title></svelte:head>
@@ -41,20 +48,24 @@
     wealth is your wallet plus the chips on your tables, and it counts your highest ever.
   </p>
 
-  <!-- how you look at a table -->
-  <div class="preview">
-    <div class="plate" style={plateVars(plate)} use:plateSpread={plate.bg}>
-      <Avatar id={data.me.id} name={data.me.name} mediaId={data.me.avatarMediaId} size={36} {ring} />
-      <div class="txt">
-        <div class="r1"><span class="name">{data.me.name}</span><span class="stack">{fmt(data.wealth)}</span></div>
-        <div class="r3">How you look at the table</div>
-      </div>
-    </div>
-  </div>
   {#if error}<p class="err" role="alert">{error}</p>{/if}
 
-  <BannerEditor me={data.me} wealth={data.wealth} {ring} {badge} initial={data.banner} onLive={(b) => (banner = b)} />
+  <div class="cols">
+    <!-- left: how you look, and your banner -->
+    <div class="look">
+      <section class="preview" aria-label="How you look at a table" style="--plate-w:136px;--plate-w-mine:164px">
+        <div class="seats">
+          <div class="seatcol"><span class="muted small cap">Your seat</span><SeatBadge seat={mine} isMine {deadline} seatNo={1} /></div>
+          <div class="seatcol"><span class="muted small cap">What others see</span><SeatBadge seat={other} seatNo={2} /></div>
+        </div>
+        <span class="muted small cap">Twice the size</span>
+        <div class="big"><SeatBadge seat={other} seatNo={3} /></div>
+      </section>
+      <BannerEditor initial={data.banner} onShow={(b) => (shown = b)} />
+    </div>
 
+    <!-- right: the rings and badges -->
+    <div class="picks">
   {#each [["ring", "Rings", "The band round your avatar."], ["badge", "Badges", "The colour of your seat plate."]] as [slot, title, sub]}
     <section class="grp">
       <div class="grp-head"><h2>{title}</h2><span class="muted small">{sub}</span></div>
@@ -78,7 +89,7 @@
             {:else if has}
               <button class="state wear" type="submit">Wear</button>
             {:else}
-              <span class="state lock">Unlocks at {short(l.at)}</span>
+              <span class="state lock">Unlocks at<b>{short(l.at)}</b></span>
               <div class="bar" aria-label="{progress(l.at)}% of the way"><div class="fill" style="width:{progress(l.at)}%"></div></div>
             {/if}
           </form>
@@ -86,10 +97,12 @@
       </div>
     </section>
   {/each}
+    </div>
+  </div>
 </div>
 
 <style>
-  .wrap { max-width: 720px; margin: 0 auto; }
+  .wrap { max-width: 1180px; margin: 0 auto; }
   .head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
   h1 { margin: 0; font-size: 26px; }
   .review { margin-left: auto; font-weight: 700; font-size: 13px; }
@@ -98,32 +111,44 @@
   .small { font-size: 12.5px; }
   .err { color: var(--danger); margin: 0 0 12px; font-weight: 600; }
 
-  .preview { display: flex; justify-content: center; padding: 22px 12px; background: var(--well); border-radius: var(--r-card); margin-bottom: 22px; }
-  .plate { position: relative; display: flex; align-items: center; gap: 8px; padding: 5px 14px 5px 5px; border-radius: 16px; box-shadow: var(--shadow-card); }
-  .plate > :global(*) { position: relative; z-index: 1; }   /* above the plate-spread overlay */
-  .plate .r1 { display: flex; gap: 7px; align-items: baseline; }
-  .plate .name { font-size: 14px; font-weight: 700; color: var(--ink); }
-  .plate .stack { font-size: 15px; font-weight: 700; color: var(--money); font-variant-numeric: tabular-nums; }
-  .plate .r3 { font-size: 11px; color: var(--sub); }
+  /* two columns: how you look (kept in view while you pick) | the rings and badges */
+  .cols { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: 22px; align-items: start; }
+  .look { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+  @media (min-height: 860px) { .look { position: sticky; top: 72px; } }
+  .picks { min-width: 0; }
+  @media (max-width: 900px) { .cols { grid-template-columns: minmax(0, 1fr); } .look { position: static; } }
+
+  .preview { display: flex; flex-direction: column; gap: 12px; padding: 14px 16px 20px; background: var(--well); border-radius: var(--r-card); }
+  .seats { display: flex; flex-wrap: wrap; gap: 14px 24px; justify-content: space-around; }
+  .seatcol { display: flex; flex-direction: column; gap: 12px; align-items: flex-start; padding-left: 12px; }
+  .seatcol .cap { margin-left: -12px; }
+  .preview > .cap { margin-top: 10px; }
+  .big { zoom: 2; padding: 2px 0 0 8px; align-self: center; }
 
   .grp { margin-bottom: 24px; }
+  .grp:last-child { margin-bottom: 0; }
   .grp-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
   .grp-head h2 { margin: 0; font-size: 15px; }
-  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 10px; }
-  .tile { margin: 0; display: grid; justify-items: center; gap: 6px; padding: 14px 8px 12px; background: var(--surface); border-radius: var(--r-card);
+  /* twelve looks: 6, 4 or 3 to a row by the column's own width, so every row is full */
+  .picks { container-type: inline-size; }
+  .grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+  @container (min-width: 420px) { .grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+  @container (min-width: 600px) { .grid { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
+  .tile { margin: 0; display: grid; justify-items: center; align-content: start; gap: 6px; padding: 12px 6px 11px; text-align: center; background: var(--surface); border-radius: var(--r-card);
     box-shadow: var(--shadow-card); transition: box-shadow var(--dur) var(--ease); }
   .tile.on { box-shadow: 0 0 0 2px var(--accent), var(--shadow-card); }
   .tile.locked .swatch { filter: grayscale(0.85) brightness(0.8); opacity: 0.75; }
   .swatch { height: 70px; display: grid; place-items: center; }
-  .mini { display: inline-flex; align-items: baseline; gap: 6px; padding: 9px 12px; border-radius: 12px; box-shadow: var(--shadow-card); }
-  .mini b { color: var(--ink); font-size: 14px; }
-  .mini i { color: var(--money); font-style: normal; font-weight: 700; font-size: 13px; font-variant-numeric: tabular-nums; }
+  .mini { display: inline-flex; align-items: baseline; gap: 5px; padding: 8px 9px; border-radius: 12px; box-shadow: var(--shadow-card); }
+  .mini b { color: var(--ink); font-size: 13px; }
+  .mini i { color: var(--money); font-style: normal; font-weight: 700; font-size: 12px; font-variant-numeric: tabular-nums; }
   .nm { font-weight: 700; font-size: 13.5px; }
-  .state { font-size: 12px; font-weight: 700; }
+  .state { font-size: 11.5px; font-weight: 700; }
   .wearing { color: var(--accent); }
   .wear { border: 0; cursor: pointer; background: var(--accent); color: var(--on-accent, #fff); padding: 5px 14px; border-radius: var(--r-pill); font: inherit; font-size: 12px; font-weight: 700; }
   .wear:hover { filter: brightness(1.08); }
-  .lock { color: var(--muted); }
+  .lock { color: var(--muted); font-weight: 600; display: grid; line-height: 1.25; }   /* two fixed lines in every locked tile */
+  .lock b { color: var(--text); font-weight: 800; font-size: 12.5px; }
   .bar { width: 80%; height: 5px; background: var(--well); border-radius: var(--r-pill); overflow: hidden; }
   .fill { height: 100%; background: var(--gold-ink); border-radius: var(--r-pill); }
 </style>
