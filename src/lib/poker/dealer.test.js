@@ -22,6 +22,8 @@ const { Dealer } = await import(pathToFileURL(join(cache, "dealer.mjs")).href);
 
 const run = (d, until, step = 16) => { while (clock.t < until) { clock.t += step; d.tick(clock.t); } };
 const seat = (n, o = {}) => ({ seat: n, inHand: true, hasCards: true, status: "active", ...o });
+// a new hand's deal opens with the shuffle (the deck ran out at the last collection): play it through
+const pastShuffle = (d) => { run(d, clock.t + 40); assert.ok(d.routine, "the deal opens with the shuffle"); run(d, clock.t + d.routine.R.duration); };
 const everyId = (d) => [...d.deck, ...d.used, ...d.flights.flatMap((f) => f.ids || [f.id]), ...d.held.map((h) => h.id)];
 
 test("deal order: clockwise from the seat after the button, wrapping", () => {
@@ -37,7 +39,7 @@ test("the between-hands pause (3.5 s) covers the collection for the largest tabl
   assert.ok(collectionMs(9 * 5 + 5) < 3500);
 });
 
-test("the deck deals down across hands and is shuffled only when a card is needed and none is left", () => {
+test("drawFromDeck: the used pile is shuffled in only when a card is needed and none is left", () => {
   assert.deepEqual(drawFromDeck(52, 8, 0), { left: 44, shuffle: null });
   assert.deepEqual(drawFromDeck(3, 3, 0), { left: 0, shuffle: null }, "emptied exactly: no shuffle until the next card");
   // 3 left, 8 hole cards to deal: 3 go, the other 49 (all on the pile) are shuffled, 5 more go
@@ -58,11 +60,13 @@ test("a whole hand: deal, early fold, board, showdown, collection, routine — e
   d.onView(idle, h2, null);
   assert.deepEqual([...d.hiddenSeats], [0, 1, 2, 3]);
   assert.equal(d.ownRevealed, false);
+  pastShuffle(d);
+  const T = clock.t;
   // seat 2 folds while cards are still in the air (before its second card lands)
-  run(d, 1000 + 150);
+  run(d, T + 150);
   const f2 = { ...h2, seats: h2.seats.map((s) => (s.seat === 2 ? { ...s, status: "folded" } : s)) };
   d.onView(h2, f2, { holeCards: ["As", "Kd"] });
-  run(d, 3000);
+  run(d, T + 2000);
   assert.equal(d.deck.length, 44);
   assert.ok(d.seatHidden(2), "a hand folded mid-deal stays hidden");
   assert.ok(!d.seatHidden(0) && !d.seatHidden(1) && !d.seatHidden(3));
@@ -74,7 +78,7 @@ test("a whole hand: deal, early fold, board, showdown, collection, routine — e
   // flop, then a showdown result (the server clears hasCards with it)
   const flop = { ...f2, board: ["2c", "7d", "9h"] };
   d.onView(f2, flop, null);
-  run(d, 4000);
+  run(d, T + 3000);
   assert.deepEqual([d.boardShown, d.boardFaceUp], [3, 3]);
   assert.equal(d.deck.length, 41);
   const res = { ...flop, board: ["2c", "7d", "9h", "Jc", "Qs"], seats: flop.seats.map((s) => ({ ...s, hasCards: false })),
@@ -85,50 +89,26 @@ test("a whole hand: deal, early fold, board, showdown, collection, routine — e
   assert.equal(d.held.length, 3 * 2 + 5, "three live hands and the board are held on the canvas");
   assert.ok(d.held.filter((h) => h.at.kind === "seat" && h.at.seat === 3).every((h) => !h.faceUp), "unshown hands stay face-down");
   assert.ok(d.held.filter((h) => h.at.kind === "seat" && h.at.seat === 1).every((h) => h.faceUp));
-  // the collection: every card on the table joins the pile; the deck stays for the next hand
+  // the collection: the rest of the deck and every card on the table go to the used pile; no shuffle yet
   run(d, clock.t + 6000);
-  assert.equal(d.routine, null, "no shuffle after a hand");
+  assert.equal(d.routine, null, "no shuffle at the end of the round");
   assert.equal(d.shuffling, false);
-  assert.equal(d.deck.length, 39);
-  assert.equal(d.used.length, 13);
-  assert.equal(new Set([...d.deck, ...d.used]).size, 52);
+  assert.equal(d.deck.length, 0, "the deck has run out");
+  assert.equal(new Set(d.used).size, 52);
   assert.ok(d.tableHidden, "the collected table stays hidden until the next hand");
-  const h3 = { handNo: 3, buttonSeat: 0, board: [], deckLeft: 31, seats: [0, 1, 2, 3].map((n) => seat(n)) };
-  const deckBefore = d.deck.slice(0, 8);
-  d.onView({ ...res, deckLeft: 39 }, h3, null);
+  // the next hand: the deal's first card finds the deck empty → the shuffle, then the deal
+  const h3 = { handNo: 3, buttonSeat: 0, board: [], seats: [0, 1, 2, 3].map((n) => seat(n)) };
+  d.onView(res, h3, null);
   assert.equal(d.tableHidden, false);
-  run(d, clock.t + 1500);
+  run(d, clock.t + 40);
+  assert.ok(d.routine && d.shuffling, "the shuffle opens the deal");
+  assert.equal(d.routine.R.finalOrder.length, 52);
+  assert.equal([...d._seatIds.values()].flat().filter((id) => id != null).length, 0, "no card leaves before the shuffle ends");
+  run(d, clock.t + d.routine.R.duration + 1500);
   assert.equal(d.routine, null);
-  assert.equal(d.deck.length, 31, "the next hand deals on from the same deck");
-  assert.deepEqual(new Set([...d._seatIds.values()].flat()), new Set(deckBefore));
-  assert.equal(d.used.length, 13);
-});
-
-test("the deck runs dry mid-deal: the used pile is shuffled in right there, then the deal carries on", () => {
-  clock.t = 20000;
-  const d = new Dealer({ variant: "holdem", mySeat: 0 });
-  const idle = { handNo: 7, buttonSeat: 3, board: [], deckLeft: 3, seats: [0, 1, 2, 3].map((n) => seat(n, { hasCards: false, inHand: false })) };
-  d.init(idle);
-  assert.deepEqual([d.deck.length, d.used.length], [3, 49]);
-  d.geom = { deckSpot: { fx: 12, fy: 80 }, usedSpot: { fx: 900, fy: 80 }, centre: { fx: 450, fy: 300 } };
-  const h = { handNo: 8, buttonSeat: 3, board: [], deckLeft: 44, seats: [0, 1, 2, 3].map((n) => seat(n)) };
-  d.onView(idle, h, null);
-  const riffles = [];
-  const t0 = clock.t;
-  while (!d.routine && clock.t < t0 + 2000) { clock.t += 8; d.tick(clock.t); riffles.push(...d.cues.splice(0).filter((c) => c.name === "riffle")); }
-  assert.ok(d.routine, "the shuffle starts once the three left are dealt");
-  assert.ok(d.shuffling, "the table blurs behind it");
-  assert.equal(d.routine.R.finalOrder.length, 49, "it shuffles the used pile, not a fresh 52");
-  assert.equal([...d._seatIds.values()].flat().filter((id) => id != null).length, 3);
-  assert.equal(riffles.length, 1);
-  const dur = d.routine.R.duration;
-  run(d, clock.t + dur + 1200);
-  assert.equal(d.routine, null);
-  assert.equal(d.shuffling, false);
-  assert.equal([...d._seatIds.values()].flat().filter((id) => id != null).length, 8, "the rest of the deal followed");
+  assert.equal([...d._seatIds.values()].flat().filter((id) => id != null).length, 8);
   assert.equal(d.deck.length, 44);
-  assert.equal(new Set([...d.deck, ...d.used, ...[...d._seatIds.values()].flat()]).size, 52);
-  assert.ok(clock.t - t0 <= shuffleHoldMs({ before: 3, used: 49, after: 5 }) + 1200, "within the server's hold");
+  assert.equal(new Set([...d.deck, ...[...d._seatIds.values()].flat()]).size, 52);
 });
 
 test("sound cues: each landing is announced as its card launches, for the frame it lands", () => {
@@ -148,7 +128,9 @@ test("sound cues: each landing is announced as its card launches, for the frame 
     }
   };
   d.onView(idle, h, null);
-  step(clock.t + 1200);
+  step(clock.t + 40);
+  step(clock.t + d.routine.R.duration + 1200);
+  cues.splice(0, cues.length, ...cues.filter((c) => c.name !== "riffle"));
   const dealt = lands.filter((l) => l.to === "seat").map((l) => l.t);
   assert.equal(dealt.length, 6);
   assert.deepEqual(cues.filter((c) => c.name === "cardLand").map((c) => c.t), dealt, "a card sound on every landing frame");
@@ -164,13 +146,21 @@ test("sound cues: each landing is announced as its card launches, for the frame 
   const taps = cues.filter((c) => c.name === "pileTap").map((c) => c.t);
   assert.deepEqual(taps, lands.filter((l) => l.to === "used").map((l) => l.t));
   assert.equal(taps.length, 2);
-  // the result: the collection taps grow quieter; and no shuffle (the deck is far from empty)
+  // the result: the collection taps grow quieter; no shuffle at the round's end
   const res = { ...f, board: [], seats: f.seats.map((s) => ({ ...s, hasCards: false })), result: { type: "fold", winners: [{ seat: 0, amount: 3 }] } };
   d.onView(f, res, { holeCards: ["As", "Ks"] });
   step(clock.t + 3000);
   const collected = cues.filter((c) => c.name === "pileTap").slice(2);
-  assert.ok(collected.length >= 4, "the live hands");
+  assert.ok(collected.length >= 5, "the leftover deck and the live hands");
   assert.ok(collected.every((c, i) => i === 0 || (c.gain ?? 1) <= (collected[i - 1].gain ?? 1)));
   assert.equal(cues.find((c) => c.name === "riffle"), undefined);
   assert.equal(d.routine, null);
+  // the next deal starts with it: one riffle for the shuffle phase
+  const h2 = { handNo: 3, buttonSeat: 0, board: [], seats: [0, 1, 2].map((n) => seat(n)) };
+  d.onView(res, h2, null);
+  step(clock.t + 100);
+  const riffle = cues.find((c) => c.name === "riffle");
+  const phase = d.routine.R.phases.find((p) => p.name === "shuffle");
+  assert.equal(riffle.t, d.routine.t0 + phase.t0);
+  assert.equal(riffle.dur, phase.t1 - phase.t0);
 });
