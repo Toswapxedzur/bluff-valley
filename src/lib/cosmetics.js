@@ -5,7 +5,7 @@
 //           its three lighter shades (always lighter than the band); all lit from the upper left in
 //           hard steps.
 //   badge — the seat plate's colour: three hard diagonal steps (lit upper-left → shaded lower-right).
-// Everyone owns the default (the six warm chess tones). A metal unlocks — ring AND badge — once the
+// Everyone owns the default (the six warm chess tones). Badges are all free (FREE_SLOTS); a metal ring unlocks once the
 // player's highest-ever wealth (wallet + chips on tables) reaches its milestone; unlocks never lapse.
 // Design sheet: design/cosmetics/.
 
@@ -34,6 +34,11 @@ export const LOOKS = [{ key: "default", name: "Chess", at: 0 }, ...METALS.map(({
 export const isLook = (key) => LOOKS.some((l) => l.key === key);
 /** The looks a player owns, from their highest-ever wealth. */
 export const ownedLooks = (peak) => LOOKS.filter((l) => (peak ?? 0) >= l.at).map((l) => l.key);
+/** Slots whose every look is free for everyone (owner, 2026-09-27: players can put any picture of
+ *  their own on the seat plate, so the plate's colours — the badges — aren't worth locking). */
+export const FREE_SLOTS = new Set(["badge"]);
+/** Does a player with this peak wealth own `look` in `slot`? */
+export const ownsLook = (slot, look, peak) => isLook(look) && (FREE_SLOTS.has(slot) || ownedLooks(peak).includes(look));
 
 // ------------------------------------------------------------------ colour
 const rgb = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
