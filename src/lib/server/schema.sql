@@ -755,6 +755,38 @@ CREATE TABLE IF NOT EXISTS notification (
   CONSTRAINT fk_notif_user FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- v26 (banners, 2026-09-27): a player's own picture on their seat plate. `banner_file` = every master
+-- picture a player uploaded (kept after a removal, as evidence); `banner` = what they wear now, and
+-- whether the admins took it down or barred them from uploading.
+CREATE TABLE IF NOT EXISTS banner_file (
+  id          VARCHAR(64) NOT NULL,                  -- content hash of the master picture
+  user_id     VARCHAR(64) NOT NULL,
+  w           INT NOT NULL,
+  h           INT NOT NULL,
+  bytes       INT NOT NULL,
+  created_at  BIGINT NOT NULL,
+  PRIMARY KEY (id, user_id),
+  KEY idx_bfile_user (user_id, created_at),
+  CONSTRAINT fk_bfile_user FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS banner (
+  user_id     VARCHAR(64) NOT NULL PRIMARY KEY,
+  file_id     VARCHAR(64),                           -- the master it was cut from
+  settings    VARCHAR(400) NOT NULL DEFAULT '{}',    -- layout / crop / ink / wash, as the player set them
+  src         VARCHAR(80),                           -- the rendered picture's file name
+  layout      VARCHAR(8) NOT NULL DEFAULT 'plate',
+  ink         CHAR(7),
+  sub         CHAR(7),
+  money       CHAR(7),
+  wash        DECIMAL(4,2) NOT NULL DEFAULT 0,       -- the wash actually used (>= the player's)
+  status      VARCHAR(12) NOT NULL DEFAULT 'none',   -- live | none | removed (by an admin)
+  banned      TINYINT NOT NULL DEFAULT 0,            -- barred from uploading
+  updated_at  BIGINT NOT NULL,
+  KEY idx_banner_recent (status, updated_at),
+  CONSTRAINT fk_banner_user FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS meta (
   meta_key   VARCHAR(64)  NOT NULL PRIMARY KEY,
   meta_value VARCHAR(255) NOT NULL

@@ -158,11 +158,13 @@ export async function ensureMigrated() {
   await migrateToV23();
   await migrateToV24();
   await migrateToV25();
+  // v26 (banners): the `banner_file` and `banner` tables are created by schema.sql's
+  // CREATE TABLE IF NOT EXISTS (applied above) — no ALTERs, so no migrateToV26.
 
   // Stamp the version row (idempotent — schema.sql also INSERT IGNOREs
   // it, but we want to be defensive).
   await execute(
-    "INSERT INTO meta(meta_key, meta_value) VALUES ('schema_version', '25') "
+    "INSERT INTO meta(meta_key, meta_value) VALUES ('schema_version', '26') "
     + "ON DUPLICATE KEY UPDATE meta_value = VALUES(meta_value)"
   );
 

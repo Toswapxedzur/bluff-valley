@@ -318,6 +318,7 @@ export class GameTable extends LiveTable {
         avatar: s.avatar ?? null,
         ring: s.ring ?? "default",
         badge: s.badge ?? "default",
+        banner: s.banner ?? null,
         stack: s.stack,
         sittingOut: !!s.sittingOut,
         connected: this.isConnected(s),

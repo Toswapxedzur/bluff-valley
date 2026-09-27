@@ -1,8 +1,10 @@
-// Cosmetics: preview and equip a ring (round the avatar) and a badge (the seat plate's colour).
+// Cosmetics: preview and equip a ring (round the avatar) and a badge (the seat plate's colour), and
+// make a banner (the player's own picture on the plate — the editor calls /api/banner).
 // Metals unlock from the player's highest-ever wealth (see $lib/server/cosmetics.js).
 import { redirect, fail } from "@sveltejs/kit";
 import { queryOne } from "$lib/server/db.js";
 import { cosmeticsFor, equip } from "$lib/server/cosmetics.js";
+import { bannerState } from "$lib/server/banners.js";
 import { hub } from "$lib/server/poker/hub.js";
 
 export async function load({ locals }) {
@@ -11,6 +13,8 @@ export async function load({ locals }) {
   const row = await queryOne("SELECT avatar_media_id FROM user WHERE id = ?", [locals.user.id]);
   return {
     ...c,
+    banner: await bannerState(locals.user.id),
+    isAdmin: !!locals.user.isAdmin,
     me: { id: locals.user.id, name: locals.user.displayName || locals.user.email, avatarMediaId: row?.avatar_media_id || null }
   };
 }
