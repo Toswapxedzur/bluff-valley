@@ -1,4 +1,5 @@
 <script>
+  import Slider from "$lib/components/Slider.svelte";
   // ActionBar — the acting player's control strip. Rendered only when it
   // is the signed-in user's turn (parent gates on `poker.turns[id]`).
   //
@@ -78,10 +79,6 @@
 
   const raiseVerb = $derived(raiseAction?.type === "bet" ? "Bet" : "Raise to");
   const atMax = $derived(raiseAction ? raiseTarget >= raiseAction.max : false);
-  // Filled fraction of the custom range track (0..100), for the accent paint.
-  const fillPct = $derived(
-    raiseAction ? ((raiseTarget - raiseAction.min) / Math.max(1, raiseAction.max - raiseAction.min)) * 100 : 0
-  );
 
   // ---- countdown to deadline ------------------------------------------
 
@@ -157,16 +154,7 @@
           </div>
 
           <div class="slider-row">
-            <input
-              class="rng"
-              type="range"
-              style="--fill:{fillPct}%"
-              min={raiseAction.min}
-              max={raiseAction.max}
-              step={step}
-              bind:value={raiseTarget}
-              aria-label="Raise amount"
-            />
+            <div class="sl-wrap"><Slider min={raiseAction.min} max={raiseAction.max} {step} bind:value={raiseTarget} ariaLabel="Raise amount" /></div>
             <input
               class="num"
               type="number"
@@ -277,6 +265,7 @@
     align-items: center;
     gap: 12px;
   }
+  .slider-row .sl-wrap { flex: 1; min-width: 0; }
   .num {
     width: 92px;
     background: var(--well);

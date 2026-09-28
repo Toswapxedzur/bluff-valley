@@ -1,4 +1,5 @@
 <script>
+  import Slider from "$lib/components/Slider.svelte";
   import { fade, scale } from "svelte/transition";
   import { d, DUR } from "$lib/motion.js";
   import { untrack } from "svelte";
@@ -10,7 +11,6 @@
   const lo = $derived(Math.min(config.bigBlind ?? 1, max));
   // starts at 20 big blinds (within the table's range), then it's the player's
   let amount = $state(untrack(() => Math.min(max, Math.max(config.minBuyin, config.bigBlind * 20))));
-  const fill = $derived(max > lo ? ((amount - lo) / (max - lo)) * 100 : 0);
 
   function confirm() {
     const amt = Math.max(1, Math.min(max, Math.round(amount)));
@@ -22,7 +22,7 @@
   <div class="modal card" onclick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Rebuy" transition:scale={{ start: 0.96, duration: d(DUR.base) }}>
     <h3>Rebuy</h3>
     <p class="muted small">Top up your stack (max {max.toLocaleString()} to reach the table cap).</p>
-    <input class="rng" type="range" style="--fill:{fill}%" min={lo} {max} step={config.bigBlind || 1} bind:value={amount} />
+    <Slider min={lo} {max} step={config.bigBlind || 1} bind:value={amount} ariaLabel="Rebuy amount" />
     <input class="num" type="number" min="1" {max} bind:value={amount} />
     <div class="modal-actions">
       <button class="btn ghost" onclick={onCancel}>Cancel</button>

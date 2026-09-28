@@ -1,4 +1,5 @@
 <script>
+  import Slider from "$lib/components/Slider.svelte";
   // The play bar (where a live table's action bar sits): the step, a scrubber, ⏮ ◀ ▶/⏸ ▶| ⏭ and the
   // speed. Drives a ReplayPlayer ($lib/poker/replay-player.svelte.js). `extra`: a snippet at the end
   // of the controls (a live table's "Back to live").
@@ -10,8 +11,8 @@
 
 <div class="bar card">
   <div class="now"><span class="count">{p.i + 1} / {p.steps.length}</span><span class="what">{p.text}</span></div>
-  <input class="scrub" type="range" min="0" max={p.last} step="1" value={p.i} aria-label="Scrub through the match"
-    oninput={(e) => p.jumpTo(Number(e.currentTarget.value))} />
+  <Slider min={0} max={p.last} step={1} value={p.i} ariaLabel="Scrub through the match"
+    valueText={(v) => `Step ${v + 1} of ${p.steps.length}`} oninput={(v) => p.jumpTo(v)} />
   <div class="ctl">
     <button type="button" class="ib" onclick={() => p.jumpTo(0)} disabled={p.i === 0} aria-label="To the start" title="Start (Home)">⏮</button>
     <button type="button" class="ib" onclick={() => p.back()} disabled={p.i === 0} aria-label="Step back" title="Back (←)">◀</button>
@@ -32,7 +33,6 @@
   .now { display: flex; gap: 10px; align-items: baseline; min-width: 0; }
   .count { font-weight: 800; font-variant-numeric: tabular-nums; color: var(--muted); font-size: 12.5px; flex: none; }
   .what { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .scrub { width: 100%; accent-color: var(--accent); }
   .ctl { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
   .ib { appearance: none; border: 0; min-width: 40px; height: 36px; padding: 0 10px; border-radius: var(--r-btn); background: var(--surface-2); color: var(--text); font-size: 14px; cursor: pointer; box-shadow: var(--shadow-card); }
   .ib:disabled { opacity: 0.4; cursor: default; }

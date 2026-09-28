@@ -1,4 +1,5 @@
 <script>
+  import Slider from "$lib/components/Slider.svelte";
   import { fade, scale } from "svelte/transition";
   import { d, DUR } from "$lib/motion.js";
   // Buy-in modal (DESIGN.md §3). Pick an amount via slider between
@@ -65,15 +66,7 @@
       <div class="amount">{amount.toLocaleString()}</div>
       <div class="muted amount-label">chips at the table</div>
 
-      <input
-        class="rng"
-        type="range"
-        style="--fill:{((amount - min) / Math.max(1, Math.max(min, max) - min)) * 100}%"
-        min={min}
-        max={Math.max(min, max)}
-        step="1"
-        bind:value={amount}
-      />
+      <Slider {min} max={Math.max(min, max)} step={1} bind:value={amount} ariaLabel="Buy-in" />
 
       <div class="bounds">
         <span class="muted">min {min.toLocaleString()}</span>
