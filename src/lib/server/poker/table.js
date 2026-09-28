@@ -528,6 +528,8 @@ export class LiveTable {
         runItTwice: this.config.runItTwice ?? false
       },
       buttonSeat: button,
+      // the live table's settings, so a replay seats everyone where they sat (replay-views.js)
+      table: { name: this.config.name, maxSeats: this.config.maxSeats, smallBlind: this.config.smallBlind, bigBlind: this.config.bigBlind, minBuyin: this.config.minBuyin, maxBuyin: this.config.maxBuyin },
       deck,
       players: players.map((p) => {
         const s = this.seats.get(p.seat);

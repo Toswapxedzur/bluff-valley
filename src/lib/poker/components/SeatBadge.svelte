@@ -37,7 +37,8 @@
     house = false, size = "sm", children = null,
     lost = false,           // this hand is out (a bust, a fold): the shared fold dim + one shake
     handSpace = 0,          // px to keep for this seat's hand from the start (a card game: the card height)
-    cardWidth = 82          // the table's card size (my hand + centre); shrinks on crowded tables
+    cardWidth = 82,         // the table's card size (my hand + centre); shrinks on crowded tables
+    watchOnly = false       // a replay: an empty seat just says so
   } = $props();
 
   // The table's bank (coin motion, every game mode): while coins move, the stack number is the
@@ -187,7 +188,7 @@
     <div class="empty">
       {#if canSit}
         <button class="btn sit-btn" onclick={() => onSit(seatNo)}>Sit here</button>
-      {:else if me}
+      {:else if me || watchOnly}
         <span class="empty-lbl">Empty</span>
       {:else}
         <a class="empty-lbl link" href="/account/login">Sign in to sit</a>

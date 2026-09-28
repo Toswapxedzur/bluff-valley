@@ -24,7 +24,7 @@
       <li>
         <a class="ml-row" href="/replay/{m.id}">
           <span class="ml-mode">{modeName(m.mode)}{#if m.context && m.context !== "cash"} <em>{m.context}</em>{/if}{#if m.role === "banker"} <em>banker</em>{/if}</span>
-          <span class="ml-table muted">{m.table_name || "table"}{#if m.hand_no} · #{m.hand_no}{/if}</span>
+          <span class="ml-table muted">{m.table_name || "table"}{#if m.hand_no}{` · #${m.hand_no}`}{/if}</span>
           <span class="ml-when muted">{when(m.ended_at)}</span>
           <span class="ml-net" class:pos={m.net >= 0} class:neg={m.net < 0}><Chip value={Math.abs(m.net)} size={14} /> {signed(m.net)}</span>
         </a>

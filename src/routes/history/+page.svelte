@@ -2,12 +2,14 @@
   import { goto } from "$app/navigation";
   import { slidingIndicator } from "$lib/actions/slider.js";
   import HistoryFeed from "$lib/poker/components/HistoryFeed.svelte";
+  import MatchList from "$lib/components/MatchList.svelte";
   import Chip from "$lib/poker/components/Chip.svelte";
   import { ACHIEVEMENTS_ON } from "$lib/config.js";
   let { data } = $props();
 
   const FILTERS = [
     { key: "all", label: "All" },
+    { key: "matches", label: "Matches" },   // replays, on the real table
     { key: "money", label: "Chips" },
     ...(ACHIEVEMENTS_ON ? [{ key: "achievements", label: "Achievements" }] : []),   // switched off for now
     { key: "friends", label: "Friends" },
@@ -46,7 +48,9 @@
     <em>Full stats →</em>
   </a>
 
-  {#if data.events.length === 0}
+  {#if data.filter === "matches"}
+    <MatchList matches={data.matches || []} empty="No recorded matches in the last 7 days yet. Play a hand and it shows up here to rewatch." />
+  {:else if data.events.length === 0}
     <div class="empty card"><p class="muted">Nothing here yet — play some hands, claim your daily reward, or add a friend.</p></div>
   {:else}
     <HistoryFeed events={data.events} />

@@ -1,213 +1,147 @@
 <script>
-  // Step-through viewer for one recorded match. Frames were expanded (and
-  // redacted) server-side; this page just pages through them.
-  import Card from "$lib/poker/components/Card.svelte";
+  // A recorded match, replayed ON THE REAL TABLE (owner, 2026-09-28): the shared TableStage draws the
+  // views the server rebuilt from the recording, so every animation plays — the deal, card flips,
+  // bets → pot → winner, all-in, glides, moments — and the table's sounds. The play bar sits where the
+  // action bar does at a live table.
+  //   step forward (▶, play) → the next view: animated
+  //   back / start / end / scrub → a JUMP: the stage re-mounts on that view, nothing animates
+  //   speed (1× 2× 4×) → only the pause between steps; animations keep their one shared timing
+  import { onMount, onDestroy } from "svelte";
+  import TableStage from "$lib/poker/components/TableStage.svelte";
+  import ReplayBar from "$lib/poker/components/ReplayBar.svelte";
   import Chip from "$lib/poker/components/Chip.svelte";
-  import CoinStack from "$lib/poker/components/CoinStack.svelte";
+  import { ReplayPlayer } from "$lib/poker/replay-player.svelte.js";
+  import { SITE_NAME } from "$lib/config.js";
+  import { variantLabel, gameIcon } from "$lib/poker/games.js";
+  import { soundEnabled, setSoundEnabled } from "$lib/sfx.js";
+  import { untrack } from "svelte";
 
   let { data } = $props();
+  const player = new ReplayPlayer(untrack(() => data));
+  const steps = player.steps;
+  const me = untrack(() => data.viewerId) ? { id: untrack(() => data.viewerId) } : null;
+  const gameKey = untrack(() => (data.mode === "holdem" ? data.variant || "holdem" : data.mode));
+  $effect(() => player.run());
 
-  let i = $state(0);
-  let playing = $state(false);
-  const frames = data.frames || [];
-  const last = frames.length - 1;
-  let frame = $derived(frames[i] || null);
-
-  const nameOf = (seat) => data.players.find((p) => p.seat === seat)?.name || `Seat ${seat}`;
-  const fmt = (n) => Number(n || 0).toLocaleString();
-
-  function step(d) {
-    i = Math.max(0, Math.min(last, i + d));
-    if (i === last) playing = false;
-  }
-  $effect(() => {
-    if (!playing) return;
-    const t = setInterval(() => step(1), 900);
-    return () => clearInterval(t);
+  let sfxOn = $state(true);
+  onMount(() => {
+    sfxOn = soundEnabled();
+    // start playing once the table is up, so the deal itself animates
+    if (steps.length > 1) setTimeout(() => { if (player.i === 0 && player.jump === 0) player.playing = true; }, 700);
   });
-  function onKey(e) {
-    if (e.key === "ArrowRight") { step(1); e.preventDefault(); }
-    else if (e.key === "ArrowLeft") { step(-1); e.preventDefault(); }
-  }
+  onDestroy(() => player.stop());
+  function toggleSfx() { sfxOn = !sfxOn; setSoundEnabled(sfxOn); }
 
-  const MODE_LABEL = { holdem: "Poker" };
-  const modeLabel = MODE_LABEL[data.mode] || (data.mode || "").replace(/-/g, " ");
-  const CARD_RE = /^[A2-9TJQK][shdc]$/;
-  // Generic module view: find labelled card arrays anywhere in the view.
-  function cardRows(view) {
-    const rows = [];
-    const walk = (v, label) => {
-      if (Array.isArray(v)) {
-        if (v.length && v.every((x) => typeof x === "string" && CARD_RE.test(x))) {
-          rows.push({ label, cards: v });
-        } else {
-          v.forEach((x, idx) => walk(x, v.length > 1 ? `${label} ${idx + 1}` : label));
-        }
-      } else if (v && typeof v === "object") {
-        const name = typeof v.name === "string" ? v.name : (v.seat != null ? nameOf(v.seat) : null);
-        for (const [k, val] of Object.entries(v)) {
-          if (k === "deck") continue;
-          walk(val, name && (k === "cards" || k === "hand") ? name : k);
-        }
-      }
-    };
-    walk(view, "");
-    return rows.slice(0, 12);
-  }
-  function actionLabel(a) {
-    if (!a) return "Start of the match";
-    const who = nameOf(a.seat);
-    const amt = a.amount ? ` ${fmt(a.amount)}` : "";
-    return `${who}: ${a.type}${amt}${a.auto ? " (auto)" : ""}`;
-  }
+  const fmt = (n) => Number(n || 0).toLocaleString("en-US");
+  const when = new Date(data.startedAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+  const title = `${data.tableName || variantLabel(gameKey)}${data.handNo ? ` · hand ${data.handNo}` : ""}`;
+  let listEl = $state(null);
+  $effect(() => { void player.i; listEl?.querySelector(".on")?.scrollIntoView({ block: "nearest" }); });
 </script>
 
-<svelte:window onkeydown={onKey} />
+<svelte:head><title>Replay · {title} — {SITE_NAME}</title></svelte:head>
+<svelte:window onkeydown={(e) => player.key(e)} />
 
-<div class="wrap">
-  <div class="head">
-    <h1>{modeLabel} replay</h1>
-    <span class="sub">
-      {data.tableName || "table"}{#if data.handNo} · hand #{data.handNo}{/if}
-      · {new Date(data.endedAt).toLocaleString()}
-      {#if data.context !== "cash"}· {data.context}{/if}
-    </span>
+<div class="tablepage">
+  {#if steps.length}
+    {#key player.jump}
+      <TableStage view={player.view} {me} privates={player.privates} watchOnly onMotion={(m) => (player.motion = m)} />
+    {/key}
+  {/if}
+
+  <div class="hud">
+    <a href="/history" class="back" aria-label="Back to your history" title="History">‹</a>
+    {#if gameIcon(gameKey)}<img class="gicon" src={gameIcon(gameKey)} alt="" width="34" height="34" />{/if}
+    <div class="title">
+      <b>Replay · {title}</b>
+      <span class="stakes">{variantLabel(gameKey)} · {when}{#if data.archived} · from the archive{/if}</span>
+    </div>
+    <div class="hud-right">
+      <button type="button" class="sfx-btn" class:off={!sfxOn} onclick={toggleSfx} title={sfxOn ? "Mute table sounds" : "Unmute table sounds"} aria-pressed={sfxOn}>{sfxOn ? "🔊" : "🔇"}</button>
+    </div>
   </div>
 
-  {#if !frames.length}
-    <!-- Re-simulation unavailable (an old recording): summary only. -->
-    <div class="panel">
+  {#if !steps.length}
+    <div class="summary">
       {#if data.archiveOffline}
-        <p class="muted">This match is in the home archive, which is offline right now — here is its outcome. The step-through comes back when the archive does.</p>
+        <p class="muted">This match is in the home archive, which is offline right now. Here's how it ended.</p>
       {:else}
-        <p class="muted">This match can't be re-simulated step by step any more; here is its outcome.</p>
+        <p class="muted">This match can't be replayed step by step. Here's how it ended.</p>
       {/if}
-      {#if data.final?.nets}
-        {#each data.final.nets as n}
-          <div class="row"><span>{nameOf(n.seat)}</span><span class={n.net >= 0 ? "pos" : "neg"}>{n.net >= 0 ? "+" : ""}{fmt(n.net)}</span></div>
-        {/each}
-      {/if}
-    </div>
-  {:else}
-    <div class="panel">
-      {#if data.kind === "poker"}
-        {@const f = frame}
-        <div class="board">
-          {#each Array(5) as _, bi}
-            {#if f.board[bi]}<Card card={f.board[bi]} size="md" />{:else}<Card size="md" />{/if}
-          {/each}
-        </div>
-        <div class="pot">
-          {#if f.pot > 0}<CoinStack value={f.pot} size={18} />{/if}
-          <span class="pot-amt">{fmt(f.pot)}</span>
-          {#if f.street}<span class="street">{f.street}</span>{/if}
-        </div>
-        <div class="seats">
-          {#each f.players as p (p.seat)}
-            <div class="seat" class:folded={p.status === "folded"} class:toact={f.toActSeat === p.seat}>
-              <div class="cards">
-                {#if data.holes?.[p.seat]}
-                  {#each data.holes[p.seat] as c}<Card card={c} size="sm" />{/each}
-                {:else}
-                  <Card faceDown size="sm" /><Card faceDown size="sm" />
-                {/if}
-              </div>
-              <div class="who">{nameOf(p.seat)}</div>
-              <div class="stack">{fmt(p.stack)}</div>
-              {#if p.totalCommitted > 0}
-                <div class="bet"><CoinStack value={p.totalCommitted} size={14} /> {fmt(p.totalCommitted)}</div>
-              {/if}
-              {#if p.status === "allin"}<span class="tag">ALL-IN</span>{/if}
-            </div>
-          {/each}
-        </div>
-      {:else}
-        {@const v = frame.view}
-        {#if v?.outcome?.headline}<div class="headline">{v.outcome.headline}</div>{/if}
-        {#each cardRows(v) as row}
-          <div class="cardrow">
-            {#if row.label}<span class="rl">{row.label}</span>{/if}
-            <span class="rc">{#each row.cards as c}<Card card={c} size="sm" />{/each}</span>
-          </div>
-        {/each}
-        {#if v?.bets}
-          {#each v.bets.filter((b) => b.bets?.length) as b}
-            <div class="row"><span>{nameOf(b.seat)}</span>
-              <span class="muted">{b.bets.map((x) => `${x.option} ${fmt(x.amount)}`).join(" · ")}</span></div>
-          {/each}
-        {/if}
-        {#if v?.results}
-          {#each v.results as r}
-            <div class="row"><span>{nameOf(r.seat)}</span>
-              <span class={r.delta >= 0 ? "pos" : "neg"}>{r.delta >= 0 ? "+" : ""}{fmt(r.delta)}</span></div>
-          {/each}
-        {/if}
-      {/if}
-
-      <div class="ticker">{actionLabel(frame?.action)}</div>
-
-      <div class="controls">
-        <button class="btn" onclick={() => { i = 0; }} disabled={i === 0}>⏮</button>
-        <button class="btn" onclick={() => step(-1)} disabled={i === 0}>←</button>
-        <button class="btn play" onclick={() => (playing = !playing)}>{playing ? "Pause" : "Play"}</button>
-        <button class="btn" onclick={() => step(1)} disabled={i === last}>→</button>
-        <button class="btn" onclick={() => { i = last; }} disabled={i === last}>⏭</button>
-        <span class="pos-ind">{i + 1} / {frames.length}</span>
-      </div>
+      <ul class="nets">
+        {#each data.players as p (p.seat)}<li><span>{p.name || `Seat ${p.seat}`}</span><b class:pos={p.net > 0} class:neg={p.net < 0}>{p.net > 0 ? "+" : ""}{fmt(p.net)}</b></li>{/each}
+      </ul>
     </div>
   {/if}
 
-  <div class="panel outcome">
-    <div class="cap">Result</div>
-    {#each data.players as p (p.seat)}
-      <div class="row">
-        <span>{p.name || `Seat ${p.seat}`}{#if p.role === "banker"} <em class="muted">banker</em>{/if}</span>
-        <span class="net {p.net >= 0 ? 'pos' : 'neg'}"><Chip value={Math.abs(p.net)} size={14} /> {p.net >= 0 ? "+" : ""}{fmt(p.net)}</span>
+  <!-- the dock, as at a live table: the steps | the play bar | who played -->
+  {#if steps.length}
+    <div class="dock">
+      <div class="dock-steps card" bind:this={listEl} aria-label="Steps">
+        {#each steps as st, n (n)}
+          <button type="button" class="stp" class:on={n === player.i} class:done={n < player.i} onclick={() => player.jumpTo(n)}>
+            <span class="no">{n + 1}</span><span class="tx">{st.text}</span>
+          </button>
+        {/each}
       </div>
-    {/each}
-  </div>
+
+      <div class="dock-actions">
+        <ReplayBar {player} />
+      </div>
+
+      <div class="dock-side">
+        <ul class="nets">
+          {#each data.players as p (p.seat)}
+            <li>
+              <a href={p.userId ? `/u/${p.userId}` : undefined}>{p.name || `Seat ${p.seat}`}</a>{#if p.role === "banker"}<span class="muted small"> · house</span>{/if}
+              <b class:pos={p.net > 0} class:neg={p.net < 0}>{#if p.net}<Chip value={Math.abs(p.net)} size={13} />{/if}{p.net > 0 ? "+" : ""}{fmt(p.net)}</b>
+            </li>
+          {/each}
+        </ul>
+      </div>
+    </div>
+  {/if}
 </div>
 
 <style>
-  .wrap { max-width: 700px; margin: 0 auto; padding: 22px 18px 60px; }
-  .head { margin-bottom: 14px; }
-  h1 { margin: 0; font-size: 21px; text-transform: capitalize; }
-  .sub { color: var(--muted); font-size: 12.5px; }
-  .panel {
-    background: color-mix(in srgb, var(--surface) 88%, #000 12%);
-    border-radius: 18px; padding: 20px; margin-bottom: 14px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  /* the live table page's frame (routes/table/[id]), so the stage sits exactly as it does there */
+  .tablepage { position: relative; display: flex; flex-direction: column; height: 100vh; height: 100dvh; overflow: hidden; }
+  .hud { position: absolute; top: 0; left: 0; right: 0; z-index: 6; display: flex; align-items: center; gap: 12px; padding: 10px 14px; pointer-events: none; }
+  .hud > * { pointer-events: auto; }
+  .back { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 999px; background: var(--surface); color: var(--text); text-decoration: none; font-size: 22px; line-height: 1; box-shadow: var(--shadow-card); }
+  .gicon { display: block; flex: none; }
+  .title { display: flex; flex-direction: column; line-height: 1.15; }
+  .title b { font-family: var(--f-display); font-size: 17px; }
+  .stakes { color: var(--muted); font-size: 12px; }
+  .hud-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+  .sfx-btn { appearance: none; border: 0; background: var(--surface); color: var(--text); border-radius: 999px; width: 34px; height: 34px; cursor: pointer; font-size: 15px; box-shadow: var(--shadow-card); }
+  .sfx-btn.off { opacity: 0.55; }
+
+  .summary { flex: 1; display: grid; place-content: center; gap: 14px; padding: 80px 16px; text-align: center; }
+
+  .dock { flex: 0 0 auto; display: grid; grid-template-columns: minmax(240px, 1fr) minmax(360px, 2fr) minmax(240px, 1fr); gap: 12px; align-items: stretch; padding: 8px 14px 14px; height: 236px; }
+  .dock-steps { margin: 0; padding: 6px; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .stp { display: flex; gap: 8px; align-items: baseline; text-align: left; border: 0; background: transparent; color: var(--muted); font: inherit; font-size: 12.5px; padding: 5px 8px; border-radius: 8px; cursor: pointer; }
+  .stp:hover { background: var(--surface-2); color: var(--text); }
+  .stp.done { color: var(--text); }
+  .stp.on { background: var(--accent-soft); color: var(--text); font-weight: 700; }
+  .stp .no { min-width: 1.8em; font-variant-numeric: tabular-nums; opacity: 0.7; }
+  .stp .tx { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  .dock-actions { display: flex; align-items: center; justify-content: center; min-width: 0; }
+
+  .dock-side { display: flex; flex-direction: column; justify-content: center; min-width: 0; }
+  .nets { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: 13.5px; }
+  .nets li { display: flex; align-items: center; gap: 6px; }
+  .nets a { color: var(--text); text-decoration: none; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .nets b { margin-left: auto; display: inline-flex; align-items: center; gap: 4px; font-variant-numeric: tabular-nums; }
+  .pos { color: var(--ok); } .neg { color: var(--danger); }
+  .small { font-size: 12px; }
+
+  @media (max-width: 960px) {
+    .tablepage { height: auto; min-height: 100vh; overflow: visible; }
+    .dock { grid-template-columns: 1fr; height: auto; }
+    .dock-actions { order: -1; }
+    .dock-steps { max-height: 180px; }
   }
-  .board { display: flex; gap: 7px; justify-content: center; margin-bottom: 12px; }
-  .pot { display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 16px; }
-  .pot-amt { color: var(--gold-ink); font-weight: 800; font-variant-numeric: tabular-nums; }
-  .street { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
-  .seats { display: flex; gap: 18px; flex-wrap: wrap; justify-content: center; }
-  .seat { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 10px; border-radius: 12px; }
-  .seat.toact { background: color-mix(in srgb, var(--accent, #4f7cff) 14%, transparent); }
-  .seat.folded { opacity: 0.38; }
-  .seat .cards { display: flex; gap: 3px; }
-  .who { font-weight: 700; font-size: 12.5px; }
-  .stack { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
-  .bet { display: flex; align-items: center; gap: 5px; color: var(--gold-ink); font-weight: 700; font-size: 12px; font-variant-numeric: tabular-nums; }
-  .tag { font-size: 10px; font-weight: 800; color: #f0a35a; }
-  .headline { font-weight: 800; font-size: 15px; margin-bottom: 10px; text-align: center; }
-  .cardrow { display: flex; align-items: center; gap: 10px; margin: 6px 0; flex-wrap: wrap; }
-  .rl { color: var(--muted); font-size: 12px; min-width: 90px; text-transform: capitalize; }
-  .rc { display: flex; gap: 4px; flex-wrap: wrap; }
-  .ticker { margin-top: 16px; text-align: center; color: var(--text); font-size: 13.5px; min-height: 20px; }
-  .controls { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 12px; }
-  .btn {
-    background: color-mix(in srgb, var(--surface) 70%, #fff 6%); color: var(--text);
-    border: 0; border-radius: 10px; padding: 7px 13px; font-size: 14px; cursor: pointer;
-  }
-  .btn:disabled { opacity: 0.35; cursor: default; }
-  .btn.play { min-width: 74px; font-weight: 700; }
-  .pos-ind { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; margin-left: 6px; }
-  .cap { color: var(--muted); font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 8px; }
-  .row { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; font-size: 13.5px; }
-  .net { display: inline-flex; align-items: center; gap: 6px; font-weight: 800; font-variant-numeric: tabular-nums; }
-  .pos { color: var(--ok, #6ee7a8); }
-  .neg { color: var(--danger, #f37f8c); }
-  .muted { color: var(--muted); }
 </style>

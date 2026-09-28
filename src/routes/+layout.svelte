@@ -45,7 +45,8 @@
 
   let { data, children } = $props();
   // Table pages are the game: no site bar, no padding — the arena owns the viewport.
-  const onTable = $derived($page.url.pathname.startsWith("/table/"));
+  // a table — live, or a replay on the real table — takes the whole window: no site bar
+  const onTable = $derived($page.url.pathname.startsWith("/table/") || $page.url.pathname.startsWith("/replay/"));
 
   // Signed-in users keep a live socket app-wide so private messages (and presence)
   // arrive on any page, and the nav can badge unread DMs.

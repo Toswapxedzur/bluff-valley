@@ -130,6 +130,8 @@ export class GameTable extends LiveTable {
       startedAt: this._handStartedAt,
       config: this.gameConfig,
       bankerSeat: this.game.usesBanker ? this.bankerSeat : null,
+      // the live table's settings, so a replay seats everyone where they sat (replay-views.js)
+      table: { name: this.config.name, maxSeats: this.config.maxSeats, smallBlind: this.config.smallBlind, bigBlind: this.config.bigBlind, minBuyin: this.config.minBuyin, maxBuyin: this.config.maxBuyin },
       deck,
       players: roundSeats.map((r) => {
         const s = this.seats.get(r.seat);
