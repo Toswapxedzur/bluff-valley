@@ -12,6 +12,7 @@
     disabled = false,
     ariaLabel = null,
     valueText = null,          // (v) => string: what a screen reader says for a value
+    marks = null,              // [{ at, label }]: ticks on the track (a visit's games); the label is their tooltip
     oninput = () => {},
     onchange = () => {},
     class: klass = ""
@@ -73,6 +74,11 @@
   aria-valuetext={valueText ? valueText(value) : undefined} aria-disabled={disabled || undefined}
   onpointerdown={down} onpointermove={move} onpointerup={up} onpointercancel={up} onkeydown={key}>
   <div class="track"><div class="fill" style:width="{pct}%"></div></div>
+  {#if marks?.length && hi > lo}
+    {#each marks as m, n (n)}
+      <span class="mark" class:past={m.at <= value} style:left="{((Math.min(hi, Math.max(lo, m.at)) - lo) / (hi - lo)) * 100}%" title={m.label}></span>
+    {/each}
+  {/if}
   <div class="thumb" style:left="{pct}%"></div>
 </div>
 
@@ -81,7 +87,12 @@
   .sl { position: relative; width: 100%; height: 22px; cursor: pointer; touch-action: none; user-select: none; outline: none; }
   .track { position: absolute; left: 0; right: 0; top: 50%; height: 6px; margin-top: -3px; border-radius: 999px; background: var(--well); overflow: hidden; }
   .fill { height: 100%; background: var(--accent); border-radius: 999px; }
-  .thumb { position: absolute; top: 50%; width: 18px; height: 18px; margin: -9px 0 0 -9px; border-radius: 50%; background: var(--accent);
+  /* a marker: a short raised tick across the track, easy to hover (its label shows in our tooltip) */
+  .mark { position: absolute; top: 50%; width: 4px; height: 14px; margin: -7px 0 0 -2px; border-radius: 2px; background: var(--muted); opacity: 0.8;
+    transition: background-color var(--dur) var(--ease), transform var(--dur) var(--ease); }
+  .mark.past { background: var(--on-accent, #fff); opacity: 0.9; }
+  .mark:hover { transform: scaleY(1.3); }
+  .thumb { z-index: 1; position: absolute; top: 50%; width: 18px; height: 18px; margin: -9px 0 0 -9px; border-radius: 50%; background: var(--accent);
     box-shadow: var(--shadow-card); transition: transform var(--dur) var(--ease), box-shadow var(--dur) var(--ease); }
   .sl:hover .thumb { transform: scale(1.12); }
   .sl.dragging .thumb { transform: scale(1.18); box-shadow: 0 0 0 6px var(--accent-soft); }

@@ -7,6 +7,7 @@ import { query } from "./db.js";
 import { ACHIEVEMENTS } from "./achievements.js";
 import { ACHIEVEMENTS_ON } from "../config.js";
 import { identities } from "./profiles.js";
+import { FOLDED_REASONS } from "./visits.js";
 
 const NINETY_DAYS = 90 * 24 * 60 * 60 * 1000;
 const ACH = new Map(ACHIEVEMENTS.map((a) => [a.key, a]));
@@ -37,9 +38,12 @@ export async function recentActivity(userId, { limit = 200, filter = "all", sinc
   const nameIds = new Set();
 
   if (filter === "all" || filter === "money") {
+    // table buy-ins / cash-outs, Sprint bids / prizes and tournament entries / prizes live inside the
+    // table visits now (visits.js), not as lines of their own
     const ledger = await query(
-      "SELECT delta, reason, ref, created_at FROM chip_ledger WHERE user_id = ? AND created_at >= ? ORDER BY created_at DESC LIMIT ?",
-      [userId, since, limit]
+      `SELECT delta, reason, ref, created_at FROM chip_ledger WHERE user_id = ? AND created_at >= ?
+          AND reason NOT IN (${FOLDED_REASONS.map(() => "?").join(",")}) ORDER BY created_at DESC LIMIT ?`,
+      [userId, since, ...FOLDED_REASONS, limit]
     );
     for (const r of ledger) {
       const meta = MONEY[r.reason] || { label: r.reason, icon: "•" };

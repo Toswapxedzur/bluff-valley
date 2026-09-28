@@ -1,15 +1,17 @@
 <script>
-  import { goto } from "$app/navigation";
+  import { goto, pushState } from "$app/navigation";
+  import { page } from "$app/stores";
+  import VisitSheet from "./VisitSheet.svelte";
+  import { gameIcon, variantLabel, SPRINT_ICON } from "$lib/poker/games.js";
   import { slidingIndicator } from "$lib/actions/slider.js";
   import HistoryFeed from "$lib/poker/components/HistoryFeed.svelte";
-  import MatchList from "$lib/components/MatchList.svelte";
   import Chip from "$lib/poker/components/Chip.svelte";
   import { ACHIEVEMENTS_ON } from "$lib/config.js";
   let { data } = $props();
 
   const FILTERS = [
     { key: "all", label: "All" },
-    { key: "matches", label: "Matches" },   // replays, on the real table
+    { key: "visits", label: "Visits" },   // your table visits, each one replayed whole on the real table
     { key: "money", label: "Chips" },
     ...(ACHIEVEMENTS_ON ? [{ key: "achievements", label: "Achievements" }] : []),   // switched off for now
     { key: "friends", label: "Friends" },
@@ -26,6 +28,34 @@
     if (dt.toDateString() === now.toDateString()) return dt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
     if (diff < 7 * day) return dt.toLocaleDateString([], { weekday: "short" }) + " " + dt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
     return dt.toLocaleDateString([], { month: "short", day: "numeric" });
+  }
+
+  // History's entries (owner, 2026-09-28): your table visits, mixed into the timeline — each opens
+  // as a near-full-screen sheet replaying the whole visit (VisitSheet). The sheet lives in the URL
+  // (?visit=…, shallow routing), so Back closes it and a visit can be linked to.
+  const visitRow = (v) => ({
+    type: "visit", id: v.id, ts: v.endedAt, amount: v.net,
+    img: v.kind === "sprint" ? SPRINT_ICON : gameIcon(v.mode === "holdem" ? v.variant || "holdem" : v.mode),
+    label: v.tableName || variantLabel(v.mode),
+    sub: `${v.kind === "sprint" ? "River Sprint" : variantLabel(v.mode === "holdem" ? v.variant || "holdem" : v.mode)}${v.kind === "tournament" ? " · tournament" : ""} · ${v.hands} game${v.hands === 1 ? "" : "s"} · ${Math.max(1, Math.round((v.endedAt - v.startedAt) / 60000))} min`
+  });
+  const items = $derived.by(() => {
+    const vs = (data.visits || []).map(visitRow);
+    if (data.filter === "visits") return vs;
+    if (data.filter !== "all") return data.events;
+    return [...vs, ...data.events].sort((a, b) => b.ts - a.ts);
+  });
+  const openId = $derived($page.state?.visit ?? $page.url.searchParams.get("visit"));
+  function openVisit(id) {
+    const u = new URL($page.url);
+    u.searchParams.set("visit", id);
+    pushState(u.pathname + u.search, { visit: id });
+  }
+  function closeVisit() {
+    if ($page.state?.visit) { history.back(); return; }
+    const u = new URL($page.url);
+    u.searchParams.delete("visit");
+    goto(u.pathname + u.search, { replaceState: true, noScroll: true, keepFocus: true });
   }
 </script>
 
@@ -48,14 +78,16 @@
     <em>Full stats →</em>
   </a>
 
-  {#if data.filter === "matches"}
-    <MatchList matches={data.matches || []} empty="No recorded matches in the last 7 days yet. Play a hand and it shows up here to rewatch." />
-  {:else if data.events.length === 0}
-    <div class="empty card"><p class="muted">Nothing here yet — play some hands, claim your daily reward, or add a friend.</p></div>
+  {#if items.length === 0}
+    <div class="empty card"><p class="muted">{data.filter === "visits" ? "No table visits in the last 7 days yet. Sit at a table and your visit shows up here to rewatch." : "Nothing here yet — play some hands, claim your daily reward, or add a friend."}</p></div>
   {:else}
-    <HistoryFeed events={data.events} />
+    <HistoryFeed events={items} onVisit={openVisit} />
   {/if}
 </div>
+
+{#if openId}
+  {#key openId}<VisitSheet visitId={openId} onClose={closeVisit} />{/key}
+{/if}
 
 <style>
   .wrap { max-width: 720px; margin: 0 auto; }

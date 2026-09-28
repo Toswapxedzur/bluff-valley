@@ -81,6 +81,7 @@ export async function buildReplay(row, user) {
 
   return {
     id: row.id,
+    tableId: row.table_id ?? null,
     mode: row.mode,
     variant: row.variant,
     context: row.context,
