@@ -1,17 +1,16 @@
 <script>
-  import { onMount, onDestroy } from "svelte";
+  import { onMount, onDestroy, untrack } from "svelte";
   import { goto } from "$app/navigation";
   import { poker } from "$lib/poker/client.svelte.js";
   import { voice } from "$lib/poker/voice.svelte.js";
   import VoiceBar from "$lib/poker/components/VoiceBar.svelte";
   import { SITE_NAME } from "$lib/config.js";
-  import PokerTable from "$lib/poker/components/PokerTable.svelte";
+  import TableStage from "$lib/poker/components/TableStage.svelte";
+  import ReplayBar from "$lib/poker/components/ReplayBar.svelte";
+  import { ReplayPlayer } from "$lib/poker/replay-player.svelte.js";
   import ActionBar from "$lib/poker/components/ActionBar.svelte";
-  import BankedTable from "$lib/poker/components/BankedTable.svelte";
   import BankedActionBar from "$lib/poker/components/BankedActionBar.svelte";
-  import BetGameTable from "$lib/poker/components/BetGameTable.svelte";
   import BankedBetBar from "$lib/poker/components/BankedBetBar.svelte";
-  import ShedTable from "$lib/poker/components/ShedTable.svelte";
   import ShedBar from "$lib/poker/components/ShedBar.svelte";
   import BuyInModal from "$lib/poker/components/BuyInModal.svelte";
   import RebuyModal from "$lib/poker/components/RebuyModal.svelte";
@@ -23,15 +22,6 @@
   import { fade, fly } from "svelte/transition";
   import { d, DUR } from "$lib/motion.js";
   import { soundEnabled, setSoundEnabled } from "$lib/sfx.js";
-  import { tableSounds } from "$lib/poker/table-sounds.svelte.js";
-  import { tableMotion } from "$lib/poker/table-motion.svelte.js";
-  import DeckLayer from "$lib/poker/components/DeckLayer.svelte";
-  import MoneyLayer from "$lib/poker/components/MoneyLayer.svelte";
-  import ButtonGlide from "$lib/poker/components/ButtonGlide.svelte";
-  import CardLayer from "$lib/poker/components/CardLayer.svelte";
-  import MomentLayer from "$lib/poker/components/MomentLayer.svelte";
-  import { dev } from "$app/environment";
-  import { MOMENT_MS, allInMs } from "$lib/poker/moments.js";
 
   let { data } = $props();
   // Reactive: a River Sprint fold-teleport navigates /table/A -> /table/B on the
@@ -149,45 +139,32 @@
   function leaveWaitlist() { poker.leaveWaitlist(tableId); onWaitlist = false; }
   $effect(() => { if (isSeated) onWaitlist = false; });
 
-  // --- sound + motion (see table-sounds.svelte.js / table-motion.svelte.js) ---
+  // --- "Watch last hand" (owner, 2026-09-28): the table's previous hand replayed right here, on this
+  // table, with the play bar where the action bar sits; the live table carries on underneath and comes
+  // back ("Back to live", or by itself the moment it's my turn) ---
+  let watching = $state(null), watchBusy = $state(false);
+  async function watchLast() {
+    if (watchBusy) return;
+    watchBusy = true;
+    try {
+      const r = await fetch(`/api/replay/last?table=${encodeURIComponent(tableId)}`);
+      if (!r.ok) { poker.toast = { level: "info", text: "No finished hand to watch yet." }; return; }
+      const p = new ReplayPlayer(await r.json());
+      watching = p;
+      setTimeout(() => { if (watching === p && p.i === 0 && p.jump === 0) p.playing = true; }, 600);
+    } catch { poker.toast = { level: "error", text: "Couldn't load the last hand." }; }
+    finally { watchBusy = false; }
+  }
+  function backToLive() { watching?.stop(); watching = null; }
+  $effect(() => { if (watching) return watching.run(); });
+  $effect(() => { if (turn && watching) untrack(() => backToLive()); });   // my turn: the live table, now
+  $effect(() => { void tableId; return () => untrack(() => backToLive()); });
+  const watchMe = $derived(watching?.data?.viewerId ? { id: watching.data.viewerId } : null);
+
+  // --- sound toggle (the table's sounds and motion live in TableStage) ---
   let sfxOn = $state(true);
   onMount(() => { sfxOn = soundEnabled(); });
   function toggleSfx() { sfxOn = !sfxOn; setSoundEnabled(sfxOn); }
-  tableSounds({
-    get view() { return view; }, get me() { return me; },
-    get dealer() { return motion.dealer; }, get bank() { return motion.bank; }, get cards() { return motion.cards; },
-    get deadline() { return turn?.deadline ?? null; }
-  });
-  const motion = tableMotion({
-    get view() { return view; }, get mySeatNo() { return mySeat?.seat ?? null; }, get privates() { return privates; }
-  });
-  const dealer = $derived(motion.dealer);
-  // DEV ONLY: ?moment=monsterPot|rare|royal|roulette|sic-bo|slots|bigTwo plays a sample moment with this
-  // table's players (moments are rare in real play; this is how they get checked). Compiled out of builds.
-  let devMomentDone = false;
-  $effect(() => {
-    if (!dev || !view || devMomentDone) return;
-    const k = new URLSearchParams(location.search).get("moment");
-    const seats = (view.seats || []).filter((s) => s.userId != null);
-    if (!k || !seats.length) return;
-    devMomentDone = true;
-    const a = seats[0].seat, others = seats.slice(1).map((s, i) => ({ seat: s.seat, cards: 2 + i * 3, pays: 100 * (2 + i * 3) }));
-    const sample = {
-      monsterPot: { kind: "monsterPot", seat: a, amount: 18640, won: 18640, bb: 93 },
-      allIn: seats[1] ? { kind: "allIn", from: 0, board: ["Kd", "7c", "2h", "5s", "Qc"], stages: [{ board: 0, pct: { [a]: 46, [seats[1].seat]: 54 } }, { board: 3, pct: { [a]: 92, [seats[1].seat]: 8 } }, { board: 4, pct: { [a]: 95, [seats[1].seat]: 5 } }, { board: 5, pct: { [a]: 0, [seats[1].seat]: 100 } }],
-        players: [{ seat: a, cards: ["Ah", "Kh"], best: null, won: false }, { seat: seats[1].seat, cards: ["Qs", "Qd"], best: ["Qs", "Qd", "Qc", "Kd", "7c"], handName: "Three of a Kind", won: true }] } : null,
-      rare: { kind: "rare", seat: a, cards: ["9s", "9h", "9d", "9c", "Kh"], name: "Four of a Kind", royal: false, game: "holdem" },
-      royal: { kind: "rare", seat: a, cards: ["Ts", "Js", "Qs", "Ks", "As"], name: "Royal Flush", royal: true, game: "holdem" },
-      roulette: { kind: "jackpot", seat: a, game: "roulette", outcome: { pocket: 17 }, mult: 35, bet: 200, payout: 7000 },
-      "sic-bo": { kind: "jackpot", seat: a, game: "sic-bo", outcome: { dice: [5, 5, 5] }, mult: 30, bet: 200, payout: 6000 },
-      slots: { kind: "jackpot", seat: a, game: "slots", outcome: { reels: ["diamond", "diamond", "diamond"] }, mult: 100, bet: 200, payout: 20000 },
-      bigTwo: { kind: "bigTwo", seat: a, pile: ["8s", "8h", "8d", "Kc", "Kh"], pot: others.reduce((x, o) => x + o.pays, 0), others }
-    }[k];
-    if (!sample) return;
-    const ms = k === "royal" ? MOMENT_MS.royal : k === "allIn" ? allInMs(0) : MOMENT_MS[sample.kind];
-    setTimeout(() => { motion.moment = { ...sample, ms, id: "dev" }; setTimeout(() => { motion.moment = null; }, ms + 60); }, 800);
-  });
-  const bank = $derived(motion.bank);
 
   // --- transient toast ---
   let toastMsg = $state(null);
@@ -238,14 +215,15 @@
 <svelte:head><title>{data.table.name} — {SITE_NAME}</title></svelte:head>
 
 <div class="tablepage">
-  {#if bank}<MoneyLayer {bank} />{/if}
-  {#if view && layout === "poker"}<ButtonGlide {view} />{/if}
-  <!-- the shuffle is a moment: the table blurs behind the deck while it plays (Hold'em's DeckLayer, or
-       the other card games' CardLayer — both sit above this veil) -->
-  {#if dealer?.shuffling || motion.cardShuffling}<div class="shuffle-veil" aria-hidden="true" transition:fade={{ duration: d(DUR.base) }}></div>{/if}
-  {#if motion.cards}<CardLayer motion={motion.cards} onShuffling={(on) => (motion.cardShuffling = on)} />{/if}
-  {#if motion.moment}{#key motion.moment.id}<MomentLayer moment={motion.moment} {view} />{/key}{/if}
-  {#if dealer}<DeckLayer {dealer} />{/if}
+  <!-- the table itself (seats, cards, coins, moments, sounds): shared with the replay page -->
+  {#key watching ? `w${watching.jump}` : "live"}
+    {#if watching}
+      <TableStage view={watching.view} me={watchMe} privates={watching.privates} watchOnly onMotion={(m) => (watching.motion = m)} />
+    {:else}
+      <TableStage {view} {me} {privates} deadline={turn?.deadline ?? null} {pick} onSit={openBuyIn}
+        loadingText={poker.connected ? "Loading table…" : "Connecting…"} />
+    {/if}
+  {/key}
   <!-- slim overlay strip: no site bar on a table -->
   <div class="hud">
     <a href="/" class="back" aria-label="Back to lobby" title="Lobby">‹</a>
@@ -261,6 +239,7 @@
       </span>
     </div>
     {#if !me}<span class="signin">Watching — <a href="/account/login">Sign in to play</a></span>{/if}
+    {#if watching}<span class="replaying" role="status">Replaying the last hand{watching.data.handNo ? ` (#${watching.data.handNo})` : ""}</span>{/if}
     <div class="hud-right">
       {#if me}<a class="wallet" href="/account" title="Your chips"><Chip value={walletChips} size={14} /><Num value={walletChips} /></a>{/if}
       <button type="button" class="sfx-btn" class:off={!sfxOn} onclick={toggleSfx} title={sfxOn ? "Mute table sounds" : "Unmute table sounds"} aria-pressed={sfxOn}>{sfxOn ? "🔊" : "🔇"}</button>
@@ -287,23 +266,6 @@
     </section>
   {/if}
 
-  <!-- the arena: seats around the ring, my seat + big cards at the bottom -->
-  <div class="arena-wrap">
-    {#if view}
-      {#if shedGame}
-        <ShedTable {view} {me} hand={privates?.holeCards || []} onSit={openBuyIn} {pick} />
-      {:else if betGame}
-        <BetGameTable {view} {me} onSit={openBuyIn} />
-      {:else if banked}
-        <BankedTable {view} {me} onSit={openBuyIn} />
-      {:else}
-        <PokerTable {view} {me} {privates} onSit={openBuyIn} {dealer} />
-      {/if}
-    {:else}
-      <div class="loading"><p class="muted">{poker.connected ? "Loading table…" : "Connecting…"}</p></div>
-    {/if}
-  </div>
-
   <!-- the dock: chat | my actions | seat controls -->
   <div class="dock">
     <div class="dock-chat">
@@ -311,7 +273,11 @@
     </div>
 
     <div class="dock-actions">
-      {#if view && turn}
+      {#if watching}
+        <ReplayBar player={watching}>
+          {#snippet extra()}<button type="button" class="btn live-btn" onclick={backToLive}>Back to live</button>{/snippet}
+        </ReplayBar>
+      {:else if view && turn}
         {#if shedGame}
           <ShedBar {turn} selected={picked} onAct={(a) => poker.act(tableId, a)} />
         {:else if betGame}
@@ -329,6 +295,9 @@
     </div>
 
     <div class="dock-side">
+      {#if view && !watching && !turn}
+        <button type="button" class="btn btn-secondary watch-btn" onclick={watchLast} disabled={watchBusy}>{watchBusy ? "Loading…" : "Watch last hand"}</button>
+      {/if}
       {#if isSeated}
         <div class="seat-controls">
           <button class="btn" onclick={stand}>Stand</button>
@@ -377,7 +346,6 @@
 <style>
   .tablepage { position: relative; display: flex; flex-direction: column; height: 100vh; height: 100dvh; overflow: hidden; }
 
-  .shuffle-veil { position: absolute; inset: 0; z-index: 5; pointer-events: none; background: rgba(6, 10, 22, 0.35); backdrop-filter: blur(7px) saturate(.85); -webkit-backdrop-filter: blur(7px) saturate(.85); }
   .hud { position: absolute; top: 0; left: 0; right: 0; z-index: 6; display: flex; align-items: center; gap: 12px; padding: 10px 14px; pointer-events: none; }
   .hud > * { pointer-events: auto; }
   .back { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 999px; background: var(--surface); color: var(--text); text-decoration: none; font-size: 22px; line-height: 1; box-shadow: var(--shadow-card); }
@@ -386,6 +354,9 @@
   .title b { font-family: var(--f-display); font-size: 17px; }
   .stakes { color: var(--muted); font-size: 12px; }
   .signin { color: var(--muted); font-size: 13px; }
+  .replaying { font-size: 12.5px; font-weight: 700; padding: 5px 12px; border-radius: var(--r-pill); background: var(--accent-soft); color: var(--text); }
+  .live-btn { margin-left: 4px; }
+  .watch-btn { font-size: 12.5px; }
   .signin a { color: var(--hero); }
   .hud-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
   .wallet { display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px 5px 8px; border-radius: 999px; background: var(--surface); color: var(--gold-ink); font-weight: 800; font-size: 13px; text-decoration: none; box-shadow: var(--shadow-card); font-variant-numeric: tabular-nums; }
@@ -399,8 +370,6 @@
   .tny-badge { font-weight: 700; padding: 2px 10px; border-radius: var(--r-pill); background: var(--accent); color: var(--on-accent); }
   .tny-place { font-weight: 700; color: var(--ok); }
 
-  .arena-wrap { flex: 1; min-height: 0; position: relative; padding: 48px 8px 0; }
-  .loading { height: 100%; display: grid; place-items: center; }
 
   .dock { flex: 0 0 auto; display: grid; grid-template-columns: minmax(240px, 1fr) minmax(360px, 2fr) minmax(240px, 1fr); gap: 12px; align-items: stretch; padding: 8px 14px 14px; height: 236px; }
   .dock-chat { min-width: 0; display: flex; flex-direction: column; }
@@ -417,7 +386,6 @@
 
   @media (max-width: 960px) {
     .tablepage { height: auto; min-height: 100vh; overflow: visible; }
-    .arena-wrap { flex: none; height: 72vh; padding-top: 88px; }   /* the title wraps on phones */
     .dock { grid-template-columns: 1fr; height: auto; }
     .dock-actions { order: -1; }   /* phones: your actions right under the table, the chat below them */
     .dock-chat :global(.chat .messages) { max-height: 180px; }

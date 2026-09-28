@@ -9,7 +9,7 @@
   // Banked card games (Blackjack, Three Card Poker):
   // the House badge + its cards at the top, an optional community row in the
   // middle, every player on the ring with their hand fanned under their badge.
-  let { view, me, onSit = () => {} } = $props();
+  let { view, me, onSit = () => {} , watchOnly = false } = $props();   // watchOnly: a replay — no sitting
 
   const round = $derived(view?.round || null);
   const dealer = $derived(round?.dealer || null);
@@ -58,7 +58,7 @@
       cards={hand?.cards?.length ? hand.cards : null}
       lost={!!(hand?.bust || hand?.folded)}
       line={ln?.text ?? (s?.sittingOut ? "sitting out" : "")} lineKind={ln?.kind ?? "muted"}
-      canSit={!!me && !t.iAmSeated && !s}
+      canSit={!watchOnly && !!me && !t.iAmSeated && !s} {watchOnly}
       deadline={round?.toActSeat === seatNo ? view?.actionDeadline ?? null : null}
       winner={outcomeOf(results, seatNo)?.delta > 0}
       {onSit}

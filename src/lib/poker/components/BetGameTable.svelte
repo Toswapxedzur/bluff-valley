@@ -13,7 +13,7 @@
   // Bet-selection games (Baccarat, Roulette, Sic Bo, Slots): the
   // round outcome (headline + any labelled card hands) sits in the middle, the
   // House on top, each player's bets + result in their badge line.
-  let { view, me, onSit = () => {} } = $props();
+  let { view, me, onSit = () => {} , watchOnly = false } = $props();   // watchOnly: a replay — no sitting
 
   const round = $derived(view?.round || {});
   const outcome = $derived(round.outcome || null);
@@ -70,7 +70,7 @@
     <SeatBadge cardWidth={t.cardW}
       seat={s ? { ...s, isToAct: round.toActSeat === seatNo } : null} {seatNo} {me} isMine={!!s && s.userId === me?.id}
       line={ln?.text ?? ""} lineKind={ln?.kind ?? "muted"}
-      canSit={!!me && !t.iAmSeated && !s}
+      canSit={!watchOnly && !!me && !t.iAmSeated && !s} {watchOnly}
       deadline={round.toActSeat === seatNo ? view?.actionDeadline ?? null : null}
       winner={outcomeOf(results, seatNo)?.delta > 0}
       {onSit}
