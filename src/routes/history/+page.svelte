@@ -1,7 +1,7 @@
 <script>
   import { goto, pushState } from "$app/navigation";
   import { page } from "$app/stores";
-  import VisitSheet from "./VisitSheet.svelte";
+  import VisitSheet from "$lib/poker/components/VisitSheet.svelte";
   import { gameIcon, variantLabel, SPRINT_ICON } from "$lib/poker/games.js";
   import { slidingIndicator } from "$lib/actions/slider.js";
   import HistoryFeed from "$lib/poker/components/HistoryFeed.svelte";

@@ -1,5 +1,5 @@
 <script>
-  // One table visit, opened from History (owner, 2026-09-28): a sheet over the page that fills the
+  // One table visit, opened from the Data page's History or /history (owner, 2026-09-28): a sheet over the page that fills the
   // window except a small margin, with the REAL table replaying the whole visit — game after game —
   // and one play bar whose slider has a marker at every game (VisitPlayer). Esc, ✕ or a click on
   // the margin closes it (the page puts it in the URL, so Back closes it too).
@@ -13,7 +13,8 @@
   import { soundEnabled, setSoundEnabled } from "$lib/sfx.js";
   import { portal } from "$lib/actions/portal.js";
 
-  let { visitId, onClose = () => {} } = $props();
+  // player: whose visit (default me); another player's plays as a watcher saw it, within what they share
+  let { visitId, player: owner = null, onClose = () => {} } = $props();
 
   let player = $state(null), visit = $state(null), error = $state(null);
   let sfxOn = $state(true);
@@ -26,7 +27,7 @@
     closeBtn?.focus({ preventScroll: true });
     (async () => {
       try {
-        const r = await fetch(`/api/history/visit?id=${encodeURIComponent(visitId)}`);
+        const r = await fetch(`/api/history/visit?id=${encodeURIComponent(visitId)}${owner ? `&player=${encodeURIComponent(owner)}` : ""}`);
         if (!r.ok) { error = r.status === 404 ? "This visit isn't in your history any more." : "Couldn't open this visit."; return; }
         visit = await r.json();
         const p = new VisitPlayer(visit);
@@ -60,7 +61,7 @@
 <!-- moved to <body> (use:portal), so it stacks over the site bar, not under it -->
 <div class="visit-layer" use:portal>
 <button type="button" class="scrim" aria-label="Close" tabindex="-1" onclick={onClose}></button>
-<div class="sheet" role="dialog" aria-modal="true" aria-label={visit ? `Your visit to ${visit.tableName}` : "Your visit"}>
+<div class="sheet" role="dialog" aria-modal="true" aria-label={visit ? `Visit to ${visit.tableName}` : "Visit"}>
   <div class="stagebox">
     {#if player}
       {#key player.jump}
