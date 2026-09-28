@@ -1,4 +1,5 @@
 <script>
+  import Slider from "$lib/components/Slider.svelte";
   // New-table modal. Emits a cfg object matching `table.create`:
   //   poker:     { name?, variant, smallBlind, bigBlind, maxSeats, minBuyin, maxBuyin, buyin }
   //   blackjack: { name?, variant:"blackjack", beBanker, smallBlind(=minBet), maxSeats,
@@ -241,15 +242,7 @@
       {isBanked && beBanker ? "Bankroll" : "Buy-in"}
       {#if canAfford}
         <div class="amount">{buyin.toLocaleString()}</div>
-        <input
-          class="rng"
-          type="range"
-          style="--fill:{((buyin - rangeMin) / Math.max(1, Math.max(rangeMin, buyinCeil) - rangeMin)) * 100}%"
-          min={rangeMin}
-          max={Math.max(rangeMin, buyinCeil)}
-          step="1"
-          bind:value={buyin}
-        />
+        <Slider min={rangeMin} max={Math.max(rangeMin, buyinCeil)} step={1} bind:value={buyin} ariaLabel="Buy-in" />
         <div class="bounds">
           <span class="muted">min {rangeMin.toLocaleString()}</span>
           <span class="muted">max {buyinCeil.toLocaleString()}</span>

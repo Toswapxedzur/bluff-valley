@@ -1,4 +1,5 @@
 <script>
+  import Slider from "$lib/components/Slider.svelte";
   import { fly } from "svelte/transition";
   import { d, DUR } from "$lib/motion.js";
   // Generic action bar for any banked card game (Blackjack, Three Card Poker). The
@@ -36,15 +37,7 @@
   {#if wager}
     <div class="bet-row">
       <span class="lbl">{wager.type === "ante" ? "Ante" : "Your bet"}</span>
-      <input
-        class="rng wager-range"
-        type="range"
-        style="--fill:{((amt - wager.min) / Math.max(1, wager.max - wager.min)) * 100}%"
-        min={wager.min}
-        max={wager.max}
-        step="1"
-        bind:value={amt}
-      />
+      <div class="wager-range"><Slider min={wager.min} max={wager.max} step={1} bind:value={amt} ariaLabel={wager.type === "ante" ? "Ante" : "Your bet"} /></div>
       <span class="amt">{amt.toLocaleString()}</span>
       <button class="btn primary" onclick={() => onAct({ type: wager.type, amount: amt })}>
         {wager.type === "ante" ? "Ante" : "Bet"}

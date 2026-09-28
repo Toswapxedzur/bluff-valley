@@ -1,4 +1,5 @@
 <script>
+  import Slider from "$lib/components/Slider.svelte";
   // The banner editor (owner, 2026-09-27): upload a picture, crop it to the seat plate,
   // pick the text colour and an optional wash, and see the real seat plate update as you go. The
   // picture keeps its own brightness: only the player's wash, exactly as set (owner, 2026-09-27).
@@ -201,7 +202,7 @@
           </div>
           <div class="zoom">
             <span class="muted small">Zoom</span>
-            <input type="range" min="1" max={MAX_ZOOM} step="0.01" bind:value={s.z} aria-label="Zoom" />
+            <div class="sl-wrap"><Slider min={1} max={MAX_ZOOM} step={0.01} bind:value={s.z} ariaLabel="Zoom" /></div>
             <button type="button" class="link small" onclick={() => { s.x = 0.5; s.y = 0.5; s.z = 1; }}>Reset crop</button>
           </div>
         </div>
@@ -219,7 +220,7 @@
         <div class="row col">
           <span class="lbl">Wash <span class="muted small">— optional: fades the picture behind the text</span></span>
           <div class="zoom">
-            <input type="range" min="0" max={MAX_WASH} step="0.05" bind:value={s.wash} aria-label="Wash" />
+            <div class="sl-wrap"><Slider min={0} max={MAX_WASH} step={0.05} bind:value={s.wash} ariaLabel="Wash" valueText={(v) => `${Math.round(v * 100)}%`} /></div>
             <span class="val">{pct(s.wash)}</span>
           </div>
         </div>
@@ -263,7 +264,7 @@
   .frame:focus-visible { box-shadow: 0 0 0 2px var(--accent); }
   .frame:active { cursor: grabbing; }
   .zoom { display: flex; align-items: center; gap: 10px; }
-  .zoom input { flex: 1; accent-color: var(--accent); }
+  .zoom .sl-wrap { flex: 1; min-width: 0; }
   .val { font-variant-numeric: tabular-nums; font-weight: 700; font-size: 13px; min-width: 3.2em; text-align: right; }
   .link { border: 0; background: none; color: var(--accent-ink); font: inherit; font-weight: 600; cursor: pointer; padding: 0; }
 

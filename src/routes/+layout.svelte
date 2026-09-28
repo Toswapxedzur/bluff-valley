@@ -7,6 +7,7 @@
   import { SITE_NAME } from "$lib/config.js";
   import { poker } from "$lib/poker/client.svelte.js";
   import { initSfx, installUiSounds, play } from "$lib/sfx.js";
+  import { installTooltips } from "$lib/tooltips.js";
   import { slidingIndicator } from "$lib/actions/slider.js";
   import { reducedMotion, d, DUR } from "$lib/motion.js";
   import Chip from "$lib/poker/components/Chip.svelte";
@@ -78,6 +79,9 @@
   let menuOpen = $state(false);
 
   afterNavigate(({ from }) => { if (from) play("nav"); });
+  // our own tooltips for every `title` on the site — never the browser's (tooltips.js)
+  onMount(() => installTooltips());
+
   onMount(() => {
     initSfx();
     installUiSounds();
