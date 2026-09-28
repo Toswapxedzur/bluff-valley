@@ -334,7 +334,10 @@ label.field {
   font-size: 12.5px;
   color: var(--muted);
 }
-input[type=email], input[type=password], input[type=text], input[type=number], textarea, input[type=file], select {
+/* every text-like field — including one that never says its type (it's text by default): no native look
+   anywhere (owner, 2026-09-28) */
+input:not([type]), input[type=text], input[type=search], input[type=email], input[type=password], input[type=url],
+input[type=tel], input[type=number], textarea, input[type=file], select {
   background: var(--well);
   border: 0;
   color: var(--text);
