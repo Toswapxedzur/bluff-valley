@@ -13,7 +13,7 @@
 export class MatchRecorder {
   // meta: { mode, variant?, context, tableId, tableName, handNo, startedAt,
   //         config, players:[{seat,userId,name,stack}], buttonSeat?,
-  //         bankerSeat?, deck }
+  //         bankerSeat?, table?, deck }   table = the live table's settings (name, maxSeats, blinds, buy-ins)
   constructor(meta, now = () => Date.now()) {
     this.meta = meta;
     this.now = now;
@@ -41,6 +41,7 @@ export class MatchRecorder {
       players: m.players,
       buttonSeat: m.buttonSeat ?? null,
       bankerSeat: m.bankerSeat ?? null,
+      table: m.table ?? null,
       deck: m.deck,
       actions: this.actions,
       final

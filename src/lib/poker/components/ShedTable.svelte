@@ -8,7 +8,7 @@
   // Big Two: the pile / last play in the middle,
   // opponents' hands as fanned backs with a count, my whole hand fanned big under
   // my badge (tappable via `pick`). No dealer, no board.
-  let { view, me, hand = [], onSit = () => {}, pick = null } = $props();
+  let { view, me, hand = [], onSit = () => {}, pick = null , watchOnly = false } = $props();   // watchOnly: a replay — no sitting
 
   const bankCtx = getContext("bank");
   let bank = $derived(bankCtx?.current ?? null);
@@ -48,7 +48,7 @@
       cards={mine && hand.length ? hand : null}
       cardCount={!mine && pl ? Math.min(pl.cardCount, 13) : 0}
       line={ln?.text ?? ""} lineKind={ln?.kind ?? "muted"}
-      canSit={!!me && !t.iAmSeated && !s}
+      canSit={!watchOnly && !!me && !t.iAmSeated && !s} {watchOnly}
       deadline={round.toActSeat === seatNo ? view?.actionDeadline ?? null : null}
       winner={winner === seatNo}
       selectable={mine ? pick : null} onSelect={pick?.onSelect} labelOf={pick?.labelOf}

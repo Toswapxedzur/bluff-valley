@@ -8,7 +8,7 @@
   // middle. The coins move on the MoneyLayer and the cards on the DeckLayer (the page draws those).
   //  dealer = the table's Dealer: cards arrive from the deck on its canvas, so the DOM hands / board
   //  stay hidden until they land, and my cards flip after landing.
-  let { view = null, me = null, privates = null, onSit = () => {}, dealer = null } = $props();
+  let { view = null, me = null, privates = null, onSit = () => {}, dealer = null, watchOnly = false } = $props();   // watchOnly: a replay — no sitting
 
   const t = $derived(tableSeats(view, me, 0));
   const HOLE_CARDS = 2;
@@ -44,7 +44,7 @@
         cardCount={s && !cards && s.hasCards ? HOLE_CARDS : 0}
         hideCards={dealer ? dealer.seatHidden(seatNo) : false}
         reveal={mine && dealer ? dealer.ownRevealed : true}
-        canSit={!!me && !t.iAmSeated && (!s || s.userId == null)}
+        canSit={!watchOnly && !!me && !t.iAmSeated && (!s || s.userId == null)} {watchOnly}
         deadline={s?.isToAct ? view?.actionDeadline ?? null : null}
         winner={winnerSet.has(seatNo)} won={wonByNo.get(seatNo) ?? 0}
         {onSit}
