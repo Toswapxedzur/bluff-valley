@@ -1,9 +1,11 @@
 <script>
   // Data hub: search any player, browse your in-game history, and look at
   // another player's in-game history (within what they expose).
-  import { goto } from "$app/navigation";
+  import { goto, pushState } from "$app/navigation";
+  import { page } from "$app/stores";
+  import VisitList from "$lib/components/VisitList.svelte";
+  import VisitSheet from "$lib/poker/components/VisitSheet.svelte";
   import Avatar from "$lib/poker/components/Avatar.svelte";
-  import MatchList from "$lib/components/MatchList.svelte";
   import Leaderboard from "$lib/components/Leaderboard.svelte";
 
   let { data } = $props();
@@ -27,6 +29,23 @@
     searching = false;
   }
   function open(id) { results = []; q = ""; goto(`/data?u=${encodeURIComponent(id)}`); }
+
+  // A visit opens as a near-full-screen sheet replaying the whole visit (owner, 2026-09-28/29). It lives
+  // in the URL (?visit=…&vp=<player>, shallow routing), so Back closes it and it can be linked.
+  const openVisit = $derived($page.state?.visit ?? $page.url.searchParams.get("visit"));
+  const openFor = $derived($page.state?.vp ?? $page.url.searchParams.get("vp"));
+  function showVisit(id, playerId = null) {
+    const u = new URL($page.url);
+    u.searchParams.set("visit", id);
+    if (playerId) u.searchParams.set("vp", playerId); else u.searchParams.delete("vp");
+    pushState(u.pathname + u.search, { visit: id, vp: playerId });
+  }
+  function closeVisit() {
+    if ($page.state?.visit) { history.back(); return; }
+    const u = new URL($page.url);
+    u.searchParams.delete("visit"); u.searchParams.delete("vp");
+    goto(u.pathname + u.search, { replaceState: true, noScroll: true, keepFocus: true });
+  }
 </script>
 
 <svelte:head><title>{data.view === "ranks" ? "Ranks" : "Data"} — Bluff Valley</title></svelte:head>
@@ -88,23 +107,27 @@
           <p class="muted small">This player keeps their play history private.</p>
         {:else}
           <div class="cap">In-game history</div>
-          <MatchList matches={data.player.matches} empty="No matches in the visible window." />
+          <VisitList visits={data.player.visits || []} empty="No table visits in the visible window." onOpen={(id) => showVisit(id, data.player.id)} />
         {/if}
       {/if}
     </section>
   {/if}
 
-  {#if data.myMatches}
+  {#if data.myVisits}
     <section class="card mine">
       <div class="sec-head">
         <h2>Your history</h2>
         <a class="muted small" href="/stats">Full statistics →</a>
       </div>
-      <MatchList matches={data.myMatches} empty="You haven't played a recorded match in this window yet." />
+      <VisitList visits={data.myVisits} empty="You haven't sat at a table in this window yet. Play a hand and your visit shows up here to rewatch." onOpen={(id) => showVisit(id)} />
     </section>
   {/if}
   {/if}
 </div>
+
+{#if openVisit}
+  {#key openVisit}<VisitSheet visitId={openVisit} player={openFor} onClose={closeVisit} />{/key}
+{/if}
 
 <style>
   .wrap { max-width: 760px; margin: 0 auto; }

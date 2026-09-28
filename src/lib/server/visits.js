@@ -9,6 +9,8 @@
 // Table buy-ins / cash-outs, Sprint bids / prizes and tournament entries / prizes are folded into the
 // visit, so the feed doesn't list them separately (activity.js skips FOLDED_REASONS).
 import { query } from "./db.js";
+import { historySinceFor, windowStartForUser } from "./replay-access.js";
+import { getProfile } from "./profiles.js";
 
 export const VISIT_GAP_MS = 30 * 60 * 1000;
 export const FOLDED_REASONS = ["table_buyin", "table_cashout", "sprint_bid", "sprint_prize", "tourney_entry", "tourney_prize"];
@@ -71,6 +73,18 @@ export async function visitsFor(userId, { sinceMs = 0, limit = 3000 } = {}) {
     [userId, Math.max(0, sinceMs - 6 * 60 * 60 * 1000)]
   );
   return groupVisits(hands, ledger);
+}
+
+/** How far back `viewer` may see `targetId`'s play history (ms), or null when they may not (the /data
+ *  rule): yourself or the owner → the 7-day horizon (none for the owner); anyone else → the player's
+ *  own exposure window, never past the horizon, and never a restricted profile. */
+export async function historySinceForTarget(viewer, targetId, now = Date.now()) {
+  const horizon = historySinceFor(viewer, now);
+  if (viewer && (viewer.isAdmin || viewer.id === targetId)) return horizon;
+  const profile = await getProfile(targetId, viewer?.id ?? null).catch(() => null);
+  if (!profile || profile.restricted) return null;
+  const exposed = await windowStartForUser(targetId, now);
+  return exposed === null ? null : Math.max(exposed, horizon);
 }
 
 /** The list's summary of a visit (no per-game detail). */

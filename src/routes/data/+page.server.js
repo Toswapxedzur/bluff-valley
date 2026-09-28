@@ -1,9 +1,10 @@
-// /data — Bluff Valley's own data hub: your in-game history, another player's
+// /data — Bluff Valley's own data hub: your in-game history (as TABLE VISITS — owner 2026-09-29:
+// each opens as a near-full-screen sheet replaying the whole visit; visits.js), another player's
 // in-game history (within what they expose and the 7-day horizon), and
 // player search (client-side via /api/friends/find). Replaces the old
 // casino.org upload tool, which now lives hidden at /casino-data.
-import { recentReplaysForUser } from "$lib/server/poker/store.js";
-import { historySinceFor, windowStartForUser } from "$lib/server/replay-access.js";
+import { historySinceFor } from "$lib/server/replay-access.js";
+import { visitsFor, visitSummary, historySinceForTarget } from "$lib/server/visits.js";
 import { getProfile } from "$lib/server/profiles.js";
 import { getLeaderboard } from "$lib/server/leaderboards.js";
 
@@ -23,28 +24,24 @@ export async function load({ locals, url }) {
     ranks = { rows, metric, timeframe, scope };
   }
 
-  const myMatches = me ? await recentReplaysForUser(me.id, { sinceMs: horizon, limit: 100 }) : null;
+  const myVisits = me ? (await visitsFor(me.id, { sinceMs: horizon })).map(visitSummary) : null;
 
   let player = null;
   const target = String(url.searchParams.get("u") || "").trim();
   if (target) {
     const profile = await getProfile(target, me?.id ?? null).catch(() => null);
     if (profile) {
-      const exposed = await windowStartForUser(target); // null = private
-      const isSelf = me?.id === target;
-      // The owner sees everything; everyone else needs the player's exposure
-      // window AND stays inside the 7-day horizon.
-      let since = null;
-      if (me?.isAdmin || isSelf) since = horizon;
-      else if (exposed !== null && !profile.restricted) since = Math.max(exposed, horizon);
-      const matches = since === null ? null : await recentReplaysForUser(target, { sinceMs: since, limit: 100 });
+      // The owner sees everything; everyone else needs the player's exposure window AND stays inside
+      // the 7-day horizon (one rule, shared with the visit sheet's API: visits.js)
+      const since = await historySinceForTarget(me, target);
+      const visits = since === null ? null : (await visitsFor(target, { sinceMs: since })).map(visitSummary);
       player = {
         id: target,
         name: profile.name || profile.displayName || "Player",
         avatarMediaId: profile.avatarMediaId ?? null,
         restricted: !!profile.restricted,
         privateHistory: since === null,
-        matches
+        visits
       };
     } else {
       player = { id: target, missing: true };
@@ -57,7 +54,7 @@ export async function load({ locals, url }) {
     signedIn: !!me,
     isOwner: !!me?.isAdmin,
     horizonDays: me?.isAdmin ? null : 7,
-    myMatches,
+    myVisits,
     player
   };
 }
