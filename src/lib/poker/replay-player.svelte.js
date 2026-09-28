@@ -62,7 +62,7 @@ export class ReplayPlayer {
 
   /** Keyboard: ← → space Home End. Returns true when it used the key. */
   key(e) {
-    if (e.target?.closest?.("input, textarea, select, [contenteditable]")) return false;
+    if (e.target?.closest?.("input, textarea, select, [contenteditable], [role=slider]")) return false;
     if (e.key === "ArrowRight") this.step();
     else if (e.key === "ArrowLeft") this.back();
     else if (e.key === " ") this.toggle();

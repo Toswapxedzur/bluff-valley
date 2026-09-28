@@ -1,4 +1,5 @@
 <script>
+  import Slider from "$lib/components/Slider.svelte";
   import { onMount, tick } from "svelte";
   import { renderCard, renderEmpty } from "$lib/poker/composer.js";
   import { coinSvg } from "$lib/poker/chips.js";
@@ -22,6 +23,10 @@
   // value (otherwise we'd race the render and `panelEl` would be undefined).
   let panelEl = $state(null);
   let stepsLen = $state(0);
+  // the scrubber (our own Slider — no native range, owner 2026-09-28): its bounds + position, and the
+  // handler the panel wires up once a round is loaded
+  let scrubMax = $state(0), scrubVal = $state(0);
+  let onScrub = null;
   let stepsReady = $state(false);
 
   // v2 (single-hero model): exactly one seat per hand can be red,
@@ -399,13 +404,12 @@
     panel.querySelector(".replay-prev").disabled = engine.cursor < 0;
     panel.querySelector(".replay-next").disabled = engine.cursor >= engine.length() - 1;
 
-    const scrub = panel.querySelector(".replay-scrubber");
-    if (Number(scrub.max) !== engine.length() - 1) {
-      scrub.max = String(Math.max(0, engine.length() - 1));
+    if (scrubMax !== Math.max(0, engine.length() - 1)) {
+      scrubMax = Math.max(0, engine.length() - 1);
       renderTicks(panel, round);
     }
     const cursor = Math.max(0, engine.cursor);
-    if (Number(scrub.value) !== cursor) scrub.value = String(cursor);
+    if (scrubVal !== cursor) scrubVal = cursor;
   }
 
   // From history.js — verbatim.
@@ -608,11 +612,8 @@
         `${tableLabel}${playerLabel} \u00b7 ${round.steps.length} step${round.steps.length === 1 ? "" : "s"}`;
 
       // Scrubber bounds.
-      const scrub = panelEl.querySelector(".replay-scrubber");
-      scrub.min = "0";
-      scrub.max = String(round.steps.length - 1);
-      scrub.step = "1";
-      scrub.value = "0";
+      scrubMax = Math.max(0, round.steps.length - 1);
+      scrubVal = 0;
 
       renderTicks(panelEl, round);
 
@@ -624,10 +625,10 @@
         engine.next();
         renderPanel();
       });
-      scrub.addEventListener("input", () => {
-        engine.goto(Number(scrub.value));
+      onScrub = (v) => {
+        engine.goto(v);
         renderPanel();
-      });
+      };
 
       panelEl.addEventListener("click", (e) => {
         const cardWrap = e.target.closest(".card-wrap.hidden");
@@ -729,7 +730,7 @@
       <button type="button" class="replay-step-btn replay-prev" aria-label="Previous step">‹ Prev</button>
       <div class="replay-scrubber-wrap">
         <div class="replay-ticks" aria-hidden="true"></div>
-        <input class="replay-scrubber" type="range" min="0" max="0" value="0" step="1" aria-label="Scrub round" />
+        <Slider min={0} max={scrubMax} step={1} value={scrubVal} ariaLabel="Scrub round" oninput={(v) => onScrub?.(v)} />
       </div>
       <button type="button" class="replay-step-btn replay-next" aria-label="Next step">Next ›</button>
     </div>
