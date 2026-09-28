@@ -4,7 +4,9 @@
   // user id, so those rows link to that player's profile.
   import { fly } from "svelte/transition";
   import { d, DUR } from "$lib/motion.js";
-  let { events = [] } = $props();
+  // `type: "visit"` rows are table visits (History, owner 2026-09-28): a button that opens the visit's
+  // sheet (onVisit) — the game's icon, the table, how many games and how long, the visit's net
+  let { events = [], onVisit = () => {} } = $props();
 
   const fmt = (n) => Number(n).toLocaleString();
   function when(ts) {
@@ -19,7 +21,19 @@
 </script>
 
 <div class="feed">
-  {#each events as e, i (e.type + e.ts + (e.ref || "") + i)}
+  {#each events as e, i (e.type + e.ts + (e.ref || e.id || "") + i)}
+    {#if e.type === "visit"}
+      <button type="button" class="ev card linky visit" onclick={() => onVisit(e.id)}
+        in:fly={{ y: d(8), duration: d(DUR.base), delay: d(Math.min(i, 12) * 22) }}>
+        <span class="ev-icon img">{#if e.img}<img src={e.img} alt="" width="26" height="26" />{/if}</span>
+        <span class="ev-main">
+          <span class="ev-label">{e.label}</span>
+          {#if e.sub}<span class="ev-sub">{e.sub}</span>{/if}
+        </span>
+        <span class="ev-amt" class:pos={e.amount >= 0} class:neg={e.amount < 0}>{e.amount >= 0 ? "+" : ""}{fmt(e.amount)}</span>
+        <span class="ev-time">{when(e.ts)}</span>
+      </button>
+    {:else}
     <svelte:element this={e.ref ? "a" : "div"} href={e.ref ? `/u/${e.ref}` : undefined}
       class="ev card" class:linky={!!e.ref}
       in:fly={{ y: d(8), duration: d(DUR.base), delay: d(Math.min(i, 12) * 22) }}>
@@ -33,6 +47,7 @@
       {/if}
       <span class="ev-time">{when(e.ts)}</span>
     </svelte:element>
+    {/if}
   {/each}
 </div>
 
@@ -42,6 +57,9 @@
     transition: transform var(--dur) var(--ease), box-shadow var(--dur) var(--ease); }
   .ev.linky { cursor: pointer; }
   .ev.linky:hover { transform: translateY(-2px); box-shadow: var(--shadow-hover); text-decoration: none; }
+  .ev.visit { width: 100%; border: 0; font: inherit; text-align: left; cursor: pointer; }
+  .ev-icon.img { background: var(--well); }
+  .ev-icon img { display: block; }
   .ev-icon { font-size: 20px; width: 34px; height: 34px; display: grid; place-items: center; background: var(--well); border-radius: 50%; flex: 0 0 auto; }
   .ev-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
   .ev-label { font-weight: 600; font-size: 14px; }
