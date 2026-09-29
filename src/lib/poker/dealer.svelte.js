@@ -74,7 +74,11 @@ export class Dealer {
   /** Called for every new table view (same table). privates = my hole cards when seated. */
   onView(prev, next, privates) {
     const t = now();
-    if (next.handNo != null && next.handNo !== prev.handNo && (next.seats || []).some((s) => s.hasCards)) {
+    // a new hand: its number moved on with cards out — or (a replay) the blinds came as their own step,
+    // so the cards appear a step later on the same hand number
+    const cardsNow = (next.seats || []).some((s) => s.hasCards), cardsBefore = (prev.seats || []).some((s) => s.hasCards);
+    const sameHandDeal = next.handNo === prev.handNo && cardsNow && !cardsBefore && !prev.result && !next.result && !(prev.board || []).length;
+    if (next.handNo != null && ((next.handNo !== prev.handNo && cardsNow) || sameHandDeal)) {
       this._newHand(next, t);
       return;
     }

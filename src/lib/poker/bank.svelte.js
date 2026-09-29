@@ -42,8 +42,10 @@ export class Bank {
   pot = $state(null);       // the pot number (poker / shed), null = use the view's
   airborne = $state([]);    // seats whose all-in pile hasn't landed yet (their ALL-IN stamps on landing)
 
-  constructor(kind) {
+  // replay: a replay never plays a full-screen moment, so the payout never waits for one
+  constructor(kind, { replay = false } = {}) {
     this.kind = kind;
+    this.replay = replay;
     this.money = new Money();
     this.view = null;
     this._dirty = true;
@@ -83,6 +85,17 @@ export class Bank {
       for (const s of next.seats || []) if (s.committed > 0) m.bet(s.seat, s.committed, t);
       return;
     }
+    // a replay pays the pots a step each (main pot, then each side pot): what a later step adds
+    // leaves the pot for its winners
+    if (prev.result && next.result) {
+      const paid = new Map();
+      for (const w of prev.result.winners || []) paid.set(w.seat, (paid.get(w.seat) || 0) + (w.amount || 0));
+      const more = new Map();
+      for (const w of next.result.winners || []) more.set(w.seat, (more.get(w.seat) || 0) + (w.amount || 0));
+      const shares = [...more].map(([seat, a]) => ({ seat, amount: a - (paid.get(seat) || 0) })).filter((x) => x.amount > 0);
+      if (shares.length) m.award(shares, t);
+      return;
+    }
     const prevBy = new Map((prev.seats || []).map((s) => [s.seat, s]));
     const result = next.result && !prev.result;
     const won = new Map();
@@ -102,7 +115,7 @@ export class Bank {
       }
     }
     if (result) {
-      t += detectMoment(next)?.ms ?? 0;          // a full-screen moment plays first
+      if (!this.replay) t += detectMoment(next)?.ms ?? 0;          // a full-screen moment plays first (live only)
       m.sweep(t);
       const shares = [...won].filter(([, a]) => a > 0).map(([seat, amount]) => ({ seat, amount }));
       if (shares.length) m.award(shares, t);
@@ -125,8 +138,9 @@ export class Bank {
     }
     if (!settled) return;
     // the wheel / dice / reels land first — or the full-screen moment (a jackpot's plays its own spin)
-    const moment = detectMoment(next);
-    t += moment ? moment.ms + (moment.kind === "jackpot" ? 0 : resolveMs(next.game)) : resolveMs(next.game);
+    const moment = this.replay ? null : detectMoment(next);
+    // a replay shows the outcome a step before the payout: it has already landed, nothing to wait for
+    if (!prev.round?.outcome) t += moment ? moment.ms + (moment.kind === "jackpot" ? 0 : resolveMs(next.game)) : resolveMs(next.game);
     for (const r of next.round?.results || []) {
       if (r.outcome === "banker" || r.seat == null) continue;
       if (r.delta > 0) m.bet(r.seat, r.delta, t, "house");               // the House pays onto the pile
@@ -145,7 +159,7 @@ export class Bank {
       return;
     }
     if (next.result && !prev.result) {
-      t += detectMoment(next)?.ms ?? 0;          // Big Two's finish plays first
+      if (!this.replay) t += detectMoment(next)?.ms ?? 0;          // Big Two's finish plays first (live only)
       const winner = next.round?.winner;
       const r = (next.round?.results || []).find((x) => x.seat === winner);
       const ante = next.config?.minBet ?? next.config?.smallBlind ?? 1;

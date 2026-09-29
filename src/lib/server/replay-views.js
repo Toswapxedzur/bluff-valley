@@ -3,8 +3,14 @@
 // broadcasts (table.js / runtime.js publicView) — so the shared TableStage draws a replay exactly like
 // live play, with every animation (they all diff one view against the next).
 //
-// Steps: 0 = the table just before the deal (so the deal itself animates), 1 = the hand / round as
-// dealt, then one per recorded action, then the result (the hand over, winners paid).
+// Steps (owner, 2026-09-29: "for each tiny action, a frame"), each coming a `gap` after the last:
+//   Hold'em — before the deal · the blinds posted · cards dealt · one per action (an action that closes
+//     a street keeps its street; the next street is dealt as its own step) · an all-in's run-out /
+//     the rest of the board a street a step · the showdown, one hand at a time (the last to bet or raise
+//     first) · the pots paid, one step each (main pot, side pots)
+//   other games — before the deal · the round starts · one per action · the automatic part a step
+//     each (the dealer turns over / hits, baccarat's draws, the ball, the dice, the reels, the dealer's
+//     three cards) · the result
 // Privacy is decided by the caller: `viewerSeat` gets its own private cards (hole cards / a Big Two
 // hand); everyone else is public view only, exactly what a watcher at the table saw.
 import { createHand, applyAction as pokerApply } from "./poker/engine/index.js";
@@ -16,6 +22,15 @@ const THINK_CAP_MS = 1500;          // a long think plays at most this long (at 
 const RESULT_HOLD_MS = 1200;        // the last action → the result
 const RUNOUT_MS = 1500;             // an all-in run-out: one street → the next (the board deals, the chances update)
 const STREET = { 3: "Flop", 4: "Turn", 5: "River" };
+const STREET_MS = 1000;             // a street dealt: its own step (owner, 2026-09-29: every tiny action a frame)
+const SHOW_MS = 1100;               // one hand turned up at the showdown
+const POT_MS = 1300;                // the next pot paid (a side pot)
+const AUTO_MS = 1100;               // a dealer's draw / the ball / the dice / the reels
+const MIN_GAP_MS = 400;             // no two steps closer than this
+const SUIT = { s: "♠", h: "♥", d: "♦", c: "♣" };
+const cardText = (c) => (c && c !== "??" ? `${c[0] === "T" ? "10" : c[0]}${SUIT[c[1]] || ""}` : "?");
+const cardsText = (cs) => (cs || []).map(cardText).join(" ");
+const fmt = (n) => Number(n || 0).toLocaleString("en-US");
 const DEAL_MS = 900;                // the table before the deal → dealt
 
 // The live table's action labels (table.js onAction)
@@ -72,18 +87,6 @@ function seatBase(p, people) {
   };
 }
 
-// step times (ms from the replay's start, at 1×): recorded, with long thinks capped
-function paced(rawTimes) {
-  const out = [];
-  let prevRaw = 0, at = 0;
-  for (const raw of rawTimes) {
-    at += Math.min(THINK_CAP_MS, Math.max(0, raw - prevRaw));
-    prevRaw = raw;
-    out.push(at);
-  }
-  return out;
-}
-
 // ---------------------------------------------------------------- Hold'em (every poker variant)
 function holdemReplay(doc, row, { people, viewerSeat }) {
   const config = tableConfig(doc, row);
@@ -101,6 +104,7 @@ function holdemReplay(doc, row, { people, viewerSeat }) {
   const holes = Object.fromEntries((state.players || []).map((p) => [p.seat, [...(p.holeCards || [])]]));
   const base = { id: `replay-${row.id}`, config, handNo: row.hand_no == null ? 0 : Number(row.hand_no), buttonSeat: doc.buttonSeat, actionDeadline: null, tournament: null };
   const potOf = (st) => (st.players || []).reduce((s, p) => s + (p.totalCommitted || 0), 0);
+  const nameOf = (seat) => seatBase(doc.players.find((p) => p.seat === seat) || { seat }, people).name;
 
   const liveView = (st) => ({
     ...base, phase: "running", street: st.street, board: [...(st.board || [])], potTotal: potOf(st),
@@ -116,71 +120,195 @@ function holdemReplay(doc, row, { people, viewerSeat }) {
     })
   });
 
-  const steps = [];
-  // 0: the table before the deal — still on the previous hand's number, as a live table is while it
-  // waits, so the next step is a NEW hand to the dealer (it deals it: cards fly, mine flip)
-  steps.push({
-    t: 0, text: "Before the deal",
+  const mine = viewerSeat != null && holes[viewerSeat] ? { seat: viewerSeat, holeCards: holes[viewerSeat] } : null;
+  const steps = [], privates = [];
+  const push = (step, priv) => { steps.push(step); privates.push(priv); };
+
+  // the table before the deal — still on the previous hand's number, as a live table is while it waits
+  push({
+    gap: 0, text: "Before the deal",
     view: {
       ...base, handNo: base.handNo - 1, phase: "waiting", street: null, board: [], potTotal: 0, pots: [], toActSeat: null, result: null,
       seats: doc.players.map((p) => ({ ...seatBase(p, people), stack: p.stack, committed: 0, status: null, inHand: false, hasCards: false,
         isButton: p.seat === doc.buttonSeat, isSB: false, isBB: false, isToAct: false, lastAction: null, timeBankMs: 0, usingTimeBank: false }))
     }
-  });
-  // 1: dealt, blinds in
-  steps.push({ t: DEAL_MS, text: "Cards dealt", view: liveView(state) });
-  const raw = [];
+  }, null);
+  // the blinds go in (a NEW hand to the motion engines: the button glides, the blinds leave the stacks)…
+  const bl = liveView(state);
+  bl.toActSeat = null;
+  bl.seats = bl.seats.map((x) => ({ ...x, hasCards: false, isToAct: false }));
+  push({ gap: 700, text: bl.seats.filter((x) => x.committed > 0).sort((x, y) => x.committed - y.committed).map((x) => `${x.name} posts ${fmt(x.committed)}`).join(" · ") || "Blinds", view: bl }, null);
+  // …then the cards are dealt
+  push({ gap: DEAL_MS, text: "Cards dealt", view: liveView(state) }, mine);
+
+  let prevRaw = 0, lastStreet = null, aggressor = null, closing = null;
   for (const a of doc.actions) {
     const { s, t, auto: _a, ...rest } = a;
+    const before = state;
     ({ state } = pokerApply(state, { ...rest, seat: s }));
     lastAction.set(s, pokerLabel(a));
-    const name = seatBase({ seat: s }, people).name;
-    steps.push({ t: 0, text: stepText(name, a) + (a.auto ? " (timed out)" : ""), view: liveView(state) });
-    raw.push(t || 0);
+    if (before.street !== lastStreet) { lastStreet = before.street; aggressor = null; }
+    if (a.type === "bet" || a.type === "raise" || (a.type === "allin" && state.players.find((x) => x.seat === s)?.totalCommitted > Math.max(...before.players.filter((x) => x.seat !== s).map((x) => x.totalCommitted || 0)))) aggressor = s;
+    const think = Math.min(THINK_CAP_MS, Math.max(0, (t || 0) - prevRaw));
+    prevRaw = t || 0;
+    const text = stepText(nameOf(s), a) + (a.auto ? " (timed out)" : "");
+    const moved = !!state.result || state.street !== before.street || (state.board || []).length !== (before.board || []).length;
+    if (!moved) { push({ gap: Math.max(MIN_GAP_MS, think), text, view: liveView(state) }, mine); continue; }
+    // the action that closed a street (or the hand), on that street: its chips go in, the board waits
+    const bp = before.players.find((x) => x.seat === s), np = state.players.find((x) => x.seat === s);
+    const d = Math.max(0, (np?.totalCommitted || 0) - (bp?.totalCommitted || 0));
+    const av = liveView(before);
+    av.toActSeat = null;
+    av.potTotal = potOf(before) + d;
+    av.seats = av.seats.map((x) => x.seat === s
+      ? { ...x, stack: x.stack - d, committed: x.committed + d, status: np?.status ?? x.status, isToAct: false }
+      : { ...x, isToAct: false });
+    push({ gap: Math.max(MIN_GAP_MS, think), text, view: av }, mine);
+    if (state.result) { closing = av; break; }
+    // the next street, dealt as its own step
+    const sv = liveView(state);
+    push({ gap: STREET_MS, text: `${STREET[sv.board.length] || "Board"} · ${cardsText(sv.board.slice((before.board || []).length))}`, view: sv }, mine);
   }
-  // the result: hand over, seats cleared, the result window up (table.js finishHand)
+  if (!closing) closing = liveView(state);
+
+  // ---- the hand is over: the rest of the board, the showdown, then the pots, one step each
   const result = doc.final?.result ?? null;
-  // An all-in run-out (owner, 2026-09-29): live, a full-screen moment deals it street by street; a
-  // replay covers nothing, so the run-out is steps on the table itself — the hands turn up, then the
-  // flop / turn / river are dealt one step at a time, each seat's line showing its chance to win.
-  const runout = result?.runout && !result.boards && (result.revealed || []).length >= 2 ? result.runout : null;
-  let tail = 0;
+  const board = result?.board || state.board || [];
+  const from = closing.board.length;
+  const streetOf = (n) => (n >= 5 ? "river" : n === 4 ? "turn" : n === 3 ? "flop" : "preflop");
+  const pre = (over) => ({ ...closing, toActSeat: null, pots: [], seats: closing.seats.map((x) => ({ ...x, committed: 0, isToAct: false })), ...over });
+  let shown = {};
+  // An all-in run-out (owner, 2026-09-29): live, a full-screen moment deals it; a replay covers
+  // nothing, so the hands turn up, then the flop / turn / river come a step each, every seat's line
+  // showing its chance to win.
+  const runout = result?.runout && !result.boards && (result.revealed || []).length >= 2 && result.runout.from === from ? result.runout : null;
   if (runout) {
-    const shown = Object.fromEntries(result.revealed.map((h) => [h.seat, [...h.holeCards]]));
-    const board = result.board || [];
+    shown = Object.fromEntries(result.revealed.map((h) => [h.seat, [...h.holeCards]]));
+    let at = from;
     for (const st of runout.stages) {
-      const v = liveView(state);
-      v.board = board.slice(0, st.board);
-      v.street = st.board >= 5 ? "river" : st.board === 4 ? "turn" : st.board === 3 ? "flop" : "preflop";
-      v.toActSeat = null; v.shown = shown; v.equity = { ...st.pct };
-      v.seats = v.seats.map((s) => ({ ...s, committed: 0, isToAct: false }));
-      const odds = result.revealed.map((h) => `${people.get(h.seat)?.name || `Seat ${h.seat}`} ${st.pct[h.seat] ?? 0}%`).join(" · ");
-      steps.push({ t: 0, text: (st.board === runout.from ? "All in — hands up" : STREET[st.board] || "Board") + ` · ${odds}`, view: v });
-      tail += 1;
+      const odds = result.revealed.map((h) => `${nameOf(h.seat)} ${st.pct[h.seat] ?? 0}%`).join(" · ");
+      const head = st.board === runout.from ? "All in — hands up" : `${STREET[st.board] || "Board"} · ${cardsText(board.slice(at, st.board))}`;
+      push({ gap: st.board === runout.from ? RESULT_HOLD_MS : RUNOUT_MS, text: `${head} · ${odds}`,
+        view: pre({ board: board.slice(0, st.board), street: streetOf(st.board), shown: { ...shown }, equity: { ...st.pct } }) }, mine);
+      at = st.board;
+    }
+  } else if (board.length > from && !result?.boards) {
+    // the rest of the board with no recorded chances (an older recording): still a street a step
+    let at = from;
+    for (const n of [3, 4, 5].filter((n) => n > from && n <= board.length)) {
+      push({ gap: STREET_MS, text: `${STREET[n]} · ${cardsText(board.slice(at, n))}`, view: pre({ board: board.slice(0, n), street: streetOf(n) }) }, mine);
+      at = n;
     }
   }
-  const mo = momentOfResult("holdem", { ...doc.config, tournament: row.context === "tournament" || row.context === "sprint" }, result);
-  steps.push({
-    t: 0, text: "Result",
-    view: {
-      ...base, phase: "running", street: "complete", board: [...(result?.board || state.board || [])], potTotal: potOf(state),
-      pots: (state.pots || []).map((p) => ({ ...p })), toActSeat: null, result,
-      seats: doc.players.map((p) => {
-        const ep = state.players.find((x) => x.seat === p.seat);
-        return { ...seatBase(p, people), stack: ep ? ep.stack : p.stack, committed: 0, status: null, inHand: false, hasCards: false,
-          isButton: p.seat === doc.buttonSeat, isSB: p.seat === sbSeat, isBB: p.seat === bbSeat, isToAct: false, lastAction: null, timeBankMs: 0, usingTimeBank: false };
-      })
+  // the showdown: each hand turns up in turn — the last to bet or raise first, else clockwise from the button
+  if (!runout && result?.type === "showdown" && (result.revealed || []).length) {
+    const seats = result.revealed.map((h) => h.seat);
+    const clockwise = [...seats].sort((x, y) => ((x - doc.buttonSeat + 100) % 100) - ((y - doc.buttonSeat + 100) % 100) || x - y);
+    const order = aggressor != null && seats.includes(aggressor) ? [aggressor, ...clockwise.filter((x) => x !== aggressor)] : clockwise;
+    for (const seat of order) {
+      const h = result.revealed.find((x) => x.seat === seat);
+      shown = { ...shown, [seat]: [...h.holeCards] };
+      push({ gap: SHOW_MS, text: `${nameOf(seat)} shows ${cardsText(h.holeCards)}${h.handName ? ` — ${h.handName}` : ""}`,
+        view: pre({ board, street: "showdown", shown: { ...shown } }) }, mine);
     }
+  }
+  // the pots, one step each (the main pot, then each side pot): winners paid, the rest still in the middle
+  const winners = result?.winners || [];
+  const total = new Map();
+  for (const w of winners) total.set(w.seat, (total.get(w.seat) || 0) + (w.amount || 0));
+  const engPots = state.result?.pots;
+  let potShares;
+  if (!result?.boards && Array.isArray(engPots) && engPots.length > 1) {
+    potShares = engPots.map((pt) => splitPot(pt.amount, pt.winnerSeats || []));
+    // odd chips: settle the last pot so every winner's total is exactly what the table paid
+    const got = new Map();
+    for (const shares of potShares) for (const x of shares) got.set(x.seat, (got.get(x.seat) || 0) + x.amount);
+    const last = potShares[potShares.length - 1];
+    for (const [seat, amt] of total) {
+      const diff = amt - (got.get(seat) || 0);
+      if (!diff) continue;
+      const hit = last.find((x) => x.seat === seat);
+      if (hit) hit.amount += diff; else last.push({ seat, amount: diff });
+    }
+    potShares = potShares.map((sh) => sh.filter((x) => x.amount > 0)).filter((sh) => sh.length);
+  } else {
+    potShares = [[...total].map(([seat, amount]) => ({ seat, amount })).filter((x) => x.amount > 0)];
+  }
+  const finalStack = new Map(state.players.map((p) => [p.seat, p.stack]));
+  const potAll = [...total.values()].reduce((a, b) => a + b, 0);
+  const handOf = (seat) => (result?.revealed || []).find((h) => h.seat === seat)?.handName || null;
+  const paid = new Map();
+  potShares.forEach((shares, i) => {
+    for (const x of shares) paid.set(x.seat, (paid.get(x.seat) || 0) + x.amount);
+    const owed = (seat) => (total.get(seat) || 0) - (paid.get(seat) || 0);
+    const cum = [...paid].filter(([, a]) => a > 0).map(([seat, amount]) => ({ seat, amount }));
+    const sum = shares.reduce((a, x) => a + x.amount, 0);
+    const who = shares.length > 1 ? `${shares.map((x) => nameOf(x.seat)).join(" and ")} split ${fmt(sum)}` : shares.length ? `${nameOf(shares[0].seat)} wins ${fmt(sum)}` : "Result";
+    const potName = potShares.length > 1 ? (i === 0 ? " · main pot" : ` · side pot${potShares.length > 2 ? ` ${i}` : ""}`) : "";
+    const hand = result?.type === "showdown" && shares.length ? handOf(shares[0].seat) : null;
+    push({
+      gap: i === 0 ? RESULT_HOLD_MS : POT_MS, text: `${who}${potName}${hand ? ` · ${hand}` : ""}`,
+      view: {
+        ...base, phase: "running", street: "complete", board: [...board], potTotal: Math.max(0, potAll - [...paid.values()].reduce((a, b) => a + b, 0)),
+        pots: [], toActSeat: null, result: result ? { ...result, winners: cum } : null,
+        seats: doc.players.map((p) => ({ ...seatBase(p, people), stack: (finalStack.get(p.seat) ?? p.stack) - owed(p.seat), committed: 0, status: null, inHand: false, hasCards: false,
+          isButton: p.seat === doc.buttonSeat, isSB: p.seat === sbSeat, isBB: p.seat === bbSeat, isToAct: false, lastAction: null, timeBankMs: 0, usingTimeBank: false }))
+      }
+    }, null);
   });
+  const mo = momentOfResult("holdem", { ...doc.config, tournament: row.context === "tournament" || row.context === "sprint" }, result);
   if (mo) steps[steps.length - 1].mark = momentLabel(mo);
-  retime(steps, raw, tail);
-  const mine = viewerSeat != null && holes[viewerSeat] ? { seat: viewerSeat, holeCards: holes[viewerSeat] } : null;
-  // hole cards are dealt at step 1 and stay mine until the hand is over
-  const privates = steps.map((_, i) => (i >= 1 && i < steps.length - 1 ? mine : null));
+  timeline(steps);
   return { kind: "poker", steps, privates };
 }
 
+/** A pot split between winners: equal shares, odd chips to the first. */
+function splitPot(amount, seats) {
+  if (!seats.length) return [];
+  const share = Math.floor(amount / seats.length);
+  let odd = amount - share * seats.length;
+  return seats.map((seat) => ({ seat, amount: share + (odd-- > 0 ? 1 : 0) }));
+}
+
 // ---------------------------------------------------------------- every other game (GameModules)
+// A round's automatic part (owner, 2026-09-29: "each tiny action a frame"): live, the dealer's draws /
+// the ball / the dice / the reels all land with the last player's move; a replay shows the table as
+// that move left it, then each automatic move as its own step, then the payouts.
+const bjValue = (cards) => {
+  let v = 0, aces = 0;
+  for (const c of cards) { const r = c[0]; if (r === "A") { aces += 1; v += 11; } else v += "TJQK".includes(r) ? 10 : Number(r); }
+  while (v > 21 && aces) { v -= 10; aces -= 1; }
+  return v;
+};
+const bacValue = (cards) => cards.reduce((a, c) => a + (c[0] === "A" ? 1 : "TJQK".includes(c[0]) ? 0 : Number(c[0])), 0) % 10;
+const HIDE = { blackjack: ["dealer", "results", "phase"], "three-card": ["dealer", "results", "phase"], baccarat: ["outcome", "results", "phase"], roulette: ["outcome", "results", "phase"], "sic-bo": ["outcome", "results", "phase"], slots: ["outcome", "results", "phase"] };
+function autoSteps(game, fin, hidden) {
+  const out = [];
+  if (game === "blackjack" && fin.dealer?.cards?.length >= 2) {
+    const cs = fin.dealer.cards;
+    for (let n = 2; n <= cs.length; n += 1) {
+      const v = bjValue(cs.slice(0, n));
+      out.push({ text: n === 2 ? `Dealer turns over ${cardText(cs[1])} · ${v}` : `Dealer hits ${cardText(cs[n - 1])} · ${v}${v > 21 ? " — bust" : ""}`,
+        round: { ...hidden, dealer: { cards: cs.slice(0, n), value: v, bust: v > 21 } } });
+    }
+  } else if (game === "baccarat" && fin.outcome?.hands?.length === 2) {
+    const [P, B] = fin.outcome.hands.map((h) => h.cards);
+    const hands = (np, nb) => [{ label: `Player (${bacValue(P.slice(0, np))})`, cards: P.slice(0, np) }, { label: `Banker (${bacValue(B.slice(0, nb))})`, cards: B.slice(0, nb) }];
+    out.push({ text: `Player ${cardsText(P.slice(0, 2))} · ${bacValue(P.slice(0, 2))} — Banker ${cardsText(B.slice(0, 2))} · ${bacValue(B.slice(0, 2))}`, round: { ...hidden, outcome: { headline: "", hands: hands(2, 2) } } });
+    if (P.length > 2) out.push({ text: `Player draws ${cardText(P[2])} · ${bacValue(P)}`, round: { ...hidden, outcome: { headline: "", hands: hands(3, 2) } } });
+    if (B.length > 2) out.push({ text: `Banker draws ${cardText(B[2])} · ${bacValue(B)}`, round: { ...hidden, outcome: { headline: "", hands: hands(P.length, 3) } } });
+  } else if (game === "roulette" && fin.outcome) {
+    out.push({ text: `Ball lands ${fin.outcome.headline}`, round: { ...hidden, outcome: fin.outcome } });
+  } else if (game === "sic-bo" && fin.outcome) {
+    out.push({ text: `Dice: ${fin.outcome.headline}`, round: { ...hidden, outcome: fin.outcome } });
+  } else if (game === "slots" && fin.outcome) {
+    out.push({ text: `Reels: ${(fin.outcome.reels || []).join(" · ")} — ${fin.outcome.headline}`, round: { ...hidden, outcome: fin.outcome } });
+  } else if (game === "three-card" && fin.dealer?.cards?.length) {
+    out.push({ text: `Dealer shows ${cardsText(fin.dealer.cards)} · ${fin.dealer.hand}${fin.dealer.qualified === false ? " — doesn't qualify" : ""}`, round: { ...hidden, dealer: fin.dealer } });
+  }
+  return out;
+}
+
 function moduleReplay(doc, row, { people, viewerSeat }) {
   const game = GAMES[doc.mode];
   if (!game) return null;
@@ -203,43 +331,43 @@ function moduleReplay(doc, row, { people, viewerSeat }) {
   const actorOf = (st) => (typeof game.actorSeat === "function" ? game.actorSeat(st) : null);
 
   const steps = [], privates = [];
-  // 0: before the deal, on the previous round's number (see holdemReplay): the next step is a new round
-  steps.push({ t: 0, text: "Before the deal", view: { ...base, handNo: base.handNo - 1, roundNo: base.roundNo - 1, phase: "waiting", toActSeat: null, seats: seatsAt(null, { inHand: false }), round: null, result: null } });
-  privates.push(null);
+  const push = (step, priv) => { steps.push(step); privates.push(priv); };
+  // before the deal, on the previous round's number (see holdemReplay): the next step is a new round
+  push({ gap: 0, text: "Before the deal", view: { ...base, handNo: base.handNo - 1, roundNo: base.roundNo - 1, phase: "waiting", toActSeat: null, seats: seatsAt(null, { inHand: false }), round: null, result: null } }, null);
   let actor = actorOf(state);
-  steps.push({ t: DEAL_MS, text: "Round starts", view: { ...base, phase: "running", toActSeat: actor, seats: seatsAt(actor), round: game.publicView(state), result: null } });
-  privates.push(privFor(state));
-  const raw = [];
+  push({ gap: DEAL_MS, text: "Round starts", view: { ...base, phase: "running", toActSeat: actor, seats: seatsAt(actor), round: game.publicView(state), result: null } }, privFor(state));
+  let prevRaw = 0;
   for (const a of doc.actions) {
     const { s, t, auto, ...rest } = a;
     ({ state } = game.applyAction(state, { ...rest, seat: s }));
     actor = actorOf(state);
-    steps.push({ t: 0, text: stepText(seatBase({ seat: s }, people).name, a) + (auto ? " (timed out)" : ""),
-      view: { ...base, phase: "running", toActSeat: actor, seats: seatsAt(actor), round: game.publicView(state), result: null } });
-    privates.push(privFor(state));
-    raw.push(t || 0);
+    const think = Math.min(THINK_CAP_MS, Math.max(0, (t || 0) - prevRaw));
+    prevRaw = t || 0;
+    push({ gap: Math.max(MIN_GAP_MS, think), text: stepText(seatBase(doc.players.find((p) => p.seat === s) || { seat: s }, people).name, a) + (auto ? " (timed out)" : ""),
+      view: { ...base, phase: "running", toActSeat: actor, seats: seatsAt(actor), round: game.publicView(state), result: null } }, privFor(state));
+  }
+  // the automatic part: the last move's step shows the table as the move left it, then a step each
+  const fin = steps[steps.length - 1].view.round, prevRound = steps[steps.length - 2]?.view.round;
+  if (HIDE[doc.mode] && fin?.phase === "complete" && prevRound && steps.length > 2) {
+    const hidden = { ...fin, toActSeat: null };
+    for (const k of HIDE[doc.mode]) hidden[k] = prevRound[k] ?? null;
+    const last = steps[steps.length - 1];
+    last.view = { ...last.view, toActSeat: null, seats: seatsAt(null), round: hidden };
+    for (const au of autoSteps(doc.mode, fin, hidden)) push({ gap: AUTO_MS, text: au.text, view: { ...last.view, round: au.round } }, privates[privates.length - 1]);
   }
   // the result: the settled round, stacks paid (runtime.js: round = result = the settled public view)
   const result = doc.final?.result ?? game.publicView(state);
-  steps.push({ t: 0, text: "Result", view: { ...base, phase: "running", toActSeat: null, seats: seatsAt(null, { settled: true, inHand: false }), round: result, result } });
+  push({ gap: RESULT_HOLD_MS, text: "Result", view: { ...base, phase: "running", toActSeat: null, seats: seatsAt(null, { settled: true, inHand: false }), round: result, result } }, null);
   const mo = momentOfResult(doc.mode, { ...doc.config, tournament: row.context === "tournament" || row.context === "sprint" }, result);
   if (mo) steps[steps.length - 1].mark = momentLabel(mo);
-  privates.push(null);
-  retime(steps, raw);
+  timeline(steps);
   return { kind: "module", steps, privates };
 }
 
-// give every step its time: 0 → the deal → the recorded actions (capped thinks) → [an all-in's
-// run-out: `tail` steps, a street each] → the result
-function retime(steps, raw, tail = 0) {
-  const acts = paced(raw);
-  const dealt = steps[1].t;
-  for (let i = 0; i < acts.length; i += 1) steps[2 + i].t = dealt + Math.max(400, acts[i]);
-  const last = steps.length - 1, runFrom = last - tail;
-  // strictly increasing, so every step gets its moment
-  for (let i = 2; i < runFrom; i += 1) steps[i].t = Math.max(steps[i].t, steps[i - 1].t + 400);
-  for (let i = runFrom; i < last; i += 1) steps[i].t = steps[i - 1].t + (i === runFrom ? RESULT_HOLD_MS : RUNOUT_MS);
-  steps[last].t = steps[last - 1].t + (tail ? RUNOUT_MS : RESULT_HOLD_MS);
+// every step's time (ms from the replay's start, at 1×): each came `gap` after the one before
+function timeline(steps) {
+  let t = 0;
+  steps.forEach((s, i) => { t += i === 0 ? 0 : Math.max(MIN_GAP_MS, s.gap ?? MIN_GAP_MS); s.t = t; delete s.gap; });
 }
 
 /** A recording → table views for the replay page, or null if it can't be re-simulated.

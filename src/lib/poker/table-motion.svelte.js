@@ -77,7 +77,7 @@ export function tableMotion(src) {
     untrack(() => {
       if (!kind) { m.bank = null; bankFor = null; bankPrev = null; return; }
       if (bankFor !== v.id || !m.bank || m.bank.kind !== kind) {
-        m.bank = new Bank(kind);
+        m.bank = new Bank(kind, { replay: !!src.replay });
         m.bank.init(v);
         bankFor = v.id; bankPrev = v;
         return;
