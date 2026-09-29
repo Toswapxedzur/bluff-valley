@@ -29,7 +29,6 @@
     play4x: "Play 4×", play3x: "Play 3×", play2x: "Play 2×", play1x: "Play 1×"
   };
   const label = (a) => (LABELS[a.type] || a.type) + (a.amount ? " " + a.amount.toLocaleString() : "");
-  const primary = (t) => t === "hit" || t === "call" || t === "raise" || t === "ride" || t.startsWith("play");
   const ghost = (t) => t === "fold" || t === "pull";
 </script>
 
@@ -39,14 +38,14 @@
       <span class="lbl">{wager.type === "ante" ? "Ante" : "Your bet"}</span>
       <div class="wager-range"><Slider min={wager.min} max={wager.max} step={1} bind:value={amt} ariaLabel={wager.type === "ante" ? "Ante" : "Your bet"} /></div>
       <span class="amt">{amt.toLocaleString()}</span>
-      <button class="btn primary" onclick={() => onAct({ type: wager.type, amount: amt })}>
+      <button class="btn" onclick={() => onAct({ type: wager.type, amount: amt })}>
         {wager.type === "ante" ? "Ante" : "Bet"}
       </button>
     </div>
     <div class="quick">
       {#each [wager.min, wager.min * 2, wager.min * 5, wager.max] as q}
         {#if q >= wager.min && q <= wager.max}
-          <button class="btn btn-secondary btn-sm ghost" onclick={() => (amt = q)}>{q.toLocaleString()}</button>
+          <button class="btn btn-secondary btn-sm" onclick={() => (amt = q)}>{q.toLocaleString()}</button>
         {/if}
       {/each}
     </div>
@@ -54,7 +53,7 @@
     <div class="acts">
       {#each decisions as a}
         <button
-          class="btn {primary(a.type) ? 'primary' : ghost(a.type) ? 'ghost' : ''}"
+          class="btn"
           class:btn-secondary={ghost(a.type)}
           onclick={() => onAct({ type: a.type })}
         >

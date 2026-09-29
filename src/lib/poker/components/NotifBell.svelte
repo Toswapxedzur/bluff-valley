@@ -51,7 +51,7 @@
 </script>
 
 <div class="bell-wrap" bind:this={root}>
-  <button class="bell" class:has={unread > 0} aria-label="Notifications" onclick={toggle}>
+  <button class="btn-icon bell" class:has={unread > 0} aria-label="Notifications" onclick={toggle}>
     <span class="ico">🔔</span>
     {#if unread > 0}<span class="dot">{unread > 9 ? "9+" : unread}</span>{/if}
   </button>
@@ -83,13 +83,7 @@
 
 <style>
   .bell-wrap { position: relative; display: inline-flex; }
-  .bell {
-    position: relative; width: 34px; height: 34px; border: 0; border-radius: var(--r-pill);
-    background: var(--well); color: var(--muted); cursor: pointer; font-size: 15px;
-    display: grid; place-items: center;
-    transition: color var(--dur) var(--ease), background-color var(--dur) var(--ease), transform var(--dur) var(--ease);
-  }
-  .bell:hover { color: var(--text); background: var(--surface-2); transform: translateY(-1px); }
+  .bell { position: relative; }
   .bell.has { color: var(--text); }
   .dot {
     position: absolute; top: -3px; right: -3px; min-width: 16px; height: 16px; padding: 0 4px;

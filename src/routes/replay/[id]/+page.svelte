@@ -50,14 +50,14 @@
   {/if}
 
   <div class="hud">
-    <a href="/history" class="back" aria-label="Back to your history" title="History">‹</a>
+    <a href="/history" class="btn-icon float back" aria-label="Back to your history" title="History">‹</a>
     {#if gameIcon(gameKey)}<img class="gicon" src={gameIcon(gameKey)} alt="" width="34" height="34" />{/if}
     <div class="title">
       <b>Replay · {title}</b>
       <span class="stakes">{variantLabel(gameKey)} · {when}{#if data.archived} · from the archive{/if}</span>
     </div>
     <div class="hud-right">
-      <button type="button" class="sfx-btn" class:off={!sfxOn} onclick={toggleSfx} title={sfxOn ? "Mute table sounds" : "Unmute table sounds"} aria-pressed={sfxOn}>{sfxOn ? "🔊" : "🔇"}</button>
+      <button type="button" class="btn-icon float" class:off={!sfxOn} onclick={toggleSfx} title={sfxOn ? "Mute table sounds" : "Unmute table sounds"} aria-pressed={sfxOn}>{sfxOn ? "🔊" : "🔇"}</button>
     </div>
   </div>
 
@@ -108,14 +108,12 @@
   .tablepage { position: relative; display: flex; flex-direction: column; height: 100vh; height: 100dvh; overflow: hidden; }
   .hud { position: absolute; top: 0; left: 0; right: 0; z-index: 6; display: flex; align-items: center; gap: 12px; padding: 10px 14px; pointer-events: none; }
   .hud > * { pointer-events: auto; }
-  .back { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 999px; background: var(--surface); color: var(--text); text-decoration: none; font-size: 22px; line-height: 1; box-shadow: var(--shadow-card); }
+  .back { font-size: 22px; text-decoration: none; }
   .gicon { display: block; flex: none; }
   .title { display: flex; flex-direction: column; line-height: 1.15; }
   .title b { font-family: var(--f-display); font-size: 17px; }
   .stakes { color: var(--muted); font-size: 12px; }
   .hud-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
-  .sfx-btn { appearance: none; border: 0; background: var(--surface); color: var(--text); border-radius: 999px; width: 34px; height: 34px; cursor: pointer; font-size: 15px; box-shadow: var(--shadow-card); }
-  .sfx-btn.off { opacity: 0.55; }
 
   .summary { flex: 1; display: grid; place-content: center; gap: 14px; padding: 80px 16px; text-align: center; }
 
