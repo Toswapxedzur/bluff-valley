@@ -6,6 +6,7 @@ import {
   serializeSocialSettings,
 } from "$lib/server/social-settings.js";
 import { hub } from "$lib/server/poker/hub.js";
+import { HISTORY_WINDOWS, normHistoryWindow } from "$lib/server/replay-access.js";
 
 export async function load({ locals }) {
   if (!locals.user) throw redirect(303, "/account/login");
@@ -16,7 +17,7 @@ export async function load({ locals }) {
   return {
     friendReqPolicy: row?.friend_req_policy || "everyone",
     visibility: row?.profile_visibility || "public",
-    historyWindow: row?.history_window || "private",
+    historyWindow: normHistoryWindow(row?.history_window),
     settings: parseSocialSettings(row?.settings),
   };
 }
@@ -29,8 +30,7 @@ export const actions = {
     const visibility = String(fd.get("visibility") || "public");
     const pol = ["everyone", "fof", "nobody"].includes(policy) ? policy : "everyone";
     const vis = ["public", "friends", "private"].includes(visibility) ? visibility : "public";
-    const historyWindow = String(fd.get("historyWindow") || "private");
-    const hw = ["private", "7d"].includes(historyWindow) ? historyWindow : "private";
+    const hw = HISTORY_WINDOWS.includes(String(fd.get("historyWindow"))) ? String(fd.get("historyWindow")) : "friends";
     await execute("UPDATE user SET friend_req_policy = ?, profile_visibility = ?, history_window = ? WHERE id = ?", [pol, vis, hw, locals.user.id]);
     return { privacyOk: true };
   },

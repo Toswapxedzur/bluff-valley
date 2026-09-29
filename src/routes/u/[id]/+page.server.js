@@ -6,7 +6,7 @@ import { requestFriend, respondFriend, removeFriend, areFriends } from "$lib/ser
 import { getTransferable, transfer } from "$lib/server/transfers.js";
 import { block, unblock, hasBlocked } from "$lib/server/moderation.js";
 import { hub } from "$lib/server/poker/hub.js";
-import { windowStartForUser } from "$lib/server/replay-access.js";
+import { historySinceForTarget } from "$lib/server/replay-access.js";
 import { modeBreakdown, overviewStats } from "$lib/server/stats.js";
 import { recentReplaysForUser } from "$lib/server/poker/store.js";
 
@@ -14,7 +14,7 @@ export async function load({ params, locals }) {
   const viewerId = locals.user?.id || null;
   const [profile, historySince] = await Promise.all([
     getProfile(params.id, viewerId),
-    windowStartForUser(params.id)
+    historySinceForTarget(locals.user ?? null, params.id)
   ]);
   if (!profile) throw error(404, "No such player.");
   const blocked = viewerId ? await hasBlocked(viewerId, params.id) : false;
