@@ -161,7 +161,7 @@
           <button class="btn btn-xs btn-gold" onclick={() => (groupOpen = true)}>＋ Group</button>
         </div>
         {#if convs.length === 0}
-          <div class="empty small">No chats yet — open one from Friends, or start a group.</div>
+          <div class="empty-note">No chats yet — open one from Friends, or start a group.</div>
         {:else}
           {#each convs as c (c.id)}
             <button class="conv" class:active={c.id === openId} onclick={() => openConv(c)}
@@ -181,7 +181,7 @@
 
       {:else if tab === "friends"}
         {#if friends.length === 0}
-          <div class="empty small">No friends yet — use Find to add someone.</div>
+          <div class="empty-note">No friends yet — use Find to add someone.</div>
         {:else}
           {#each friends as f (f.id)}
             <div class="frow" in:fly={{ y: d(6), duration: d(DUR.base) }} animate:flip={{ duration: d(DUR.base) }}>
@@ -202,7 +202,7 @@
 
       {:else if tab === "requests"}
         <div class="list-head"><span class="muted small">Incoming</span></div>
-        {#if incoming.length === 0}<div class="empty small">No pending requests.</div>{/if}
+        {#if incoming.length === 0}<div class="empty-note">No pending requests.</div>{/if}
         {#each incoming as p (p.id)}
           <div class="frow" in:fly={{ y: d(6), duration: d(DUR.base) }} animate:flip={{ duration: d(DUR.base) }}>
             <span class="avatar frow-av" style="background:{color(p.id)}">{initial(p.name)}</span>
@@ -237,7 +237,7 @@
         </div>
         <div class="find-head"><span class="muted small">{findMode === "search" ? "Results" : "Suggested for you"}</span>{#if findLoading}<span class="muted small">searching…</span>{/if}</div>
         {#if findResults.length === 0 && !findLoading}
-          <div class="empty small">{findMode === "search" ? "No players found." : "No suggestions yet — play some hands or add a friend."}</div>
+          <div class="empty-note">{findMode === "search" ? "No players found." : "No suggestions yet — play some hands or add a friend."}</div>
         {/if}
         {#each findResults as r (r.id)}
           <div class="frow" in:fly={{ y: d(6), duration: d(DUR.base) }} animate:flip={{ duration: d(DUR.base) }}>
@@ -345,7 +345,7 @@
       </div>
     {:else}
       <div class="thread-empty">
-        <p class="muted">Select a chat, or open one from Friends.</p>
+        <p class="empty-note">Select a chat, or open one from Friends.</p>
       </div>
     {/if}
   </section>
@@ -365,7 +365,7 @@
             {#if groupPick.has(f.id)}<span class="pick-check">✓</span>{/if}
           </button>
         {/each}
-        {#if friends.length === 0}<div class="empty small">Add friends first.</div>{/if}
+        {#if friends.length === 0}<div class="empty-note">Add friends first.</div>{/if}
       </div>
       <div class="modal-actions">
         <button class="btn btn-secondary" onclick={() => (groupOpen = false)}>Cancel</button>
@@ -389,7 +389,6 @@
 
   .pane-body { flex: 1; overflow-y: auto; padding: 6px 10px 12px; min-height: 0; }
   .list-head { display: flex; align-items: center; justify-content: space-between; padding: 6px 4px 8px; }
-  .empty { text-align: center; color: var(--muted); padding: 24px 12px; }
   .small { font-size: 12.5px; }
 
   .conv { width: 100%; display: flex; align-items: center; gap: 11px; padding: 9px 10px; border: 0; background: transparent; border-radius: var(--r-card); cursor: pointer; text-align: left;

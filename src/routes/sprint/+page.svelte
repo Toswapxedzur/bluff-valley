@@ -95,7 +95,7 @@
       </div>
     </section>
   {:else}
-    <div class="card empty"><p class="muted">No rounds scheduled right now — check back soon.</p></div>
+    <div class="card empty-note"><p>No rounds scheduled right now — check back soon.</p></div>
   {/if}
 
   {#if data.upcoming.length > 1}
@@ -166,5 +166,4 @@
   .lname { flex: 1; min-width: 0; font-weight: 700; font-size: 14px; color: var(--text); text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .lname:hover { color: var(--accent-ink); }
   .prize { font-weight: 800; color: var(--gold-ink); font-variant-numeric: tabular-nums; font-size: 13.5px; display: inline-flex; align-items: center; gap: 5px; }
-  .empty { text-align: center; padding: 30px; }
 </style>

@@ -37,7 +37,7 @@
     {/each}
   </ul>
 {:else}
-  <p class="muted small empty">{empty}</p>
+  <p class="empty-note">{empty}</p>
 {/if}
 
 <style>
@@ -54,8 +54,6 @@
   .net { flex: none; display: inline-flex; align-items: center; gap: 5px; font-weight: 800; font-variant-numeric: tabular-nums; font-size: 14px; }
   .net.pos { color: var(--ok); } .net.neg { color: var(--danger); }
   .when { flex: none; min-width: 64px; text-align: right; color: var(--faint); font-size: 12px; }
-  .small { font-size: 12.5px; }
-  .empty { margin: 6px 0; }
   .end { display: contents; }
   /* phones: the net over the time, and the details may take two lines */
   @media (max-width: 480px) {

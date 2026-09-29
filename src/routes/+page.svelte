@@ -108,8 +108,8 @@
     <div class="main-col">
       <section class="hero">
         <div>
-          <span class="eyebrow">Play-money · just chips</span>
-          <h1>{SITE_NAME}<span class="conn {poker.connected ? 'on' : 'off'}">{poker.connected ? "live" : "connecting…"}</span></h1>
+          <span class="eyebrow">{SITE_NAME} · play-money, just chips</span>
+          <h1>Pick a game<span class="conn {poker.connected ? 'on' : 'off'}">{poker.connected ? "live" : "connecting…"}</span></h1>
         </div>
       </section>
 
@@ -143,8 +143,8 @@
       {/if}
 
       {#if tablesForMode.length === 0}
-        <div class="empty-state">
-          <p class="muted">
+        <div class="empty-note boxed">
+          <p>
             {isBanked
               ? "No " + modeLabel + " tables yet — start one and host, or let a bot bank it."
               : "No tables yet — hit Quick Play or start one."}
@@ -181,7 +181,7 @@
             <button class="btn btn-gold btn-sm" onclick={newTournament} disabled={!signedIn}>＋ New</button>
           </div>
           {#if tournaments.length === 0}
-            <div class="empty-state"><p class="muted">No tournaments yet — start a Sit &amp; Go (6-max, 500 entry). Empty seats fill with bots.</p></div>
+            <div class="empty-note boxed"><p>No tournaments yet — start a Sit &amp; Go (6-max, 500 entry). Empty seats fill with bots.</p></div>
           {:else}
             {#each tournaments as t (t.id)}
               <div class="trow" in:fly={{ y: d(10), duration: d(DUR.base) }} out:fade={{ duration: d(DUR.fast) }} animate:flip={{ duration: d(DUR.base) }}>
@@ -290,8 +290,6 @@
   .row-head h3 { font-size: 19px; margin: 0; }
   .toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 
-  .empty-state { text-align: center; padding: 34px 16px; background: var(--well); border-radius: var(--r-card); }
-  .empty-state p { margin: 0; }
 
   .table-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(258px, 1fr)); gap: 14px; }
   .tcard { border-radius: var(--r-card); background: var(--surface); padding: 16px; box-shadow: var(--shadow-card);

@@ -63,7 +63,7 @@
         {#if items.length > 0}<button class="clear" onclick={() => poker.markNotifsRead()}>Mark all read</button>{/if}
       </div>
       {#if items.length === 0}
-        <div class="empty">You're all caught up.</div>
+        <div class="empty-note">You're all caught up.</div>
       {:else}
         <div class="list">
           {#each items as n (n.id)}
@@ -101,7 +101,6 @@
   }
   .clear { border: 0; background: transparent; color: var(--accent-ink); font-size: 12px; font-weight: 600; cursor: pointer; }
   .clear:hover { opacity: .75; }
-  .empty { padding: 26px 16px; text-align: center; color: var(--muted); font-size: 13px; }
   .list { max-height: 380px; overflow-y: auto; display: flex; flex-direction: column; padding: 4px; gap: 2px; }
   .row {
     display: flex; align-items: flex-start; gap: 10px; width: 100%; text-align: left;
