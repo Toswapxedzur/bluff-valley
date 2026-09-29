@@ -3,8 +3,8 @@
 // in-game history (within what they expose and the 7-day horizon), and
 // player search (client-side via /api/friends/find). Replaces the old
 // casino.org upload tool, which now lives hidden at /casino-data.
-import { historySinceFor } from "$lib/server/replay-access.js";
-import { visitsFor, visitSummary, historySinceForTarget } from "$lib/server/visits.js";
+import { historySinceFor, historySinceForTarget } from "$lib/server/replay-access.js";
+import { visitsFor, visitSummary } from "$lib/server/visits.js";
 import { getProfile } from "$lib/server/profiles.js";
 import { getLeaderboard } from "$lib/server/leaderboards.js";
 
@@ -31,8 +31,8 @@ export async function load({ locals, url }) {
   if (target) {
     const profile = await getProfile(target, me?.id ?? null).catch(() => null);
     if (profile) {
-      // The owner sees everything; everyone else needs the player's exposure window AND stays inside
-      // the 7-day horizon (one rule, shared with the visit sheet's API: visits.js)
+      // The owner sees everything; everyone else needs the player to share their history with them
+      // (only me / friends / everyone) AND stays inside the 7-day horizon (replay-access.js — one rule)
       const since = await historySinceForTarget(me, target);
       const visits = since === null ? null : (await visitsFor(target, { sinceMs: since })).map(visitSummary);
       player = {

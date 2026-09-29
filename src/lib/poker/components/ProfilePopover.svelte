@@ -96,6 +96,7 @@
       <div class="pp-actions">
         {#if profile.isSelf}
           <a class="btn btn-sm btn-secondary" href="/u/{profile.id}">View profile</a>
+          <a class="btn btn-sm btn-secondary" href="/data" onclick={() => profilePop.close()}>History</a>
         {:else}
           {#if profile.relationship === "friends"}
             <a class="btn btn-sm" href="/social?to={profile.id}">Message</a>
@@ -108,6 +109,8 @@
             <button class="btn btn-sm" disabled={busy} onclick={() => act("request")}>＋ Add friend</button>
           {/if}
           <a class="btn btn-sm btn-secondary" href="/u/{profile.id}">Profile</a>
+          <!-- their table visits on the Data page, when they share them with you (Settings → Privacy) -->
+          {#if profile.canSeeHistory}<a class="btn btn-sm btn-secondary" href="/data?u={encodeURIComponent(profile.id)}" onclick={() => profilePop.close()}>History</a>{/if}
         {/if}
       </div>
       {#if profile.banner && !profile.isSelf}
@@ -133,7 +136,7 @@
   .pp-stats b { color: var(--text); font-variant-numeric: tabular-nums; }
   .pp-stats .pos b { color: var(--ok); } .pp-stats .neg b { color: var(--danger); }
   .pp-err { font-size: 12px; color: var(--danger); margin-bottom: 8px; }
-  .pp-actions { display: flex; gap: 8px; margin-top: 4px; }
+  .pp-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
   .pp-actions .btn { flex: 1; }
   .pp-actions .pp-call { flex: 0 0 auto; }
   .pp-report { margin-top: 10px; font-size: 12px; text-align: right; }

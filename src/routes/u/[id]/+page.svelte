@@ -114,7 +114,7 @@
         {/if}
         {#if p.isSelf}<a class="full-stats" href="/stats">Open full statistics →</a>{/if}
       {:else if data.historyPrivate}
-        <p class="muted small private-note">Play history is private.{#if p.isSelf} <a href="/stats">Your full statistics are still available.</a>{/if}</p>
+        <p class="muted small private-note">{p.name} doesn't share their play history with you.</p>
       {/if}
     </section>
   {/if}

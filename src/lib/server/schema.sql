@@ -127,7 +127,7 @@ CREATE TABLE IF NOT EXISTS user (
   -- v22 (replays): how much of this user's play history is publicly visible on
   -- their profile: private | 7d | 30d | 90d | all. Own history is always fully
   -- visible to the user themself.
-  history_window     VARCHAR(16) NOT NULL DEFAULT 'private',
+  history_window     VARCHAR(16) NOT NULL DEFAULT 'friends',
   -- v20 (money transfer): chips that may be SENT to friends — only game-earned
   -- inflows raise this; free grants never do; receiving chips does not raise it
   -- (received chips can be played but not re-forwarded). See wallet.js.
