@@ -3,6 +3,7 @@
   import { enhance } from "$app/forms";
   import Select from "$lib/components/Select.svelte";
   import Checkbox from "$lib/components/Checkbox.svelte";
+  import VisitHistory from "$lib/components/VisitHistory.svelte";
   import { soundEnabled, setSoundEnabled } from "$lib/sfx.js";
   let { data, form } = $props();
 
@@ -81,6 +82,12 @@
       <button class="btn" type="submit" style="margin-top:14px">Save privacy</button>
       {#if form?.privacyOk}<p class="form-success">Saved.</p>{/if}
     </form>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><h3>Your history</h3>{#if data.myVisits.length > 8}<a class="muted small" href="/history/{data.myId}">All {data.myVisits.length} visits →</a>{/if}</div>
+    <VisitHistory visits={data.myVisits.slice(0, 8)} playerId={data.myId}
+      empty="You haven't sat at a table in the last 7 days. Play a hand and your visit shows up here to rewatch." />
   </section>
 
   <section class="card">

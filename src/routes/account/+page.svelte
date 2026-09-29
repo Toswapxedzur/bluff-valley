@@ -213,7 +213,7 @@
       {#each data.myUploads as u (u.id)}
         <li class="row">
           <span>
-            <a href={`/data#${u.hand_key}`}>{u.hand_key}</a>
+            <a href={`/casino-data#${u.hand_key}`}>{u.hand_key}</a>
             {#if u.is_canonical}<span style="color:var(--ok);margin-left:6px;font-size:11px">CANONICAL</span>{/if}
           </span>
           <span class="muted">
@@ -227,19 +227,6 @@
   {/if}
 </section>
 
-<section class="card">
-  <div class="card-head"><h3>Clean data</h3></div>
-  <p class="muted">
-    {#if data.user.isAdmin}
-      Per-round, per-table, and per-player deletion lives on the
-      <a href="/data">Data</a> page now — admins see checkboxes,
-      <em>Delete table</em> buttons, and a sticky bulk-delete bar.
-    {:else}
-      Only admins can clean data. Ask an existing admin to promote your
-      account.
-    {/if}
-  </p>
-</section>
 {/if}
 
 {#if data.user.isAdmin && data.reports}
