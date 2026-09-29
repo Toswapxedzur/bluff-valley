@@ -69,7 +69,7 @@
 
   <div class="messages" bind:this={listEl} onscroll={onScroll}>
     {#if messages.length === 0}
-      <div class="empty muted">No messages yet — say hello.</div>
+      <div class="empty-note">No messages yet — say hello.</div>
     {:else}
       {#each messages as m, i (i)}
         <div class="msg" in:fly={{ y: d(8), duration: ready ? d(DUR.base) : 0 }}>
@@ -102,11 +102,6 @@
     flex-direction: column;
     gap: 5px;
     padding-right: 4px;
-  }
-  .empty {
-    text-align: center;
-    font-size: 12.5px;
-    padding: 24px 0;
   }
   .msg {
     display: flex;

@@ -120,7 +120,7 @@
       {#if data.daily.length}<span class="muted small">{fmt(data.daily.reduce((sum, row) => sum + row.matches, 0))} recorded matches</span>{/if}
     </div>
     {#if chart.bars.length === 0}
-      <div class="empty-chart muted">Your daily results will appear after a recorded match.</div>
+      <div class="empty-note boxed">Your daily results will appear after a recorded match.</div>
     {:else}
       <div class="chart-wrap">
         <svg viewBox={`0 0 ${chart.width} ${chart.height}`} role="img" aria-label="Daily net winnings bar chart">
@@ -163,7 +163,7 @@
       <div><p class="cap">Game mix</p><h2>Mode breakdown</h2></div>
     </div>
     {#if data.modes.length === 0}
-      <div class="card empty-table muted">No recorded modes yet.</div>
+      <div class="card empty-note">No recorded modes yet.</div>
     {:else}
       <div class="mode-table card">
         <div class="mode-row mode-header" aria-hidden="true">
@@ -233,7 +233,6 @@
   .bar-neg { fill: var(--danger); }
   .axis-label { fill: currentColor; font-size: 11px; font-family: inherit; }
   .chart-scale { display: flex; justify-content: space-between; gap: 16px; margin-top: 8px; font-size: 11.5px; font-weight: 700; font-variant-numeric: tabular-nums; }
-  .empty-chart, .empty-table { text-align: center; padding: 42px 18px; }
 
   .poker-totals { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-bottom: 10px; }
   .poker-totals > div { background: var(--well); border-radius: var(--r-btn); padding: 13px; display: flex; flex-direction: column; gap: 5px; }

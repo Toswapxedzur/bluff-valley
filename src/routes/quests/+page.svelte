@@ -102,7 +102,7 @@
   {#if !achievements.length}
     <section class="grp">
       <div class="grp-head"><h2>Achievements</h2></div>
-      <p class="muted empty">Achievements are on the way.</p>
+      <p class="empty-note boxed">Achievements are on the way.</p>
     </section>
   {:else}
     <section class="grp">
@@ -147,7 +147,6 @@
 </div>
 
 <style>
-  .empty { margin: 0; padding: 18px 16px; border-radius: var(--r-card, 14px); background: var(--surface); text-align: center; }
   .wrap { max-width: 640px; margin: 0 auto; }
   .head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
   h1 { margin: 0; font-size: 26px; }
