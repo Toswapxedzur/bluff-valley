@@ -14,6 +14,7 @@
   import { fly } from "svelte/transition";
   import Num from "$lib/poker/components/Num.svelte";
   import ProfilePopover from "$lib/poker/components/ProfilePopover.svelte";
+  import Avatar from "$lib/poker/components/Avatar.svelte";
   import NotifBell from "$lib/poker/components/NotifBell.svelte";
   import CallOverlay from "$lib/poker/components/CallOverlay.svelte";
   import AchievementToast from "$lib/components/AchievementToast.svelte";
@@ -129,8 +130,6 @@
     { href: "/quests", label: "Quests", show: !!data.user },
     { href: "/cosmetics", label: "Cosmetics", show: !!data.user },
     { href: "/sprint", label: "Sprint", show: true, icon: SPRINT_ICON },
-    // /data = Bluff Valley's own data hub (your history, others' in-game history, player search).
-    { href: "/data", label: "Data", show: true },
     // Hidden from everyone incl. the owner (2026-09-05): blog + casino.org tooling
     // (/casino-data, /contribute). Routes 404 too — see $lib/server/owner-only.js.
     { href: "/blog", label: "Blog", show: false },
@@ -167,6 +166,8 @@
         <Num value={Math.max(0, chips - pendingReward)} />
         {#if data.bonusReady}<span class="bonus-dot" title="Daily bonus ready"></span>{/if}
       </a>
+      <!-- your avatar: the same profile popup as everyone else's (View profile · History), owner 2026-09-29 -->
+      <span class="me-av"><Avatar id={data.user.id} name={data.user.displayName || data.user.email} mediaId={data.look?.avatarMediaId} size={24} userId={data.user.id} ring={data.look?.ring || "default"} /></span>
       <a class="nav-tab" href="/account" aria-current={isActive("/account") ? "page" : undefined}>
         {data.user.displayName || data.user.email}
         {#if data.user.isAdmin}<span style="margin-left:4px;color:var(--gold-ink)">admin</span>{/if}
@@ -235,6 +236,7 @@
   .theme-btn:hover { color: var(--text); background: var(--surface-2); transform: translateY(-1px); }
 
   .topbar-right { display: flex; align-items: center; gap: 9px; margin-left: auto; }
+  .me-av { display: inline-flex; }
 
   .bonus-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 6px var(--ok); display: inline-block; }
 

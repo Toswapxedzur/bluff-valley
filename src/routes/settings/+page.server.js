@@ -6,7 +6,8 @@ import {
   serializeSocialSettings,
 } from "$lib/server/social-settings.js";
 import { hub } from "$lib/server/poker/hub.js";
-import { HISTORY_WINDOWS, normHistoryWindow } from "$lib/server/replay-access.js";
+import { HISTORY_WINDOWS, normHistoryWindow, historySinceFor } from "$lib/server/replay-access.js";
+import { visitsFor, visitSummary } from "$lib/server/visits.js";
 
 export async function load({ locals }) {
   if (!locals.user) throw redirect(303, "/account/login");
@@ -18,6 +19,9 @@ export async function load({ locals }) {
     friendReqPolicy: row?.friend_req_policy || "everyone",
     visibility: row?.profile_visibility || "public",
     historyWindow: normHistoryWindow(row?.history_window),
+    // "Your history" (owner, 2026-09-29): your table visits, each opening the visit replay
+    myVisits: (await visitsFor(locals.user.id, { sinceMs: historySinceFor(locals.user) })).map(visitSummary),
+    myId: locals.user.id,
     settings: parseSocialSettings(row?.settings),
   };
 }
