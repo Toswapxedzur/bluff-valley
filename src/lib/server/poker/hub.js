@@ -32,7 +32,7 @@ import { GameTable } from "./runtime.js";
 import { getGame, isBankedGame } from "./games/registry.js";
 import { VARIANT_KEYS } from "./engine/variants.js";
 import { BotManager } from "./bot/manager.js";
-import { looksFor } from "../cosmetics.js";
+import { looksFor, ringOf } from "../cosmetics.js";
 
 const INVITE_TTL_MS = 60_000;
 
@@ -1040,10 +1040,10 @@ export class PokerHub {
     const uniq = [...new Set((ids || []).filter(Boolean))];
     if (!uniq.length) return new Map();
     const rows = await dbQuery(
-      `SELECT id, display_name, email, avatar_media_id FROM user WHERE id IN (${uniq.map(() => "?").join(",")})`,
+      `SELECT id, display_name, email, avatar_media_id, ring, peak_wealth FROM user WHERE id IN (${uniq.map(() => "?").join(",")})`,
       uniq
     );
-    return new Map(rows.map((r) => [r.id, { id: r.id, name: r.display_name || r.email, avatarMediaId: r.avatar_media_id || null }]));
+    return new Map(rows.map((r) => [r.id, { id: r.id, name: r.display_name || r.email, avatarMediaId: r.avatar_media_id || null, ring: ringOf(r) }]));
   }
 
   // Client-facing summary of one conversation, from `forUserId`'s view. For a DM

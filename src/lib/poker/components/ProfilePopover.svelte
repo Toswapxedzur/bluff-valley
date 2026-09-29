@@ -80,7 +80,7 @@
       <div class="pp-loading muted">Loading…</div>
     {:else}
       <div class="pp-head">
-        <Avatar id={profile.id} name={profile.name} mediaId={profile.avatarMediaId} size={44} />
+        <Avatar id={profile.id} name={profile.name} mediaId={profile.avatarMediaId} size={34} ring={profile.ring || "default"} />
         <div class="pp-idblock">
           <a class="pp-name" href="/u/{profile.id}">{profile.name}{#if profile.online}<span class="pp-on" title="Online"></span>{/if}</a>
           {#if profile.statusText}<span class="pp-status">{profile.statusText}</span>{/if}

@@ -5,6 +5,7 @@ import {
 } from "$lib/server/sprint.js";
 import { SPRINT } from "$lib/server/sprint-core.js";
 import { identities } from "$lib/server/profiles.js";
+import { ringOf } from "$lib/server/cosmetics.js";
 
 export async function load({ locals }) {
   const uid = locals.user?.id || null;
@@ -15,7 +16,7 @@ export async function load({ locals }) {
   const last = await lastFinishedRound();
   if (last) {
     lastRound = last;
-    lastResults = await roundResults(last.id, 12);
+    lastResults = (await roundResults(last.id, 12)).map((r) => ({ ...r, ring: ringOf(r) }));
   }
 
   const chips = uid ? Number((await queryOne("SELECT chips FROM user WHERE id = ?", [uid]))?.chips || 0) : 0;

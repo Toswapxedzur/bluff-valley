@@ -4,6 +4,7 @@
 import { json, error } from "@sveltejs/kit";
 import { searchByTrigram, recommendFriends } from "$lib/server/friend-search.js";
 import { query } from "$lib/server/db.js";
+import { ringOf } from "$lib/server/cosmetics.js";
 
 async function tagRelationships(viewerId, results) {
   const ids = results.map((r) => r.id);
@@ -20,7 +21,8 @@ async function tagRelationships(viewerId, results) {
     const other = e.requester_id === viewerId ? e.addressee_id : e.requester_id;
     rel.set(other, e.status === "accepted" ? "friends" : (e.requester_id === viewerId ? "outgoing" : "incoming"));
   }
-  return results.map((r) => ({ ...r, relationship: rel.get(r.id) || "none" }));
+  const looks = new Map((await query(`SELECT id, ring, peak_wealth FROM user WHERE id IN (${ph})`, ids)).map((u) => [u.id, ringOf(u)]));
+  return results.map((r) => ({ ...r, relationship: rel.get(r.id) || "none", ring: looks.get(r.id) ?? "default" }));
 }
 
 export async function GET({ url, locals }) {

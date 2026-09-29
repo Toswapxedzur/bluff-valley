@@ -15,6 +15,7 @@ async function decorate(ids) {
       id,
       name: info.get(id)?.name || "Unknown",
       avatarMediaId: info.get(id)?.avatarMediaId || null,
+      ring: info.get(id)?.ring || "default",
       online: (hub.connsForUser?.(id) || []).length > 0,
       tableId: table?.id || null,
       tableName: table?.config?.name || null,

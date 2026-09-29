@@ -29,7 +29,7 @@
   <a class="back" href="/social">‹ Social</a>
 
   <section class="hero card" in:fly={{ y: d(10), duration: d(DUR.base) }}>
-    <Avatar id={p.id} name={p.name} mediaId={p.avatarMediaId} size={84} />
+    <Avatar id={p.id} name={p.name} mediaId={p.avatarMediaId} size={64} ring={p.ring || "default"} />
     <div class="hero-main">
       <h1>{p.name}{#if pres.online}<span class="on-dot" title="Online"></span>{/if}</h1>
       {#if p.statusText}<p class="status">{p.statusText}</p>{/if}
