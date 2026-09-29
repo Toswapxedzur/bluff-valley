@@ -1,5 +1,6 @@
 <script>
   import { SPRINT_ICON } from "$lib/poker/games.js";
+  import Icon from "$lib/components/Icon.svelte";
   import "../app.css";
   import { page } from "$app/stores";
   import { onMount } from "svelte";
@@ -157,7 +158,7 @@
 
   <div class="topbar-right">
     <button class="btn-icon" aria-label="Toggle theme" title="Toggle light / dark" onclick={toggleTheme}>
-      {theme === "dark" ? "☾" : "☀"}
+      <Icon name={theme === "dark" ? "moon" : "sun"} />
     </button>
     {#if data.user}<NotifBell />{/if}
     {#if data.user}

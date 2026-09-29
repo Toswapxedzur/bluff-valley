@@ -19,7 +19,7 @@
   const winner = $derived(round.winner ?? null);
   function lineFor(seatNo, pl) {
     const oc = outcomeOf(results, seatNo);
-    if (oc) return { text: (oc.outcome === "win" ? "🏆 " : "") + signed(oc.delta), kind: deltaKind(oc.delta) };
+    if (oc) return { text: signed(oc.delta), kind: deltaKind(oc.delta) };
     if (pl) return { text: pl.cardCount + (pl.cardCount === 1 ? " card" : " cards"), kind: "" };
     return { text: "", kind: "muted" };
   }

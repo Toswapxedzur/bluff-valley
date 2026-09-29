@@ -5,4 +5,5 @@
   Fills are theme tokens (`var(--ic-a0…a4)` = the icon's own family, `--ic-b…` = the other): lights on the dark
   theme, darks on the light theme (`themeVars(dark)`), so each icon reads on both.
 - `sheet.mjs` → `sheet.html` / `sheet.png` — review sheet (dark big, dark at button size, light big, light small).
-- Status 2026-09-29: DRAFT sent to the owner for review; not wired into the site yet.
+- `build.mjs` → `src/lib/ui-icons.js` (generated; `<Icon name size label>` in `src/lib/components/Icon.svelte` renames clip ids per instance). Tones come from `--ic-a*` / `--ic-b*` in app.css (+ `.on-color` / coloured `.btn` keep lights, `.btn-gold` darks).
+- Status 2026-09-29: WIRED into the site (every emoji replaced) as the first draft; next: redraw the glyphs with the owner, then `node design/ui-icons/build.mjs`.

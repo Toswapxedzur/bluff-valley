@@ -1,5 +1,6 @@
 <script>
   import { ACHIEVEMENTS_ON } from "$lib/config.js";
+  import Icon from "$lib/components/Icon.svelte";
   import { enhance } from "$app/forms";
   import { fly } from "svelte/transition";
   import { d, DUR } from "$lib/motion.js";
@@ -79,7 +80,7 @@
       <div class="stat card" in:fly={{ y: d(10), duration: d(DUR.base), delay: d(120) }}><span class="s-val" class:pos={p.stats.netGame >= 0} class:neg={p.stats.netGame < 0}>{p.stats.netGame >= 0 ? "+" : ""}{fmt(p.stats.netGame)}</span><span class="s-lbl">Net at tables</span></div>
       <div class="stat card" in:fly={{ y: d(10), duration: d(DUR.base), delay: d(160) }}><span class="s-val">{fmt(p.stats.biggestPot)}</span><span class="s-lbl">Biggest win</span></div>
       {#if ACHIEVEMENTS_ON}<div class="stat card" in:fly={{ y: d(10), duration: d(DUR.base), delay: d(200) }}><span class="s-val">{fmt(p.stats.achievements)}</span><span class="s-lbl">Achievements</span></div>{/if}
-      <div class="stat card" in:fly={{ y: d(10), duration: d(DUR.base), delay: d(240) }}><span class="s-val">🔥 {p.stats ? p.streak : 0}</span><span class="s-lbl">Day streak (best {p.bestStreak})</span></div>
+      <div class="stat card" in:fly={{ y: d(10), duration: d(DUR.base), delay: d(240) }}><span class="s-val"><Icon name="streak" size={22} /> {p.stats ? p.streak : 0}</span><span class="s-lbl">Day streak (best {p.bestStreak})</span></div>
     </section>
 
     <section class="public-stats card" in:fly={{ y: d(10), duration: d(DUR.base), delay: d(280) }}>

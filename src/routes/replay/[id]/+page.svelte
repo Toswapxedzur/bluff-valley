@@ -7,6 +7,7 @@
   //   back / start / end / scrub → a JUMP: the stage re-mounts on that view, nothing animates
   //   speed (1× 2× 4×) → only the pause between steps; animations keep their one shared timing
   import { onMount, onDestroy } from "svelte";
+  import Icon from "$lib/components/Icon.svelte";
   import TableStage from "$lib/poker/components/TableStage.svelte";
   import ReplayBar from "$lib/poker/components/ReplayBar.svelte";
   import Chip from "$lib/poker/components/Chip.svelte";
@@ -57,7 +58,7 @@
       <span class="stakes">{variantLabel(gameKey)} · {when}{#if data.archived} · from the archive{/if}</span>
     </div>
     <div class="hud-right">
-      <button type="button" class="btn-icon float" class:off={!sfxOn} onclick={toggleSfx} title={sfxOn ? "Mute table sounds" : "Unmute table sounds"} aria-pressed={sfxOn}>{sfxOn ? "🔊" : "🔇"}</button>
+      <button type="button" class="btn-icon float" class:off={!sfxOn} onclick={toggleSfx} title={sfxOn ? "Mute table sounds" : "Unmute table sounds"} aria-pressed={sfxOn}><Icon name={sfxOn ? "sound-on" : "sound-off"} /></button>
     </div>
   </div>
 
