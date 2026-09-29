@@ -1,5 +1,6 @@
 <script>
   import { voice } from "$lib/poker/voice.svelte.js";
+  import Icon from "$lib/components/Icon.svelte";
   import { fly, fade, scale } from "svelte/transition";
   import { flip } from "svelte/animate";
   import { d, DUR } from "$lib/motion.js";
@@ -10,11 +11,11 @@
 
 <div class="voice-bar">
   <button class="btn btn-sm btn-secondary" class:btn-danger={voice.active} onclick={toggle}>
-    {voice.active ? "Leave voice" : "🎤 Join voice"}
+    {#if voice.active}Leave voice{:else}<Icon name="mic" size={15} /> Join voice{/if}
   </button>
   {#if voice.active}
     <button class="btn btn-sm btn-secondary" transition:fly={{ x: d(-8), duration: d(DUR.base) }} onclick={() => voice.toggleMute()}>
-      {voice.muted ? "🔇 Unmute" : "🎙️ Mute"}
+      <Icon name={voice.muted ? "mic-off" : "mic"} size={15} /> {voice.muted ? "Unmute" : "Mute"}
     </button>
     {#each Object.entries(voice.peers) as [id, p] (id)}
       <span class="peer" class:on={p.state === "connected"} title={p.state}

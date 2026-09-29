@@ -1,5 +1,6 @@
 <script>
   import { play } from "$lib/sfx.js";
+  import Icon from "$lib/components/Icon.svelte";
   import { enhance } from "$app/forms";
   import { fly } from "svelte/transition";
   import { d, DUR } from "$lib/motion.js";
@@ -120,7 +121,7 @@
                 <div class="q-main">
                   <div class="q-top">
                     <span class="q-title">
-                      {#if a.unlocked}<span class="ach-ico" aria-hidden="true">🏅</span>{:else}<span class="ach-coin"><Chip value={tierCoin(a)} size={18} /></span>{/if}
+                      {#if a.unlocked}<span class="ach-ico"><Icon name="medal" size={18} /></span>{:else}<span class="ach-coin"><Chip value={tierCoin(a)} size={18} /></span>{/if}
                       {a.name}
                     </span>
                     <span class="q-reward" class:muted={a.unlocked}>

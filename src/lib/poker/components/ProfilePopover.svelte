@@ -3,6 +3,7 @@
   // when any avatar calls profilePop.open(userId, rect). Fetches a mini-profile
   // and lets you add/accept/message without leaving the page.
   import { profilePop } from "$lib/profilePopover.svelte.js";
+  import Icon from "$lib/components/Icon.svelte";
   import Avatar from "$lib/poker/components/Avatar.svelte";
   import { calls } from "$lib/poker/call.svelte.js";
   import { fly } from "svelte/transition";
@@ -101,7 +102,7 @@
         {:else}
           {#if profile.relationship === "friends"}
             <a class="btn btn-sm" href="/social?to={profile.id}">Message</a>
-            {#if profile.online}<button class="btn btn-sm btn-secondary pp-call" title="Voice call" aria-label="Voice call" onclick={() => { const p = profile; profilePop.close(); calls.start(p.id, p.name); }}>📞</button>{/if}
+            {#if profile.online}<button class="btn btn-sm btn-secondary pp-call" title="Voice call" aria-label="Voice call" onclick={() => { const p = profile; profilePop.close(); calls.start(p.id, p.name); }}><Icon name="phone" size={15} /></button>{/if}
           {:else if profile.relationship === "incoming"}
             <button class="btn btn-sm" disabled={busy} onclick={() => act("accept")}>Accept</button>
           {:else if profile.relationship === "outgoing"}
