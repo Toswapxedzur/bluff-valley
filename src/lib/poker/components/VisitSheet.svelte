@@ -5,6 +5,7 @@
   // the margin closes it (the page puts it in the URL, so Back closes it too).
   //   stacking: above the site bar (20), below full-screen moments (40), banners and toasts
   import { onMount, onDestroy } from "svelte";
+  import Icon from "$lib/components/Icon.svelte";
   import TableStage from "$lib/poker/components/TableStage.svelte";
   import ReplayBar from "$lib/poker/components/ReplayBar.svelte";
   import Chip from "$lib/poker/components/Chip.svelte";
@@ -87,7 +88,7 @@
         <span class="net" class:pos={visit.net > 0} class:neg={visit.net < 0}>{#if visit.net}<Chip value={Math.abs(visit.net)} size={16} />{/if}{visit.net > 0 ? "+" : ""}{fmt(visit.net)}</span>
       {/if}
       <div class="hud-right">
-        <button type="button" class="btn-icon float" class:off={!sfxOn} onclick={toggleSfx} title={sfxOn ? "Mute table sounds" : "Unmute table sounds"} aria-pressed={sfxOn}>{sfxOn ? "🔊" : "🔇"}</button>
+        <button type="button" class="btn-icon float" class:off={!sfxOn} onclick={toggleSfx} title={sfxOn ? "Mute table sounds" : "Unmute table sounds"} aria-pressed={sfxOn}><Icon name={sfxOn ? "sound-on" : "sound-off"} /></button>
         <button type="button" class="btn-icon float close" bind:this={closeBtn} onclick={onClose} title="Close (Esc)" aria-label="Close">✕</button>
       </div>
     </div>

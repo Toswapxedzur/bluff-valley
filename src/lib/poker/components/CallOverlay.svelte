@@ -3,6 +3,7 @@
   // and a docked in-call bar (mute / hang up + a running duration) once connected.
   // All state lives on the poker store; the `calls` controller drives transitions.
   import { fly, scale } from "svelte/transition";
+  import Icon from "$lib/components/Icon.svelte";
   import { poker } from "$lib/poker/client.svelte.js";
   import { calls } from "$lib/poker/call.svelte.js";
   import { d, DUR } from "$lib/motion.js";
@@ -34,7 +35,7 @@
 {#if incoming}
   <div class="scrim" transition:fly={{ duration: d(DUR.fast) }}>
     <div class="ring-card" transition:scale={{ duration: d(DUR.base), start: 0.9 }}>
-      <div class="pulse"><span class="ph">📞</span></div>
+      <div class="pulse"><span class="ph"><Icon name="phone" size={30} /></span></div>
       <div class="who">{incoming.fromName}</div>
       <div class="sub">Incoming voice call…</div>
       <div class="btns">
@@ -52,10 +53,10 @@
     <span class="cstatus">{statusText}</span>
     {#if call.state === "active"}
       <button class="btn-icon cbtn" class:muted onclick={() => calls.toggleMute()} aria-label={muted ? "Unmute" : "Mute"}>
-        {muted ? "🔇" : "🎙"}
+        <Icon name={muted ? "mic-off" : "mic"} />
       </button>
     {/if}
-    <button class="btn-icon cbtn hang" onclick={() => calls.hangup()} aria-label="Hang up">📵</button>
+    <button class="btn-icon cbtn hang on-color" onclick={() => calls.hangup()} aria-label="Hang up"><Icon name="hang-up" /></button>
   </div>
 {/if}
 

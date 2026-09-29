@@ -1,5 +1,6 @@
 <script>
   import { onMount, onDestroy, untrack } from "svelte";
+  import Icon from "$lib/components/Icon.svelte";
   import { goto } from "$app/navigation";
   import { poker } from "$lib/poker/client.svelte.js";
   import { voice } from "$lib/poker/voice.svelte.js";
@@ -242,7 +243,7 @@
     {#if watching}<span class="replaying" role="status">Replaying the last hand{watching.data.handNo ? ` (#${watching.data.handNo})` : ""}</span>{/if}
     <div class="hud-right">
       {#if me}<a class="wallet" href="/account" title="Your chips"><Chip value={walletChips} size={14} /><Num value={walletChips} /></a>{/if}
-      <button type="button" class="btn-icon float" class:off={!sfxOn} onclick={toggleSfx} title={sfxOn ? "Mute table sounds" : "Unmute table sounds"} aria-pressed={sfxOn}>{sfxOn ? "🔊" : "🔇"}</button>
+      <button type="button" class="btn-icon float" class:off={!sfxOn} onclick={toggleSfx} title={sfxOn ? "Mute table sounds" : "Unmute table sounds"} aria-pressed={sfxOn}><Icon name={sfxOn ? "sound-on" : "sound-off"} /></button>
     </div>
   </div>
 
@@ -254,7 +255,7 @@
     {@const tny = view.tournament}
     {@const isSprint = tny.kind === "sprint"}
     <section class="tny-hud" transition:fly={{ y: d(-10), duration: d(DUR.base) }}>
-      <span class="tny-badge">{isSprint ? "⚡ River Sprint" : tny.status === "complete" ? "🏆 Finished" : tny.status === "running" ? "Level " + tny.level : "Registering"}</span>
+      <span class="tny-badge">{#if isSprint}<img src={SPRINT_ICON} alt="" width="15" height="15" /> River Sprint{:else if tny.status === "complete"}<Icon name="trophy" size={15} /> Finished{:else if tny.status === "running"}Level {tny.level}{:else}Registering{/if}</span>
       {#if tny.blinds}<span>Blinds <b>{tny.blinds.sb}/{tny.blinds.bb}</b></span>{/if}
       {#if !isSprint}<span>Prize pool <b>{(tny.prizePool ?? 0).toLocaleString()}</b></span>{/if}
       <span>{tny.remaining} left{#if !isSprint} / {tny.registered}{/if}</span>

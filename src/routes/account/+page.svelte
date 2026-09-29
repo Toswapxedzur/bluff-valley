@@ -1,5 +1,6 @@
 <script>
   import { play } from "$lib/sfx.js";
+  import Icon from "$lib/components/Icon.svelte";
   import { enhance } from "$app/forms";
   import Avatar from "$lib/poker/components/Avatar.svelte";
   import Chip from "$lib/poker/components/Chip.svelte";
@@ -77,7 +78,7 @@
     <div class="bonus-side">
       {#if (form?.streak ?? data.streak) > 0}
         <span class="streak" title="Consecutive daily logins. Status only — no extra chips.">
-          🔥 {form?.streak ?? data.streak}-day streak{#if (form?.bestStreak ?? data.bestStreak) > (form?.streak ?? data.streak)} · best {form?.bestStreak ?? data.bestStreak}{/if}
+          <Icon name="streak" size={15} /> {form?.streak ?? data.streak}-day streak{#if (form?.bestStreak ?? data.bestStreak) > (form?.streak ?? data.streak)} · best {form?.bestStreak ?? data.bestStreak}{/if}
         </span>
       {/if}
       <form method="POST" action="?/claimDailyBonus" style="margin:0" use:enhance={({ formElement }) => async ({ result, update }) => {
@@ -95,7 +96,7 @@
     </div>
   </div>
   {#if form?.bonusError}<p class="form-error">{form.bonusError}</p>{/if}
-  {#if form?.bonusOk}<p class="form-success">+{chips(form.bonusAmount)} chips added. 🔥 {form.streak}-day streak.{#if form.newBadges?.length} New badge{form.newBadges.length > 1 ? "s" : ""} unlocked!{/if}</p>{/if}
+  {#if form?.bonusOk}<p class="form-success">+{chips(form.bonusAmount)} chips added. <Icon name="streak" size={14} /> {form.streak}-day streak.{#if form.newBadges?.length} New badge{form.newBadges.length > 1 ? "s" : ""} unlocked!{/if}</p>{/if}
 
   {#if data.ledger?.length}
     <h4 class="sub">Recent activity</h4>
@@ -126,7 +127,7 @@
           {#each items as a (a.key)}
             <div class="badge" class:locked={!a.unlocked} class:tier-gold={a.tier === "gold"} class:tier-silver={a.tier === "silver"} title={a.desc}>
               <div class="badge-top">
-                <span class="badge-ico">{a.unlocked ? "🏅" : "🔒"}</span>
+                <span class="badge-ico"><Icon name={a.unlocked ? "medal" : "lock"} size={20} /></span>
                 {#if a.reward}<span class="badge-reward" class:got={a.unlocked}><Chip value={a.reward} size={13} /> {chips(a.reward)}</span>{/if}
               </div>
               <span class="badge-name">{a.name}</span>

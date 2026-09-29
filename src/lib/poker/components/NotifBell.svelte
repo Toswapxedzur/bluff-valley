@@ -3,6 +3,7 @@
   // feed (friend requests/accepts, chip transfers, missed messages). Opening the
   // panel marks everything read. Clicking an item routes to the right place.
   import { onMount } from "svelte";
+  import Icon from "$lib/components/Icon.svelte";
   import { goto } from "$app/navigation";
   import { fly } from "svelte/transition";
   import { poker } from "$lib/poker/client.svelte.js";
@@ -14,7 +15,7 @@
   const items = $derived(poker.notifications || []);
   const unread = $derived(poker.notifUnread || 0);
 
-  const ICON = { friend_request: "👋", friend_accept: "✅", transfer: "💸", message: "💬" };
+  const ICON = { friend_request: "friend-add", friend_accept: "friend-ok", transfer: "transfer", message: "chat" };
 
   function toggle() {
     open = !open;
@@ -52,7 +53,7 @@
 
 <div class="bell-wrap" bind:this={root}>
   <button class="btn-icon bell" class:has={unread > 0} aria-label="Notifications" onclick={toggle}>
-    <span class="ico">🔔</span>
+    <span class="ico"><Icon name="bell" /></span>
     {#if unread > 0}<span class="dot">{unread > 9 ? "9+" : unread}</span>{/if}
   </button>
 
@@ -68,7 +69,7 @@
         <div class="list">
           {#each items as n (n.id)}
             <button class="row" class:unread={!n.readAt} onclick={() => pick(n)}>
-              <span class="kico">{ICON[n.kind] || "•"}</span>
+              <span class="kico">{#if ICON[n.kind]}<Icon name={ICON[n.kind]} size={16} />{:else}•{/if}</span>
               <span class="body">
                 <span class="text">{n.body}</span>
                 <span class="time">{rel(n.createdAt)}</span>

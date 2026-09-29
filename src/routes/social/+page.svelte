@@ -4,6 +4,7 @@
   // /messages pages. Chats stream via the `poker` client's conversation state;
   // friend management uses the SSR form actions.
   import { poker } from "$lib/poker/client.svelte.js";
+  import Icon from "$lib/components/Icon.svelte";
   import { page } from "$app/stores";
   import { enhance } from "$app/forms";
   import { onMount, tick } from "svelte";
@@ -97,10 +98,10 @@
   }
   function preview(c) {
     if (!c.last) return "No messages yet";
-    if (c.last.kind === "image") return "📷 Photo";
-    if (c.last.kind === "file") return "📎 File";
+    if (c.last.kind === "image") return "Photo";
+    if (c.last.kind === "file") return "File";
     const who = c.kind === "group" && c.last.senderName ? c.last.senderName + ": " : "";
-    return who + (c.last.body || "");
+    return who + String(c.last.body || "").replace(/^💸\s*/u, "");
   }
   // --- live friend-finding (trigram search + recommendations) ---
   let findQ = $state("");
@@ -173,7 +174,7 @@
               {/if}
               <span class="conv-main">
                 <span class="conv-top"><span class="conv-title">{c.title}</span><span class="conv-time">{fmtTime(c.lastMsgAt)}</span></span>
-                <span class="conv-sub"><span class="conv-prev">{preview(c)}</span>{#if c.unread > 0}<span class="unread">{c.unread}</span>{/if}</span>
+                <span class="conv-sub"><span class="conv-prev">{#if c.last?.kind === "image"}<Icon name="picture" size={13} /> {:else if c.last?.kind === "file"}<Icon name="file" size={13} /> {:else if String(c.last?.body || "").startsWith("💸")}<Icon name="transfer" size={13} /> {/if}{preview(c)}</span>{#if c.unread > 0}<span class="unread">{c.unread}</span>{/if}</span>
               </span>
             </button>
           {/each}
@@ -191,7 +192,7 @@
                 <span class="frow-status {f.online ? 'on' : ''}">{f.online ? (f.tableName ? "at " + f.tableName : "online") : "offline"}</span>
               </a>
               <button class="btn btn-xs" onclick={() => openFriendDm(f)}>Message</button>
-              {#if f.online}<button class="btn btn-xs btn-secondary" title="Voice call" aria-label="Voice call {f.name}" onclick={() => calls.start(f.id, f.name)}>📞</button>{/if}
+              {#if f.online}<button class="btn btn-xs btn-secondary" title="Voice call" aria-label="Voice call {f.name}" onclick={() => calls.start(f.id, f.name)}><Icon name="phone" size={14} /></button>{/if}
               <form method="POST" action="?/remove" use:enhance>
                 <input type="hidden" name="userId" value={f.id} />
                 <button class="btn btn-xs btn-secondary" type="submit" title="Remove friend">✕</button>
@@ -275,7 +276,7 @@
           {#if header.kind === "dm" && header.other}<a class="th-name-link" href="/u/{header.other.id}">{header.title}</a>{:else}{header.title}{/if}
           <span class="th-sub">{header.kind === "group" ? header.members.length + " members" : (friends.find((f) => f.id === header.other?.id)?.online ? "online" : "")}</span>
         </span>
-        {#if header.kind === "group"}<button class="btn-icon sm gear" onclick={() => (groupPanel = !groupPanel)} aria-label="Group settings">⚙</button>{/if}
+        {#if header.kind === "group"}<button class="btn-icon sm gear" onclick={() => (groupPanel = !groupPanel)} aria-label="Group settings"><Icon name="gear" size={16} /></button>{/if}
       </div>
       {#if me}
         {#key openId}
@@ -313,7 +314,8 @@
       <div class="thread" bind:this={threadEl}>
         {#each messages as m (m.id)}
           {#if m.kind === "system"}
-            <div class="sys-msg" in:fade={{ duration: d(DUR.base) }}>{m.body}</div>
+            <!-- a chip transfer's system line is stored as "💸 …" — shown with our icon instead -->
+            <div class="sys-msg" in:fade={{ duration: d(DUR.base) }}>{#if String(m.body || "").startsWith("💸")}<Icon name="transfer" size={15} /> {m.body.replace(/^💸\s*/u, "")}{:else}{m.body}{/if}</div>
           {:else}
             <div class="msg" class:mine={m.mine} in:fly={{ y: d(6), duration: d(DUR.base) }}>
               {#if header.kind === "group" && !m.mine}<a class="msg-who" href="/u/{m.senderId}" style="color:{color(m.senderId)}">{m.senderName}</a>{/if}
@@ -337,7 +339,7 @@
       </div>
       <div class="composer">
         <label class="img-btn" title="Send a photo">
-          {sendingImg ? "…" : "🖼"}
+          {#if sendingImg}…{:else}<Icon name="picture" size={18} />{/if}
           <input type="file" accept="image/png,image/jpeg,image/gif,image/webp" hidden onchange={onImageFile} disabled={sendingImg} />
         </label>
         <textarea class="composer-input" bind:value={draft} onkeydown={onKey} oninput={() => openId && poker.sendTyping(openId)} rows="1" placeholder="Message…"></textarea>

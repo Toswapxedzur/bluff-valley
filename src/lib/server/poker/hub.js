@@ -1135,7 +1135,7 @@ export class PokerHub {
     // Notify AWAY recipients so missed chats wait in the bell (online users
     // already have the live message + nav badge). Skip system messages.
     if (row.senderId) {
-      const snippet = row.kind === "image" ? "📷 Photo" : String(row.body || "").slice(0, 80);
+      const snippet = row.kind === "image" ? "Photo" : String(row.body || "").slice(0, 80);
       for (const uid of memberList) {
         if (uid === row.senderId) continue;
         if (this.connsForUser(uid).length > 0) continue; // online → skip

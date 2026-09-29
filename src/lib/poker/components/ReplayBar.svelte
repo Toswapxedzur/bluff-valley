@@ -1,5 +1,6 @@
 <script>
   import Slider from "$lib/components/Slider.svelte";
+  import Icon from "$lib/components/Icon.svelte";
   // The play bar (where a live table's action bar sits): the step, a scrubber, ⏮ ◀ ▶/⏸ ▶| ⏭ and the
   // speed. Drives a ReplayPlayer (one hand) or a VisitPlayer (a whole table visit: the scrubber gets a
   // marker per game, and ⏮ ⏭ go to the previous / next game). `extra`: a snippet at the end of the
@@ -18,17 +19,17 @@
     valueText={(v) => `Step ${v + 1} of ${total}`} oninput={(v) => p.jumpTo(v)} />
   <div class="ctl">
     {#if games}
-      <button type="button" class="ib" onclick={() => p.prevGame()} disabled={p.atFirst} aria-label="Previous game" title="Previous game (PageUp)">⏮</button>
+      <button type="button" class="ib" onclick={() => p.prevGame()} disabled={p.atFirst} aria-label="Previous game" title="Previous game (PageUp)"><Icon name="first" size={16} /></button>
     {:else}
-      <button type="button" class="ib" onclick={() => p.jumpTo(0)} disabled={p.i === 0} aria-label="To the start" title="Start (Home)">⏮</button>
+      <button type="button" class="ib" onclick={() => p.jumpTo(0)} disabled={p.i === 0} aria-label="To the start" title="Start (Home)"><Icon name="first" size={16} /></button>
     {/if}
-    <button type="button" class="ib" onclick={() => p.back()} disabled={p.i === 0} aria-label="Step back" title="Back (←)">◀</button>
-    <button type="button" class="ib play" onclick={() => p.toggle()} aria-label={p.playing ? "Pause" : "Play"} title="Play / pause (space)">{p.playing ? "⏸" : "▶"}</button>
-    <button type="button" class="ib" onclick={() => p.step()} disabled={p.i >= p.last} aria-label="Step forward" title="Forward (→)">▶|</button>
+    <button type="button" class="ib" onclick={() => p.back()} disabled={p.i === 0} aria-label="Step back" title="Back (←)"><Icon name="back" size={16} /></button>
+    <button type="button" class="ib play on-color" onclick={() => p.toggle()} aria-label={p.playing ? "Pause" : "Play"} title="Play / pause (space)"><Icon name={p.playing ? "pause" : "play"} size={16} /></button>
+    <button type="button" class="ib" onclick={() => p.step()} disabled={p.i >= p.last} aria-label="Step forward" title="Forward (→)"><Icon name="step" size={16} /></button>
     {#if games}
-      <button type="button" class="ib" onclick={() => p.nextGame()} disabled={p.atLast} aria-label="Next game" title="Next game (PageDown)">⏭</button>
+      <button type="button" class="ib" onclick={() => p.nextGame()} disabled={p.atLast} aria-label="Next game" title="Next game (PageDown)"><Icon name="last" size={16} /></button>
     {:else}
-      <button type="button" class="ib" onclick={() => p.jumpTo(p.last)} disabled={p.i >= p.last} aria-label="To the result" title="Result (End)">⏭</button>
+      <button type="button" class="ib" onclick={() => p.jumpTo(p.last)} disabled={p.i >= p.last} aria-label="To the result" title="Result (End)"><Icon name="last" size={16} /></button>
     {/if}
     <div class="seg" role="radiogroup" aria-label="Speed">
       {#each SPEEDS as sp (sp)}

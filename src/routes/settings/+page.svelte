@@ -1,5 +1,6 @@
 <script>
   import { onMount } from "svelte";
+  import Icon from "$lib/components/Icon.svelte";
   import { enhance } from "$app/forms";
   import Select from "$lib/components/Select.svelte";
   import Checkbox from "$lib/components/Checkbox.svelte";
@@ -52,13 +53,13 @@
     <div class="card-head"><h3>Appearance</h3></div>
     <label class="field"><span>Theme</span></label>
     <div class="seg">
-      {#each [["light", "☀ Light"], ["dark", "☾ Dark"], ["system", "🖥 System"]] as [val, lbl]}
-        <button type="button" class="seg-btn" class:on={theme === val} onclick={() => setTheme(val)}>{lbl}</button>
+      {#each [["light", "Light", "sun"], ["dark", "Dark", "moon"], ["system", "System", "system"]] as [val, lbl, ic]}
+        <button type="button" class="seg-btn" class:on={theme === val} onclick={() => setTheme(val)}><Icon name={ic} size={15} /> {lbl}</button>
       {/each}
     </div>
     <p class="muted small">System follows your device's light/dark setting.</p>
     <div class="toggle-row" style="margin-top:14px"><Checkbox bind:checked={sound} label="Table sound effects (cards, chips, your turn)" /></div>
-    <p class="muted small">Stored on this device. There is also a 🔊 button on every table.</p>
+    <p class="muted small">Stored on this device. There is also a sound button on every table.</p>
     <p class="muted small">Sound credits: chip, card and dice recordings by <a href="https://freesound.org/people/ArtOrDie/packs/10595/" rel="noopener">ArtOrDie</a> (Freesound, CC BY 4.0); interface sounds and jingles by <a href="https://kenney.nl" rel="noopener">Kenney</a> (CC0) and <a href="https://mixkit.co" rel="noopener">Mixkit</a>.</p>
   </section>
 
