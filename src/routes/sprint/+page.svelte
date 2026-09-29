@@ -114,7 +114,7 @@
         {#each data.lastResults as r (r.user_id)}
           <div class="lrow" class:top={r.place <= 3}>
             <span class="rank" class:medal={r.place <= 3}>{r.place}</span>
-            <Avatar id={r.user_id} name={r.name} mediaId={r.avatar_media_id} size={30} userId={r.user_id} />
+            <Avatar id={r.user_id} name={r.name} mediaId={r.avatar_media_id} size={24} userId={r.user_id} ring={r.ring || "default"} />
             <a class="lname" href="/u/{r.user_id}">{r.name}</a>
             {#if r.prize > 0}<span class="prize"><Chip value={r.prize} size={14} /> +{fmt(r.prize)}</span>{/if}
           </div>

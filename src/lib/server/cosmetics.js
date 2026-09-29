@@ -78,7 +78,11 @@ export async function equip(userId, slot, look) {
   return { ...c, [slot]: look };
 }
 
-/** Equipped looks for many users at once (for seats, the lobby, the leaderboard): id → { ring, badge,
+/** The ring a user row ({ ring, peak_wealth }) wears — every avatar in the app wears its ring
+ *  (owner, 2026-09-29): select those two columns wherever you load a user for an avatar. */
+export const ringOf = (row) => (row && ownsLook("ring", row.ring, Number(row.peak_wealth)) ? row.ring : "default");
+
+/** Equipped looks for many users at once (for seats, the lobby): id → { ring, badge,
  *  banner } (banner = the picture they WEAR — badge CUSTOM — or null). */
 export async function looksFor(userIds) {
   const ids = [...new Set((userIds || []).filter(Boolean))];

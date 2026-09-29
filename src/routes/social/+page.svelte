@@ -169,7 +169,7 @@
               {#if c.kind === "group"}
                 <span class="avatar conv-av" style="background:var(--accent)">#</span>
               {:else}
-                <Avatar id={c.other?.id} name={c.title} mediaId={c.other?.avatarMediaId} size={40} />
+                <Avatar id={c.other?.id} name={c.title} mediaId={c.other?.avatarMediaId} size={30} ring={c.other?.ring || "default"} />
               {/if}
               <span class="conv-main">
                 <span class="conv-top"><span class="conv-title">{c.title}</span><span class="conv-time">{fmtTime(c.lastMsgAt)}</span></span>
@@ -185,7 +185,7 @@
         {:else}
           {#each friends as f (f.id)}
             <div class="frow" in:fly={{ y: d(6), duration: d(DUR.base) }} animate:flip={{ duration: d(DUR.base) }}>
-              <Avatar id={f.id} name={f.name} mediaId={f.avatarMediaId} size={40} userId={f.id} />
+              <Avatar id={f.id} name={f.name} mediaId={f.avatarMediaId} size={30} userId={f.id} ring={f.ring || "default"} />
               <a class="frow-main frow-link" href="/u/{f.id}">
                 <span class="frow-name">{f.name}</span>
                 <span class="frow-status {f.online ? 'on' : ''}">{f.online ? (f.tableName ? "at " + f.tableName : "online") : "offline"}</span>
@@ -241,7 +241,7 @@
         {/if}
         {#each findResults as r (r.id)}
           <div class="frow" in:fly={{ y: d(6), duration: d(DUR.base) }} animate:flip={{ duration: d(DUR.base) }}>
-            <Avatar id={r.id} name={r.name} mediaId={r.avatarMediaId} size={38} userId={r.id} />
+            <Avatar id={r.id} name={r.name} mediaId={r.avatarMediaId} size={28} userId={r.id} ring={r.ring || "default"} />
             <div class="frow-main">
               <span class="frow-name">{r.name}</span>
               {#if r.reason}<span class="frow-status">{r.reason}</span>{:else if r.reqError}<span class="frow-status" style="color:var(--danger)">{r.reqError}</span>{/if}
@@ -267,7 +267,7 @@
       <div class="thread-head">
         <button class="back-btn" onclick={() => (mobileThread = false)} aria-label="Back">‹</button>
         {#if header.kind === "dm" && header.other}
-          <Avatar id={header.other.id} name={header.title} mediaId={header.other.avatarMediaId} size={40} userId={header.other.id} />
+          <Avatar id={header.other.id} name={header.title} mediaId={header.other.avatarMediaId} size={30} userId={header.other.id} ring={header.other.ring || "default"} />
         {:else}
           <span class="avatar th-av" style="background:var(--accent)">#</span>
         {/if}

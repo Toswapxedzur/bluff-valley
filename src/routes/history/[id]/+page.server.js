@@ -15,7 +15,7 @@ export async function load({ params, locals }) {
   const since = await historySinceForTarget(me, params.id);
   const visits = since === null ? null : (await visitsFor(params.id, { sinceMs: since })).map(visitSummary);
   return {
-    player: { id: params.id, name: profile.name, avatarMediaId: profile.avatarMediaId ?? null, isSelf: profile.isSelf },
+    player: { id: params.id, name: profile.name, avatarMediaId: profile.avatarMediaId ?? null, ring: profile.ring || "default", isSelf: profile.isSelf },
     visits,
     horizonDays: me.isAdmin ? null : 7
   };
