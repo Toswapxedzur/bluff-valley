@@ -1,6 +1,5 @@
 <script>
   import { ACHIEVEMENTS_ON } from "$lib/config.js";
-  import MatchList from "$lib/components/MatchList.svelte";
   import { enhance } from "$app/forms";
   import { fly } from "svelte/transition";
   import { d, DUR } from "$lib/motion.js";
@@ -108,11 +107,11 @@
         {:else}
           <p class="muted small ps-empty">No matches in this visible window.</p>
         {/if}
-        {#if data.recentMatches?.length}
-          <div class="ps-cap">In-game history</div>
-          <MatchList matches={data.recentMatches} />
-        {/if}
-        {#if p.isSelf}<a class="full-stats" href="/stats">Open full statistics →</a>{/if}
+        <!-- their table visits live on their history page (owner, 2026-09-29: one way to view history) -->
+        <span class="ps-links">
+          <a class="full-stats" href="/history/{p.id}">{p.isSelf ? "Your history" : `${p.name}'s history`} →</a>
+          {#if p.isSelf}<a class="full-stats" href="/stats">Full statistics →</a>{/if}
+        </span>
       {:else if data.historyPrivate}
         <p class="muted small private-note">{p.name} doesn't share their play history with you.</p>
       {/if}
@@ -185,5 +184,5 @@
   .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 14px; }
   @media (max-width: 660px) { .ps-overview { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
   @media (max-width: 560px) { .hero { flex-wrap: wrap; } .actions { width: 100%; } .ps-mode { grid-template-columns: 1fr auto; } .ps-mode > span:nth-child(2) { display: none; } }
-  .ps-cap { color: var(--muted); font-size: 11.5px; text-transform: uppercase; letter-spacing: .6px; margin: 14px 0 8px; }
+  .ps-links { display: flex; gap: 18px; flex-wrap: wrap; }
 </style>
