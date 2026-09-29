@@ -1,8 +1,7 @@
 // PokerHub — the process-wide singleton owning every live table and every
 // connection. PlayOK-style model (v11): tables are player-created and
 // ephemeral (no seeding, no DB auto-load); the hub also maintains lobby
-// presence (online players), a lobby chat relay, invites, and a chip
-// leaderboard. Gameplay routing to LiveTable is unchanged.
+// presence (online players), a lobby chat relay and invites. Gameplay routing to LiveTable is unchanged.
 //
 // Plain-node-ESM clean so it runs under both Vite dev and the prod
 // server.js.
@@ -13,7 +12,6 @@ import {
   createTableRow,
   closeTableRow,
   chipsForUsers,
-  leaderboard,
   handsPlayedByUser
 } from "./store.js";
 import { getBalance } from "../wallet.js";
@@ -37,7 +35,6 @@ import { BotManager } from "./bot/manager.js";
 import { looksFor } from "../cosmetics.js";
 
 const INVITE_TTL_MS = 60_000;
-const LEADERBOARD_SIZE = 10;
 
 /** Quick Play's tables: Hold'em ring games (not another game's, not a tournament or Sprint table). */
 const isQuickPlayTable = (t) => t.config.variant === "holdem" && !t.isTournament;
@@ -180,7 +177,7 @@ export class PokerHub {
     };
   }
 
-  // Build the full { tables, players, leaderboard } snapshot. Players are
+  // Build the full { tables, players, tournaments } snapshot. Players are
   // deduped by userId; location is the table they're seated at / watching,
   // else "lobby".
   async lobbySnapshot() {
@@ -230,15 +227,7 @@ export class PokerHub {
       .map((id) => ({ ...byUser.get(id), chips: chips.get(id) ?? 0, avatarMediaId: avatars.get(id)?.avatarMediaId ?? null, ring: looks.get(id)?.ring ?? "default" }))
       .sort((a, b) => a.name.localeCompare(b.name));
 
-    let lb = [];
-    try {
-      const top = await leaderboard(LEADERBOARD_SIZE);
-      let lbLooks = new Map();
-      try { lbLooks = await looksFor(top.map((r) => r.id)); } catch { /* rings optional */ }
-      lb = top.map((r) => ({ id: r.id, name: r.name, chips: Number(r.chips), avatarMediaId: r.avatarMediaId, ring: lbLooks.get(r.id)?.ring ?? "default" }));
-    } catch { /* leaderboard optional */ }
-
-    return { tables, players, leaderboard: lb, tournaments: this.tournamentRows() };
+    return { tables, players, tournaments: this.tournamentRows() };
   }
 
   /** A player changed their ring / badge / banner (the Cosmetics page, or an admin taking a banner
