@@ -39,17 +39,22 @@
           {@const mine = me && p.id === me.id}
           <div class="prow" class:me={mine} in:fly={{ y: d(6), duration: ready ? d(DUR.base) : 0 }} out:fade={{ duration: d(DUR.fast) }} animate:flip={{ duration: d(DUR.base) }}>
             <Avatar id={p.id} name={p.name} mediaId={p.avatarMediaId} size={26} userId={mine ? null : p.id} ring={p.ring || "default"} />
-            {#if mine}
-              <span class="name" title={p.name}>{p.name}<span class="you">{" (you)"}</span></span>
-            {:else}
-              <a class="name name-link" href="/u/{p.id}" title="View {p.name}'s profile">{p.name}</a>
-            {/if}
-            <span class="loc" class:playing={p.location !== "lobby"}>
-              {p.location === "lobby"
-                ? "In lobby"
-                : (p.tableName ?? "At a table")}
+            <!-- two lines, so a long name isn't squeezed by the ring, the place and the chips -->
+            <span class="who">
+              {#if mine}
+                <span class="name" title={p.name}>{p.name}<span class="you">{" (you)"}</span></span>
+              {:else}
+                <a class="name name-link" href="/u/{p.id}" title="View {p.name}'s profile">{p.name}</a>
+              {/if}
+              <span class="sub">
+                <span class="loc" class:playing={p.location !== "lobby"}>
+                  {p.location === "lobby"
+                    ? "In lobby"
+                    : (p.tableName ?? "At a table")}
+                </span>
+                <span class="chips">{fmt(p.chips)}</span>
+              </span>
             </span>
-            <span class="chips">{fmt(p.chips)}</span>
             {#if !mine}
               <button
                 class="btn btn-secondary btn-xs invite"
@@ -102,6 +107,9 @@
     text-overflow: ellipsis;
     white-space: nowrap;
   }
+  .who { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+  .who .name { flex: none; }
+  .sub { display: flex; align-items: center; gap: 8px; min-width: 0; }
   .prow.me .name { color: var(--accent); }
   .name-link { text-decoration: none; transition: color var(--dur, .2s) var(--ease, ease); }
   .name-link:hover { color: var(--accent-ink); }
@@ -109,8 +117,8 @@
 
 
   .loc {
-    flex: 0 0 auto;
-    max-width: 40%;
+    flex: 0 1 auto;
+    min-width: 0;
     font-size: 10.5px;
     color: var(--muted);
     background: var(--surface-2);
