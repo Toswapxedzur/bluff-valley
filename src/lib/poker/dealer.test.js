@@ -158,3 +158,19 @@ test("a replay's dealer (shuffle: false): the cards are collected, then go strai
   run(d, clock.t + 3000);
   assert.equal(new Set(everyId(d).concat([...d._seatIds].flatMap(([, v]) => v))).size, 52, "the next hand deals from it, every card accounted for");
 });
+
+test("a replay's blinds step (new hand number, no cards yet) → the cards dealt a step later on the same number", () => {
+  clock.t = 90_000;
+  const d = new Dealer({ variant: "holdem", mySeat: null, shuffle: false });
+  const idle = { handNo: 4, buttonSeat: 0, board: [], seats: [0, 1].map((n) => seat(n, { hasCards: false, inHand: false })) };
+  d.init(idle);
+  d.geom = { deckSpot: { fx: 12, fy: 80 }, usedSpot: { fx: 900, fy: 80 }, centre: { fx: 450, fy: 300 } };
+  const blinds = { handNo: 5, buttonSeat: 1, board: [], seats: [0, 1].map((n) => seat(n, { hasCards: false })) };
+  d.onView(idle, blinds, null);
+  run(d, clock.t + 400);
+  assert.equal(d.flights.length, 0, "nothing dealt while the blinds go in");
+  const dealt = { ...blinds, seats: [0, 1].map((n) => seat(n)) };
+  d.onView(blinds, dealt, null);
+  run(d, clock.t + 3000);
+  assert.equal(d.deck.length, 48, "then both hands are dealt");
+});
