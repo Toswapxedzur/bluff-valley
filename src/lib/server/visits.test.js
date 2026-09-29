@@ -47,3 +47,13 @@ test("a tournament's net is prize − entry; an archived hand has no step count"
   assert.equal(v[0].net, 150);
   assert.equal(v[0].games[0].steps, null);
 });
+
+test("a game's step count matches its replay: + an all-in run-out's streets", () => {
+  const t0 = 1_000_000_000;
+  const [v] = groupVisits([
+    hand("a1", "A", t0, 5, { nact: 6 }),
+    hand("a2", "A", t0 + MIN, 50, { nact: 4, nrun: 3, nrev: 2, btype: null }),
+    hand("a3", "A", t0 + 2 * MIN, 50, { nact: 4, nrun: 2, nrev: 2, btype: "ARRAY" })   // run it twice: no run-out steps
+  ]);
+  assert.deepEqual(v.games.map((g) => g.steps), [9, 10, 7]);
+});

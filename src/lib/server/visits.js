@@ -38,8 +38,11 @@ export function groupVisits(hands, ledger = []) {
     v.endedAt = Math.max(v.endedAt, ended);
     v.net += Number(h.net) || 0;
     const actions = h.nact == null ? null : Number(h.nact);
+    // replay-views.js: before the deal, dealt, one per action, the result — plus an all-in run-out's
+    // street steps (a Hold'em showdown with ≥ 2 hands up and no run-it-twice)
+    const runout = h.nrun && Number(h.nrev) >= 2 && (!h.btype || h.btype === "NULL") ? Number(h.nrun) : 0;
     v.games.push({ replayId: h.id, handNo: h.hand_no == null ? null : Number(h.hand_no), tableId: h.table_id,
-      net: Number(h.net) || 0, steps: actions == null ? null : actions + 3, startedAt: started });
+      net: Number(h.net) || 0, steps: actions == null ? null : actions + 3 + runout, startedAt: started });
   }
   // Sprint / tournament: the money result is the wallet's, not the table chips'
   const money = new Map();
@@ -58,7 +61,10 @@ export function groupVisits(hands, ledger = []) {
 export async function visitsFor(userId, { sinceMs = 0, limit = 3000 } = {}) {
   const hands = await query(
     `SELECT mr.id, mr.mode, mr.variant, mr.context, mr.table_id, mr.table_name, mr.hand_no, mr.started_at, mr.ended_at,
-            mrp.net, JSON_LENGTH(mr.replay_json, '$.actions') AS nact
+            mrp.net, JSON_LENGTH(mr.replay_json, '$.actions') AS nact,
+            JSON_LENGTH(mr.replay_json, '$.final.result.runout.stages') AS nrun,
+            JSON_LENGTH(mr.replay_json, '$.final.result.revealed') AS nrev,
+            JSON_TYPE(JSON_EXTRACT(mr.replay_json, '$.final.result.boards')) AS btype
        FROM match_replay_player mrp
        JOIN match_replay mr ON mr.id = mrp.replay_id
       WHERE mrp.user_id = ? AND mrp.ended_at >= ?

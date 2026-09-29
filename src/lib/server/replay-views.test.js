@@ -86,3 +86,21 @@ test("a broken recording gives null, never a throw", () => {
   assert.equal(replayViews(null, {}, { people: new Map() }), null);
   assert.equal(replayViews({ v: 1, mode: "nope", players: [], actions: [] }, { id: "x" }, { people: new Map() }), null);
 });
+
+test("an all-in run-out is steps on the table (hands up, then a street a step, each with the chances), marked All-in", () => {
+  const { doc: base, row } = fixtures["holdem-showdown"];
+  const doc = structuredClone(base);
+  const [a, b] = doc.final.result.revealed.map((h) => h.seat);
+  doc.final.result.runout = { from: 3, stages: [{ board: 3, pct: { [a]: 30, [b]: 70 } }, { board: 4, pct: { [a]: 9, [b]: 91 } }, { board: 5, pct: { [a]: 0, [b]: 100 } }] };
+  const out = replayViews(doc, row, { people: people(doc), viewerSeat: null });
+  assert.equal(out.steps.length, doc.actions.length + 3 + 3, "three run-out steps before the result");
+  const run = out.steps.slice(-4, -1);
+  assert.deepEqual(run.map((s) => s.view.board.length), [3, 4, 5], "the board grows a street a step");
+  assert.ok(run.every((s) => !s.view.result), "not the result yet: the dealer deals these cards");
+  assert.deepEqual(run.map((s) => s.view.equity[b]), [70, 91, 100]);
+  assert.ok(run.every((s) => s.view.shown[a]?.length === 2 && s.view.shown[b]?.length === 2), "both hands are up");
+  assert.match(run[0].text, /^All in — hands up/); assert.match(run[1].text, /^Turn/); assert.match(run[2].text, /^River/);
+  assert.equal(out.steps.at(-1).mark, "All-in", "the result carries the moment's slider mark");
+  for (let i = 1; i < out.steps.length; i += 1) assert.ok(out.steps[i].t > out.steps[i - 1].t);
+  assert.equal(views("holdem-showdown").out.steps.at(-1).mark, undefined, "an ordinary showdown has no mark");
+});

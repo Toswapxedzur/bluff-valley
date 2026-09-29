@@ -24,7 +24,7 @@
   let busy = false;
   $effect(() => {
     const q = poker.achievementQueue;
-    if (busy || !q.length) return;
+    if (busy || !q.length || poker.replaying > 0) return;   // a replay is on screen: it waits
     busy = true;
     current = q[0];
     cueAt(current.metal ? "ringSet" : "medalClink", performance.now() + 300);   // as it slides in

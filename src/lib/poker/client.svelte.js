@@ -44,6 +44,7 @@ class PokerClient {
   notifUnread = $state(0);
   achievementQueue = $state([]); // [{ key, name, desc, tier, reward }] waiting for the unlock toast
   proclamationQueue = $state([]); // [{ kind, ... }] banner moments waiting their turn (S2C.MOMENT)
+  replaying = $state(0);          // replays on screen: live banners and toasts wait until none is (owner, 2026-09-29)
 
   // Phase E — out-of-game friend voice calls.
   incomingCall = $state(null);  // { callId, fromUserId, fromName } — ringing at me

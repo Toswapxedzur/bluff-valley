@@ -7,6 +7,7 @@
   import VoiceBar from "$lib/poker/components/VoiceBar.svelte";
   import { SITE_NAME } from "$lib/config.js";
   import TableStage from "$lib/poker/components/TableStage.svelte";
+  import ReplayTag from "$lib/poker/components/ReplayTag.svelte";
   import ReplayBar from "$lib/poker/components/ReplayBar.svelte";
   import { ReplayPlayer } from "$lib/poker/replay-player.svelte.js";
   import ActionBar from "$lib/poker/components/ActionBar.svelte";
@@ -230,6 +231,7 @@
     <a href="/" class="btn-icon float back" aria-label="Back to lobby" title="Lobby">‹</a>
     {#if String(tableId).startsWith("sprint-")}<img class="gicon" src={SPRINT_ICON} alt="" width="34" height="34" />
     {:else if gameIcon(gameKey)}<img class="gicon" src={gameIcon(gameKey)} alt="" width="34" height="34" />{/if}
+    {#if watching}<ReplayTag label="Replay · Last hand" />{/if}
     <div class="title">
       <b>{data.table.name}</b>
       <span class="stakes">

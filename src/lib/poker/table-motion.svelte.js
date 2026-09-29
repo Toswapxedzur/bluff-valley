@@ -2,7 +2,8 @@
 // DeckLayer, flop poker — see deal-anim.js) and the Bank (coins on the MoneyLayer, every game — see
 // bank.svelte.js). Both turn view changes into flights; the DOM hands / board / badges read them to
 // know what is still in the air. Call tableMotion(src) once while the page component initialises;
-// src is a live getter object { view, mySeatNo, privates }. The badges and pots find the Bank through
+// src is a live getter object { view, mySeatNo, privates, replay }. A replay never gets a full-screen
+// moment (owner, 2026-09-29: nothing covers the table in a replay — its slider marks them instead). The badges and pots find the Bank through
 // the "bank" context.
 import { untrack, setContext } from "svelte";
 import { Dealer } from "./dealer.svelte.js";
@@ -60,7 +61,7 @@ export function tableMotion(src) {
     untrack(() => {
       const prev = momentPrev;
       momentPrev = v;
-      if (!v || !prev || prev.id !== v.id || reducedMotion() || prev.result || !v.result) return;
+      if (!v || !prev || prev.id !== v.id || reducedMotion() || src.replay || prev.result || !v.result) return;
       const mo = detectMoment(v);
       if (!mo) return;
       const id = `${v.id}:${v.handNo}`;
