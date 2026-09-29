@@ -161,15 +161,28 @@ export async function ensureMigrated() {
   // v26 (banners): the `banner_file` and `banner` tables are created by schema.sql's
   // CREATE TABLE IF NOT EXISTS (applied above) — no ALTERs, so no migrateToV26.
   await migrateToV27();
+  await migrateToV28();
 
   // Stamp the version row (idempotent — schema.sql also INSERT IGNOREs
   // it, but we want to be defensive).
   await execute(
-    "INSERT INTO meta(meta_key, meta_value) VALUES ('schema_version', '27') "
+    "INSERT INTO meta(meta_key, meta_value) VALUES ('schema_version', '28') "
     + "ON DUPLICATE KEY UPDATE meta_value = VALUES(meta_value)"
   );
 
   _migrated = true;
+}
+
+// v27 -> v28 (who sees your play history, owner 2026-09-29): history_window becomes
+// private | friends | everyone with 'friends' the default. Every player still on the old default
+// ('private' — nobody on prod had ever changed it) moves to 'friends', once (gated on the stored
+// version, so a later explicit 'private' stays); the legacy windows (7d/30d/90d/all) mean 'everyone'.
+async function migrateToV28() {
+  const v = await query("SELECT meta_value FROM meta WHERE meta_key = 'schema_version'");
+  if (v.length && Number(v[0].meta_value) >= 28) return;
+  await execute("ALTER TABLE user MODIFY COLUMN history_window VARCHAR(16) NOT NULL DEFAULT 'friends'");
+  await execute("UPDATE user SET history_window = 'friends' WHERE history_window = 'private'");
+  await execute("UPDATE user SET history_window = 'everyone' WHERE history_window NOT IN ('private', 'friends', 'everyone')");
 }
 
 // v26 -> v27 (the banner becomes a badge you wear, 2026-09-27): a banner now shows only while the

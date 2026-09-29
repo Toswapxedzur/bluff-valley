@@ -3,7 +3,8 @@
 // the whole visit's slider and its markers before any table views load (those come a few games at a
 // time from /api/history/steps, each game under /replay's own access rules).
 import { json, error } from "@sveltejs/kit";
-import { visitsFor, historySinceForTarget } from "$lib/server/visits.js";
+import { visitsFor } from "$lib/server/visits.js";
+import { historySinceForTarget } from "$lib/server/replay-access.js";
 
 export async function GET({ url, locals }) {
   if (!locals.user) throw error(401, "Sign in.");

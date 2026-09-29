@@ -104,7 +104,7 @@
         {#if data.player.restricted}
           <p class="muted small">This profile is private.</p>
         {:else if data.player.privateHistory}
-          <p class="muted small">This player keeps their play history private.</p>
+          <p class="muted small">{data.player.name} doesn't share their play history with you.</p>
         {:else}
           <div class="cap">In-game history</div>
           <VisitList visits={data.player.visits || []} empty="No table visits in the visible window." onOpen={(id) => showVisit(id, data.player.id)} />

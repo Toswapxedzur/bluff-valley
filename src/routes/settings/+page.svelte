@@ -25,7 +25,7 @@
 
   // --- Privacy (form) ---
   let visibility = $state(data.visibility);
-  let historyWindow = $state(["private", "7d"].includes(data.historyWindow) ? data.historyWindow : "7d");
+  let historyWindow = $state(data.historyWindow || "friends");
   let friendReqPolicy = $state(data.friendReqPolicy);
 
   // --- Social toggles (form via hidden inputs) ---
@@ -70,13 +70,14 @@
       <label class="field" style="margin-top:14px"><span>Who can send me friend requests</span></label>
       <Select name="friendReqPolicy" bind:value={friendReqPolicy} block
         options={[{ value: "everyone", label: "Everyone" }, { value: "fof", label: "Friends of friends" }, { value: "nobody", label: "Nobody" }]} />
-      <label class="field" style="margin-top:14px"><span>Public play history &amp; replays</span></label>
+      <label class="field" style="margin-top:14px"><span>Who can see my play history</span></label>
       <Select name="historyWindow" bind:value={historyWindow} block
         options={[
-          { value: "private", label: "Private (only me)" },
-          { value: "7d", label: "Show the last 7 days" }
+          { value: "private", label: "Only me" },
+          { value: "friends", label: "Friends" },
+          { value: "everyone", label: "Everybody" }
         ]} />
-      <p class="muted small">Bluff Valley keeps 7 days of play history. Visitors to your profile can see your stats and step-through replays from that window; your hole cards in an exposed replay stay hidden unless they were revealed at showdown.</p>
+      <p class="muted small">Bluff Valley keeps 7 days of play history. Whoever you choose sees a History button on your profile card, with your table visits, stats and replays from that window. Your hole cards stay hidden unless they were shown at showdown.</p>
       <button class="btn" type="submit" style="margin-top:14px">Save privacy</button>
       {#if form?.privacyOk}<p class="form-success">Saved.</p>{/if}
     </form>
