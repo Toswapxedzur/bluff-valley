@@ -25,8 +25,8 @@
     <Slider min={lo} {max} step={config.bigBlind || 1} bind:value={amount} ariaLabel="Rebuy amount" />
     <input class="num" type="number" min="1" {max} bind:value={amount} />
     <div class="modal-actions">
-      <button class="btn ghost" onclick={onCancel}>Cancel</button>
-      <button class="btn primary" onclick={confirm} disabled={amount <= 0}>Rebuy {Math.round(amount).toLocaleString()}</button>
+      <button class="btn btn-secondary" onclick={onCancel}>Cancel</button>
+      <button class="btn" onclick={confirm} disabled={amount <= 0}>Rebuy {Math.round(amount).toLocaleString()}</button>
     </div>
   </div>
 </div>
@@ -38,6 +38,4 @@
   .modal .num { width: 100%; padding: 9px 11px; border-radius: var(--r-btn); border: 0; background: var(--well); color: var(--text); }
   .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 4px; }
   .small { font-size: 12px; opacity: 0.8; }
-  .btn.primary { background: var(--accent); color: var(--on-accent); }
-  .btn.ghost { background: var(--well); box-shadow: none; }
 </style>

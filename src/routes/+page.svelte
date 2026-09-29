@@ -305,7 +305,6 @@
   .pip { width: 9px; height: 9px; border-radius: 50%; background: var(--well); box-shadow: inset 0 0 0 1px rgba(128,128,128,.18); }
   .pip.on { background: var(--accent); box-shadow: none; }
   .seats-lbl { color: var(--muted); font-size: 12px; margin-left: 6px; font-variant-numeric: tabular-nums; }
-  .btn-block { width: 100%; }
 
   /* tournaments — borderless spaced row-cards */
   .tny { margin-top: 22px; }

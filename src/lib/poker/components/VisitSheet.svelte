@@ -87,8 +87,8 @@
         <span class="net" class:pos={visit.net > 0} class:neg={visit.net < 0}>{#if visit.net}<Chip value={Math.abs(visit.net)} size={16} />{/if}{visit.net > 0 ? "+" : ""}{fmt(visit.net)}</span>
       {/if}
       <div class="hud-right">
-        <button type="button" class="round" class:off={!sfxOn} onclick={toggleSfx} title={sfxOn ? "Mute table sounds" : "Unmute table sounds"} aria-pressed={sfxOn}>{sfxOn ? "🔊" : "🔇"}</button>
-        <button type="button" class="round close" bind:this={closeBtn} onclick={onClose} title="Close (Esc)" aria-label="Close">✕</button>
+        <button type="button" class="btn-icon float" class:off={!sfxOn} onclick={toggleSfx} title={sfxOn ? "Mute table sounds" : "Unmute table sounds"} aria-pressed={sfxOn}>{sfxOn ? "🔊" : "🔇"}</button>
+        <button type="button" class="btn-icon float close" bind:this={closeBtn} onclick={onClose} title="Close (Esc)" aria-label="Close">✕</button>
       </div>
     </div>
 
@@ -117,9 +117,7 @@
   .net { display: inline-flex; align-items: center; gap: 5px; font-weight: 800; font-variant-numeric: tabular-nums; padding: 5px 12px; border-radius: 999px; background: var(--surface); box-shadow: var(--shadow-card); }
   .net.pos { color: var(--ok); } .net.neg { color: var(--danger); }
   .hud-right { margin-left: auto; display: flex; gap: 8px; }
-  .round { appearance: none; border: 0; width: 34px; height: 34px; border-radius: 999px; background: var(--surface); color: var(--text); cursor: pointer; font-size: 15px; box-shadow: var(--shadow-card); }
-  .round.off { opacity: 0.55; }
-  .round.close { font-size: 14px; font-weight: 700; }
+  .close { font-size: 14px; font-weight: 700; }
   .dock { flex: 0 0 auto; display: flex; justify-content: center; padding: 8px 14px 14px; }
   .dock > :global(*) { max-width: 760px; }
 </style>

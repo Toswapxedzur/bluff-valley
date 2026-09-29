@@ -51,11 +51,11 @@
     <span class="cname">{call.peer?.name || "Friend"}</span>
     <span class="cstatus">{statusText}</span>
     {#if call.state === "active"}
-      <button class="cbtn" class:muted onclick={() => calls.toggleMute()} aria-label={muted ? "Unmute" : "Mute"}>
+      <button class="btn-icon cbtn" class:muted onclick={() => calls.toggleMute()} aria-label={muted ? "Unmute" : "Mute"}>
         {muted ? "🔇" : "🎙"}
       </button>
     {/if}
-    <button class="cbtn hang" onclick={() => calls.hangup()} aria-label="Hang up">📵</button>
+    <button class="btn-icon cbtn hang" onclick={() => calls.hangup()} aria-label="Hang up">📵</button>
   </div>
 {/if}
 
@@ -91,10 +91,7 @@
   @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: .4; } }
   .cname { font-weight: 700; font-size: 14px; color: var(--text); }
   .cstatus { color: var(--muted); font-size: 12.5px; font-variant-numeric: tabular-nums; min-width: 42px; }
-  .cbtn { width: 34px; height: 34px; border: 0; border-radius: 50%; cursor: pointer; font-size: 15px;
-    background: var(--well); color: var(--text); display: grid; place-items: center;
-    transition: background-color var(--dur) var(--ease), transform var(--dur) var(--ease); }
-  .cbtn:hover { transform: translateY(-1px); background: var(--surface-2); }
+  .cbtn { color: var(--text); }
   .cbtn.muted { background: var(--accent-soft); }
   .cbtn.hang { background: var(--danger); color: #fff; }
 </style>

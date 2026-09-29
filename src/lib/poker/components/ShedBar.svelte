@@ -21,7 +21,7 @@
   {#if myTurn}
     <div class="acts">
       {#if canPass}<button class="btn btn-secondary" onclick={() => onAct({ type: "pass" })}>Pass</button>{/if}
-      <button class="btn primary" onclick={() => selected.length && onAct({ type: "play", cards: [...selected] })} disabled={!selected.length}>Play {selected.length || ""}</button>
+      <button class="btn" onclick={() => selected.length && onAct({ type: "play", cards: [...selected] })} disabled={!selected.length}>Play {selected.length || ""}</button>
     </div>
   {/if}
 </section>

@@ -226,7 +226,7 @@
   {/key}
   <!-- slim overlay strip: no site bar on a table -->
   <div class="hud">
-    <a href="/" class="back" aria-label="Back to lobby" title="Lobby">‹</a>
+    <a href="/" class="btn-icon float back" aria-label="Back to lobby" title="Lobby">‹</a>
     {#if String(tableId).startsWith("sprint-")}<img class="gicon" src={SPRINT_ICON} alt="" width="34" height="34" />
     {:else if gameIcon(gameKey)}<img class="gicon" src={gameIcon(gameKey)} alt="" width="34" height="34" />{/if}
     <div class="title">
@@ -242,7 +242,7 @@
     {#if watching}<span class="replaying" role="status">Replaying the last hand{watching.data.handNo ? ` (#${watching.data.handNo})` : ""}</span>{/if}
     <div class="hud-right">
       {#if me}<a class="wallet" href="/account" title="Your chips"><Chip value={walletChips} size={14} /><Num value={walletChips} /></a>{/if}
-      <button type="button" class="sfx-btn" class:off={!sfxOn} onclick={toggleSfx} title={sfxOn ? "Mute table sounds" : "Unmute table sounds"} aria-pressed={sfxOn}>{sfxOn ? "🔊" : "🔇"}</button>
+      <button type="button" class="btn-icon float" class:off={!sfxOn} onclick={toggleSfx} title={sfxOn ? "Mute table sounds" : "Unmute table sounds"} aria-pressed={sfxOn}>{sfxOn ? "🔊" : "🔇"}</button>
     </div>
   </div>
 
@@ -300,9 +300,9 @@
       {/if}
       {#if isSeated}
         <div class="seat-controls">
-          <button class="btn" onclick={stand}>Stand</button>
-          <button class="btn" onclick={toggleSitOut}>{mySeat.sittingOut ? "Sit back in" : "Sit out"}</button>
-          <button class="btn" onclick={() => (rebuyOpen = true)} disabled={rebuyMax <= 0}>Rebuy</button>
+          <button class="btn btn-secondary" onclick={stand}>Stand</button>
+          <button class="btn btn-secondary" onclick={toggleSitOut}>{mySeat.sittingOut ? "Sit back in" : "Sit out"}</button>
+          <button class="btn btn-secondary" onclick={() => (rebuyOpen = true)} disabled={rebuyMax <= 0}>Rebuy</button>
         </div>
         {#if hasOpenSeat}
           <div class="bot-controls">
@@ -348,7 +348,7 @@
 
   .hud { position: absolute; top: 0; left: 0; right: 0; z-index: 6; display: flex; align-items: center; gap: 12px; padding: 10px 14px; pointer-events: none; }
   .hud > * { pointer-events: auto; }
-  .back { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 999px; background: var(--surface); color: var(--text); text-decoration: none; font-size: 22px; line-height: 1; box-shadow: var(--shadow-card); }
+  .back { font-size: 22px; text-decoration: none; }
   .gicon { display: block; flex: none; }
   .title { display: flex; flex-direction: column; line-height: 1.15; }
   .title b { font-family: var(--f-display); font-size: 17px; }
@@ -360,8 +360,6 @@
   .signin a { color: var(--hero); }
   .hud-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
   .wallet { display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px 5px 8px; border-radius: 999px; background: var(--surface); color: var(--gold-ink); font-weight: 800; font-size: 13px; text-decoration: none; box-shadow: var(--shadow-card); font-variant-numeric: tabular-nums; }
-  .sfx-btn { appearance: none; border: 0; background: var(--surface); color: var(--text); border-radius: 999px; width: 34px; height: 34px; cursor: pointer; font-size: 15px; box-shadow: var(--shadow-card); }
-  .sfx-btn.off { opacity: 0.55; }
 
   .toast { position: absolute; top: 56px; left: 50%; transform: translateX(-50%); z-index: 7; max-width: 520px; padding: 11px 15px; border-radius: var(--r-card); text-align: center; font-size: 14px; box-shadow: var(--shadow-card); background: var(--surface); color: var(--text); }
   .toast.error { color: var(--danger); box-shadow: 0 0 0 2px var(--danger), var(--shadow-card); }

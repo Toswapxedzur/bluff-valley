@@ -78,7 +78,7 @@
 
       <div class="cta">
         {#if !data.signedIn}
-          <a class="btn-primary" href="/account/login">Sign in to enter</a>
+          <a class="btn btn-gold btn-lg" href="/account/login">Sign in to enter</a>
         {:else if entered}
           <span class="enrolled">✓ You're in — good luck!</span>
         {:else if f.status === "live"}
@@ -88,7 +88,7 @@
         {:else}
           <form method="POST" action="?/register" use:enhance={onRegister()}>
             <input type="hidden" name="roundId" value={f.id} />
-            <button class="btn-primary" type="submit">Enter for {fmt(data.cfg.bid)} chips</button>
+            <button class="btn btn-gold btn-lg" type="submit">Enter for {fmt(data.cfg.bid)} chips</button>
           </form>
         {/if}
         {#if form?.error}<span class="err">{form.error}</span>{/if}
@@ -149,10 +149,6 @@
   .sl { font-size: 10.5px; color: var(--muted); text-transform: uppercase; letter-spacing: .03em; }
 
   .cta { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-  .btn-primary { border: 0; cursor: pointer; font-weight: 700; font-size: 14px; color: #1a1200;
-    background: var(--gold-ink); padding: 11px 20px; border-radius: var(--r-pill); text-decoration: none; display: inline-block;
-    transition: filter var(--dur) var(--ease); }
-  .btn-primary:hover { filter: brightness(1.08); }
   .cta form { margin: 0; }
   .enrolled { font-weight: 700; color: var(--ok); }
   .closed { font-weight: 600; color: var(--muted); }

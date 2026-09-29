@@ -139,7 +139,7 @@
 
 {#if !onTable}
 <header class="topbar">
-  <button class="menu-btn" aria-label="Menu" aria-expanded={menuOpen} onclick={() => (menuOpen = !menuOpen)}>
+  <button class="btn-icon menu-btn" aria-label="Menu" aria-expanded={menuOpen} onclick={() => (menuOpen = !menuOpen)}>
     <span class="bars"></span>
   </button>
 
@@ -156,7 +156,7 @@
   </nav>
 
   <div class="topbar-right">
-    <button class="theme-btn" aria-label="Toggle theme" title="Toggle light / dark" onclick={toggleTheme}>
+    <button class="btn-icon" aria-label="Toggle theme" title="Toggle light / dark" onclick={toggleTheme}>
       {theme === "dark" ? "☾" : "☀"}
     </button>
     {#if data.user}<NotifBell />{/if}
@@ -215,25 +215,12 @@
 
 <style>
   /* mobile menu toggle — hidden on desktop */
-  .menu-btn {
-    display: none; width: 34px; height: 34px; border: 0; border-radius: var(--r-pill);
-    background: var(--well); color: var(--text); cursor: pointer; place-items: center;
-    transition: background-color var(--dur) var(--ease);
-  }
-  .menu-btn:hover { background: var(--surface-2); }
+  .menu-btn { display: none; color: var(--text); }
   .menu-btn .bars, .menu-btn .bars::before, .menu-btn .bars::after {
     content: ""; display: block; width: 15px; height: 2px; border-radius: 2px; background: currentColor; position: relative;
   }
   .menu-btn .bars::before { position: absolute; top: -5px; }
   .menu-btn .bars::after { position: absolute; top: 5px; }
-
-  .theme-btn {
-    width: 34px; height: 34px; border: 0; border-radius: var(--r-pill);
-    background: var(--well); color: var(--muted); cursor: pointer; font-size: 15px;
-    display: grid; place-items: center;
-    transition: color var(--dur) var(--ease), background-color var(--dur) var(--ease), transform var(--dur) var(--ease);
-  }
-  .theme-btn:hover { color: var(--text); background: var(--surface-2); transform: translateY(-1px); }
 
   .topbar-right { display: flex; align-items: center; gap: 9px; margin-left: auto; }
   .me-av { display: inline-flex; }

@@ -47,9 +47,9 @@
     {/each}
   </div>
   <div class="acts">
-    <button class="btn btn-secondary ghost" onclick={clear} disabled={total === 0}>Clear</button>
+    <button class="btn btn-secondary" onclick={clear} disabled={total === 0}>Clear</button>
     <button class="btn btn-secondary" onclick={() => onAct({ type: "bet", bets: [] })}>Skip</button>
-    <button class="btn primary" onclick={place} disabled={total < minBet}>Place bets</button>
+    <button class="btn" onclick={place} disabled={total < minBet}>Place bets</button>
   </div>
 </section>
 

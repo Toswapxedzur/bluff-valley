@@ -37,7 +37,7 @@
             {#if Number(b.banned)}
               <form method="POST" action="?/unban" use:enhance><input type="hidden" name="userId" value={b.user_id} /><button class="btn btn-sm btn-secondary">Lift bar</button></form>
             {:else}
-              <form method="POST" action="?/ban" use:enhance><input type="hidden" name="userId" value={b.user_id} /><button class="btn btn-sm danger">Remove and bar</button></form>
+              <form method="POST" action="?/ban" use:enhance><input type="hidden" name="userId" value={b.user_id} /><button class="btn btn-sm btn-danger">Remove and bar</button></form>
             {/if}
           </div>
         </div>
@@ -62,5 +62,4 @@
   .bad { color: var(--danger); }
   .acts { display: flex; gap: 8px; flex-wrap: wrap; }
   .acts form { margin: 0; }
-  .danger { background: var(--danger); color: #fff; }
 </style>
