@@ -72,7 +72,6 @@
   <section class="section">
     <div class="card-head">
       <h3>Leaderboard</h3>
-      <a class="lb-all" href="/data?view=ranks">See all →</a>
     </div>
 
     <div class="board">
@@ -151,8 +150,6 @@
   .prow.me .name { color: var(--accent); }
   .name-link { text-decoration: none; transition: color var(--dur, .2s) var(--ease, ease); }
   .name-link:hover { color: var(--accent-ink); }
-  .lb-all { font-size: 12px; color: var(--accent-ink); text-decoration: none; }
-  .lb-all:hover { opacity: .75; }
   .you { color: var(--muted); font-weight: 400; }
 
   .rank {
