@@ -111,7 +111,8 @@
   .hud > * { pointer-events: auto; }
   .gicon { display: block; flex: none; }
   .title { display: flex; flex-direction: column; line-height: 1.15; min-width: 0; }
-  .title b { font-family: var(--f-display); font-size: 17px; }
+  .title b { font-family: var(--f-display); font-size: 17px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  @media (max-width: 480px) { .title b { font-size: 15px; } .hud { gap: 8px; padding: 10px; } }
   .meta { color: var(--muted); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .net { display: inline-flex; align-items: center; gap: 5px; font-weight: 800; font-variant-numeric: tabular-nums; padding: 5px 12px; border-radius: 999px; background: var(--surface); box-shadow: var(--shadow-card); }
   .net.pos { color: var(--ok); } .net.neg { color: var(--danger); }

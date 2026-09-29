@@ -28,8 +28,10 @@
             <span class="name">{v.tableName || variantLabel(keyOf(v))}</span>
             <span class="sub">{v.kind === "sprint" ? "River Sprint" : variantLabel(keyOf(v))}{v.kind === "tournament" ? " · tournament" : ""} · {v.hands} game{v.hands === 1 ? "" : "s"} · {Math.max(1, Math.round((v.endedAt - v.startedAt) / 60_000))} min</span>
           </span>
+          <span class="end">
           <span class="net" class:pos={v.net > 0} class:neg={v.net < 0}>{#if v.net}<Chip value={Math.abs(v.net)} size={14} />{/if}{v.net > 0 ? "+" : ""}{fmt(v.net)}</span>
           <span class="when">{when(v.endedAt)}</span>
+          </span>
         </button>
       </li>
     {/each}
@@ -54,4 +56,12 @@
   .when { flex: none; min-width: 64px; text-align: right; color: var(--faint); font-size: 12px; }
   .small { font-size: 12.5px; }
   .empty { margin: 6px 0; }
+  .end { display: contents; }
+  /* phones: the net over the time, and the details may take two lines */
+  @media (max-width: 480px) {
+    .row { gap: 10px; padding: 10px 12px; }
+    .end { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; flex: none; }
+    .when { min-width: 0; }
+    .sub { white-space: normal; }
+  }
 </style>

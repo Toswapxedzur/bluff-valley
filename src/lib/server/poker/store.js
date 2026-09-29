@@ -225,26 +225,6 @@ export async function replayById(replayId) {
   return { ...row, players };
 }
 
-// A user's recent recorded matches (their own history page, or a public
-// profile filtered by the exposure window). `sinceMs` bounds ended_at.
-export async function recentReplaysForUser(userId, { sinceMs = 0, mode = null, limit = 50, before = null } = {}) {
-  const args = [userId, sinceMs];
-  let where = "mrp.user_id = ? AND mrp.ended_at >= ?";
-  if (mode) { where += " AND mrp.mode = ?"; args.push(mode); }
-  if (before) { where += " AND mrp.ended_at < ?"; args.push(before); }
-  args.push(limit);
-  return query(
-    `SELECT mr.id, mr.mode, mr.variant, mr.context, mr.table_name, mr.hand_no,
-            mr.started_at, mr.ended_at, mr.pot_total, mrp.seat, mrp.net, mrp.role
-       FROM match_replay_player mrp
-       JOIN match_replay mr ON mr.id = mrp.replay_id
-      WHERE ${where}
-      ORDER BY mrp.ended_at DESC
-      LIMIT ?`,
-    args
-  );
-}
-
 // Lifetime count of hands a user has been dealt into (for milestone achievements).
 export async function handsPlayedByUser(userId) {
   const row = await queryOne(

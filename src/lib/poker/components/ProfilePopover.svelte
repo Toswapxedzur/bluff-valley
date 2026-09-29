@@ -95,8 +95,9 @@
       {#if profile.reqError}<div class="pp-err">{profile.reqError}</div>{/if}
       <div class="pp-actions">
         {#if profile.isSelf}
-          <a class="btn btn-sm btn-secondary" href="/u/{profile.id}">View profile</a>
+          <a class="btn btn-sm btn-secondary" href="/u/{profile.id}" onclick={() => profilePop.close()}>Profile</a>
           <a class="btn btn-sm btn-secondary" href="/history/{encodeURIComponent(profile.id)}" onclick={() => profilePop.close()}>History</a>
+          <a class="btn btn-sm btn-secondary" href="/stats" onclick={() => profilePop.close()}>Stats</a>
         {:else}
           {#if profile.relationship === "friends"}
             <a class="btn btn-sm" href="/social?to={profile.id}">Message</a>
@@ -108,7 +109,7 @@
           {:else}
             <button class="btn btn-sm" disabled={busy} onclick={() => act("request")}>＋ Add friend</button>
           {/if}
-          <a class="btn btn-sm btn-secondary" href="/u/{profile.id}">Profile</a>
+          <a class="btn btn-sm btn-secondary" href="/u/{profile.id}" onclick={() => profilePop.close()}>Profile</a>
           <!-- their table visits (/history/<id>), when they share them with you (Settings → Privacy) -->
           {#if profile.canSeeHistory}<a class="btn btn-sm btn-secondary" href="/history/{encodeURIComponent(profile.id)}" onclick={() => profilePop.close()}>History</a>{/if}
         {/if}
