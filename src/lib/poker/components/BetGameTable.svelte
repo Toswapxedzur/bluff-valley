@@ -19,8 +19,9 @@
   const outcome = $derived(round.outcome || null);
   // Roulette / Sic Bo / Slots: the wheel, dice or reels play first; the result (headline, lines,
   // winner marks — and the coins, in the bank) waits until they land (resolve-anim.js)
-  // a jackpot plays as a full-screen moment, spin and all: the table's own spin steps aside for it
-  const jackpot = $derived(outcome ? detectMoment(view)?.kind === "jackpot" : false);
+  // a jackpot plays as a full-screen moment, spin and all: the table's own spin steps aside for it —
+  // live only: a replay has no moments, so its jackpot spins on the table like any other round
+  const jackpot = $derived(outcome && !watchOnly ? detectMoment(view)?.kind === "jackpot" : false);
   const spins = $derived(!!outcome && !jackpot && resolveMs(view?.game) > 0 && (outcome.pocket != null || outcome.dice || outcome.reels));
   let landedFor = $state(null);
   $effect(() => {
