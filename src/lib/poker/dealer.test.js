@@ -133,3 +133,28 @@ test("sound cues: each landing is announced as its card launches, for the frame 
   assert.equal(riffle.t, d.routine.t0 + phase.t0);
   assert.equal(riffle.dur, phase.t1 - phase.t0);
 });
+
+test("a replay's dealer (shuffle: false): the cards are collected, then go straight back as the deck — no routine, no riffle", () => {
+  clock.t = 50_000;
+  const d = new Dealer({ variant: "holdem", mySeat: null, shuffle: false });
+  const idle = { handNo: 1, buttonSeat: 1, board: [], seats: [0, 1].map((n) => seat(n, { hasCards: false, inHand: false })) };
+  d.init(idle);
+  d.geom = { deckSpot: { fx: 12, fy: 80 }, usedSpot: { fx: 900, fy: 80 }, centre: { fx: 450, fy: 300 } };
+  const h2 = { handNo: 2, buttonSeat: 1, board: [], seats: [0, 1].map((n) => seat(n)) };
+  d.onView(idle, h2, null);
+  run(d, clock.t + 3000);
+  const res = { ...h2, board: ["2c", "7d", "9h", "Jc", "Qs"], seats: h2.seats.map((s) => ({ ...s, hasCards: false })),
+    result: { type: "showdown", revealed: [{ seat: 0, holeCards: ["3c", "3d"] }, { seat: 1, holeCards: ["Ah", "Kd"] }], winners: [{ seat: 0, amount: 10 }] } };
+  d.onView(h2, res, null);
+  let routine = false;
+  const until = clock.t + 12_000;
+  while (clock.t < until) { clock.t += 16; d.tick(clock.t); if (d.routine || d.shuffling) routine = true; }
+  assert.equal(routine, false, "no shuffle routine ever starts");
+  assert.ok(!d.cues.some((c) => c.name === "riffle"), "no riffle sound");
+  assert.equal(new Set(d.deck).size, 52, "the whole deck is back in its corner");
+  assert.equal(d.used.length, 0);
+  const h3 = { handNo: 3, buttonSeat: 0, board: [], seats: [0, 1].map((n) => seat(n)) };
+  d.onView(res, h3, null);
+  run(d, clock.t + 3000);
+  assert.equal(new Set(everyId(d).concat([...d._seatIds].flatMap(([, v]) => v))).size, 52, "the next hand deals from it, every card accounted for");
+});

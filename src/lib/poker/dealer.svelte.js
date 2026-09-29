@@ -40,8 +40,11 @@ export class Dealer {
   // it lands (performance.now() clock) — cardLand · flip · pileTap · riffle (see table-audio.js)
   cues = [];
 
-  constructor({ variant, mySeat = null } = {}) {
+  // shuffle: false = a REPLAY (owner, 2026-09-29/30: no covering animation, the shuffle included) — the
+  // collected cards go straight back as the deck, no routine, no riffle
+  constructor({ variant, mySeat = null, shuffle = true } = {}) {
     this.holeCount = HOLE_COUNT[variant] ?? 2;
+    this.shuffle = shuffle;
     this.mySeat = mySeat;
     this._queue = [];                 // [{ t, fn }] timed actions
     this._seatIds = new Map();        // seat → its cards' visual ids (by slot) this hand
@@ -234,7 +237,7 @@ export class Dealer {
         this._fly({ id: c.id, from: c.at, to: { kind: "used" }, dur: DEAL.collectFlight, faceUp: c.faceUp, cue: { name: "pileTap", gain: Math.max(0.35, 1 - i * 0.07) } }, () => this.used.push(c.id));
       });
     });
-    this._at(t + DEAL.collectEvery + Math.max(0, cards.length - 1) * gap + DEAL.collectFlight + 30, () => this._startRoutine());
+    this._at(t + DEAL.collectEvery + Math.max(0, cards.length - 1) * gap + DEAL.collectFlight + 30, () => (this.shuffle ? this._startRoutine() : this._restack()));
   }
 
   _startRoutine() {
@@ -251,6 +254,9 @@ export class Dealer {
     this.used = [];
     this.deck = [];
   }
+
+  /** No shuffle (a replay): the used pile simply becomes the deck again. */
+  _restack() { this.deck = this.used.slice(); this.used = []; }
 
   _finishRoutine() {
     if (this.routine) { this.deck = this.routine.R.finalOrder.slice(); this.routine = null; this.used = []; }

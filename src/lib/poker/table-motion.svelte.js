@@ -33,7 +33,7 @@ export function tableMotion(src) {
     untrack(() => {
       if (!on) { m.dealer = null; dealerFor = null; dealerPrev = null; return; }
       if (dealerFor !== v.id || !m.dealer) {
-        m.dealer = new Dealer({ variant: v.config.variant, mySeat: src.mySeatNo });
+        m.dealer = new Dealer({ variant: v.config.variant, mySeat: src.mySeatNo, shuffle: !src.replay });
         m.dealer.init(v);
         dealerFor = v.id; dealerPrev = v;
         return;
