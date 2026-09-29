@@ -7,6 +7,7 @@
   import { onMount, onDestroy } from "svelte";
   import Icon from "$lib/components/Icon.svelte";
   import TableStage from "$lib/poker/components/TableStage.svelte";
+  import ReplayTag from "$lib/poker/components/ReplayTag.svelte";
   import ReplayBar from "$lib/poker/components/ReplayBar.svelte";
   import Chip from "$lib/poker/components/Chip.svelte";
   import { VisitPlayer } from "$lib/poker/visit-player.svelte.js";
@@ -78,6 +79,7 @@
 
     <div class="hud">
       {#if icon}<img class="gicon" src={icon} alt="" width="34" height="34" />{/if}
+      <ReplayTag label={player?.game ? `Replay · Game ${player.game.k + 1}` : "Replay"} />
       <div class="title">
         <b>{visit?.tableName || "Your visit"}</b>
         {#if visit}

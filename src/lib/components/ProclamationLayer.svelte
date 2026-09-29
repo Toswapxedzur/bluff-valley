@@ -22,7 +22,7 @@
 
   $effect(() => {
     const q = poker.proclamationQueue;
-    if (playing || !q.length || !host) return;
+    if (playing || !q.length || !host || poker.replaying > 0) return;   // a replay is on screen: it waits
     const [next, ...rest] = q;
     poker.proclamationQueue = rest;
     if (next.kind === "newLook" && ($page.url.pathname.startsWith("/table/") || reducedMotion())) {

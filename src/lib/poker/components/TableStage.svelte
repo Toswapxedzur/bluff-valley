@@ -24,6 +24,8 @@
   import { d, DUR } from "$lib/motion.js";
   import { dev } from "$app/environment";
   import { MOMENT_MS, allInMs } from "$lib/poker/moments.js";
+  import { poker } from "$lib/poker/client.svelte.js";
+  import { onMount } from "svelte";
 
   let {
     view = null, me = null, privates = null,
@@ -31,7 +33,8 @@
     pick = null,                // Big Two card picking (my turn)
     onSit = () => {},
     loadingText = "Loading table…",
-    watchOnly = false,          // a replay: nobody can sit
+    watchOnly = false,          // a REPLAY: nobody can sit, nothing covers the table (no full-screen
+                                // moments, no shuffle blur, no your-turn glow), live banners and toasts wait
     onMotion = () => {}         // hands the page the table's motion (the replay paces itself by it)
   } = $props();
 
@@ -48,8 +51,11 @@
     get deadline() { return deadline; }
   });
   const motion = tableMotion({
-    get view() { return view; }, get mySeatNo() { return mySeat?.seat ?? null; }, get privates() { return privates; }
+    get view() { return view; }, get mySeatNo() { return mySeat?.seat ?? null; }, get privates() { return privates; },
+    get replay() { return watchOnly; }
   });
+  // while a replay is on screen the site's live banners / toasts queue up (they'd cover the table)
+  onMount(() => { if (!watchOnly) return; poker.replaying += 1; return () => { poker.replaying = Math.max(0, poker.replaying - 1); }; });
   onMotion(motion);
   const dealer = $derived(motion.dealer);
   const bank = $derived(motion.bank);
@@ -85,7 +91,7 @@
 {#if view && layout === "poker"}<ButtonGlide {view} />{/if}
 <!-- the shuffle is a moment: the table blurs behind the deck while it plays (Hold'em's DeckLayer, or
      the other card games' CardLayer — both sit above this veil) -->
-{#if dealer?.shuffling || motion.cardShuffling}<div class="shuffle-veil" aria-hidden="true" transition:fade={{ duration: d(DUR.base) }}></div>{/if}
+{#if !watchOnly && (dealer?.shuffling || motion.cardShuffling)}<div class="shuffle-veil" aria-hidden="true" transition:fade={{ duration: d(DUR.base) }}></div>{/if}
 {#if motion.cards}<CardLayer motion={motion.cards} onShuffling={(on) => (motion.cardShuffling = on)} />{/if}
 {#if motion.moment}{#key motion.moment.id}<MomentLayer moment={motion.moment} {view} />{/key}{/if}
 {#if dealer}<DeckLayer {dealer} />{/if}

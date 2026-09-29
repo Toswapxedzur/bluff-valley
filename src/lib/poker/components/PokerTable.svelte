@@ -12,7 +12,8 @@
 
   const t = $derived(tableSeats(view, me, 0));
   const HOLE_CARDS = 2;
-  let revealedByNo = $derived(new Map((view?.result?.revealed || []).map((r) => [r.seat, r.holeCards])));
+  // revealed at showdown — or, in a replay's all-in run-out, turned up before the board is dealt (view.shown)
+  let revealedByNo = $derived(new Map([...Object.entries(view?.shown || {}).map(([s, c]) => [Number(s), c]), ...(view?.result?.revealed || []).map((r) => [r.seat, r.holeCards])]));
   let winnerSet = $derived(new Set((view?.result?.winners || []).map((w) => w.seat)));
   let wonByNo = $derived.by(() => { const m = new Map(); for (const w of view?.result?.winners || []) m.set(w.seat, (m.get(w.seat) || 0) + (w.amount || 0)); return m; });
 
@@ -47,6 +48,7 @@
         canSit={!watchOnly && !!me && !t.iAmSeated && (!s || s.userId == null)} {watchOnly}
         deadline={s?.isToAct ? view?.actionDeadline ?? null : null}
         winner={winnerSet.has(seatNo)} won={wonByNo.get(seatNo) ?? 0}
+        line={view?.equity && view.equity[seatNo] != null ? `${view.equity[seatNo]}% to win` : null}
         {onSit}
       />
     {/snippet}

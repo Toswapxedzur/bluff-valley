@@ -12,7 +12,8 @@
     disabled = false,
     ariaLabel = null,
     valueText = null,          // (v) => string: what a screen reader says for a value
-    marks = null,              // [{ at, label }]: ticks on the track (a visit's games); the label is their tooltip
+    marks = null,              // [{ at, label, kind? }]: ticks on the track (a visit's games) — the label is their
+                               // tooltip, a press lands exactly on one; kind "moment" = a big moment, a gold diamond
     oninput = () => {},
     onchange = () => {},
     class: klass = ""
@@ -76,7 +77,8 @@
   <div class="track"><div class="fill" style:width="{pct}%"></div></div>
   {#if marks?.length && hi > lo}
     {#each marks as m, n (n)}
-      <span class="mark" class:past={m.at <= value} style:left="{((Math.min(hi, Math.max(lo, m.at)) - lo) / (hi - lo)) * 100}%" title={m.label}></span>
+      <span class="mark" class:moment={m.kind === "moment"} class:past={m.at <= value} style:left="{((Math.min(hi, Math.max(lo, m.at)) - lo) / (hi - lo)) * 100}%" title={m.label}
+        onpointerdown={(e) => { if (disabled || e.button > 0) return; e.stopPropagation(); e.preventDefault(); el.focus({ preventScroll: true }); set(m.at, true); }}></span>
     {/each}
   {/if}
   <div class="thumb" style:left="{pct}%"></div>
@@ -92,6 +94,10 @@
     transition: background-color var(--dur) var(--ease), transform var(--dur) var(--ease); }
   .mark.past { background: var(--on-accent, #fff); opacity: 0.9; }
   .mark:hover { transform: scaleY(1.3); }
+  /* a big moment (all-in, monster pot, rare hand, jackpot…): a gold diamond just above the track */
+  .mark.moment { z-index: 2; top: 0; width: 9px; height: 9px; margin: -4px 0 0 -4.5px; border-radius: 2px; background: var(--gold-ink); opacity: 1; transform: rotate(45deg); cursor: pointer; }
+  .mark.moment.past { background: var(--gold-ink); }
+  .mark.moment:hover { transform: rotate(45deg) scale(1.3); }
   .thumb { z-index: 1; position: absolute; top: 50%; width: 18px; height: 18px; margin: -9px 0 0 -9px; border-radius: 50%; background: var(--accent);
     box-shadow: var(--shadow-card); transition: transform var(--dur) var(--ease), box-shadow var(--dur) var(--ease); }
   .sl:hover .thumb { transform: scale(1.12); }
