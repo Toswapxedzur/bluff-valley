@@ -173,9 +173,8 @@
   .ps-name { color: var(--text); font-weight: 750; }
   .ps-name em { display: inline-block; margin-left: 5px; padding: 2px 6px; border-radius: var(--r-pill); background: var(--well); color: var(--gold-ink); font-size: 9px; font-style: normal; text-transform: uppercase; letter-spacing: .05em; }
   .full-stats { display: inline-block; margin-top: 12px; color: var(--accent-ink); font-size: 12.5px; font-weight: 700; text-decoration: none; }
-  .full-stats:hover, .private-note a:hover { color: var(--text); }
+  .full-stats:hover { color: var(--text); }
   .private-note, .ps-empty { margin: 3px 0 0; }
-  .private-note a { color: var(--accent-ink); }
   .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.55); display: grid; place-items: center; z-index: 60; padding: 20px; }
   .modal { width: min(400px, 94vw); }
   .modal h3 { margin: 0 0 10px; }

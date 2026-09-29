@@ -104,21 +104,6 @@ export async function searchUsers(q, limit = 20, excludeId = null) {
   return rows.map((r) => ({ id: r.id, name: r.display_name || r.email }));
 }
 
-// Top players by wallet chips, for the lobby leaderboard. Bots are real user
-// rows (so they buy in through escrow like anyone) but live under a reserved
-// `.invalid` email domain — exclude them so they don't crowd the human board.
-export async function leaderboard(limit = 10) {
-  const rows = await query(
-    `SELECT id, COALESCE(NULLIF(display_name, ''), email) AS name, chips, avatar_media_id
-       FROM user
-      WHERE email NOT LIKE '%@bot.bluffingvalley.invalid'
-      ORDER BY chips DESC, name ASC
-      LIMIT ?`,
-    [limit]
-  );
-  return rows.map((r) => ({ id: r.id, name: r.name, chips: r.chips, avatarMediaId: r.avatar_media_id || null }));
-}
-
 // Insert a starter set of Hold'em tables the first time the room boots
 // with an empty poker_table. Idempotent: does nothing if any table
 // already exists. Blinds/buy-ins span a few levels so the lobby isn't

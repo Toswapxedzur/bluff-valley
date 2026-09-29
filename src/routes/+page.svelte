@@ -6,7 +6,7 @@
   // Layout:
   //   LEFT / main  — header + toolbar (Quick Play / New Table) + live
   //                  tables list (empty-state when none).
-  //   RIGHT        — LobbyPlayers (online players + leaderboard + invite).
+  //   RIGHT        — LobbyPlayers (online players + invite).
   //   BOTTOM       — LobbyChat (spans the main column on wide screens).
   // Incoming invites render as a banner stack at the very top.
 
@@ -221,7 +221,6 @@
     <aside class="side-col">
       <LobbyPlayers
         players={poker.lobby.players}
-        leaderboard={poker.lobby.leaderboard}
         me={poker.me}
         onInvite={(uid) => poker.invitePlayer(uid)}
       />

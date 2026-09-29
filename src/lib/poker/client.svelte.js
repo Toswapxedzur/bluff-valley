@@ -14,8 +14,8 @@ class PokerClient {
   ws = null;
   connected = $state(false);
   me = $state(null);            // {id, name, isAdmin} | null
-  // PlayOK-style lobby snapshot (tables/players/leaderboard).
-  lobby = $state({ tables: [], players: [], leaderboard: [], tournaments: [] });
+  // PlayOK-style lobby snapshot (tables/players/tournaments).
+  lobby = $state({ tables: [], players: [], tournaments: [] });
   lobbyChat = $state([]);       // [{from,text,ts}] shared lobby chat
   invites = $state([]);         // [{inviteId, fromName, fromUserId, tableId, tableName}] incoming
   pendingNav = $state(null);    // tableId to navigate to (create/quickplay/invite-accept)
@@ -122,7 +122,6 @@ class PokerClient {
         this.lobby = {
           tables: msg.tables || [],
           players: msg.players || [],
-          leaderboard: msg.leaderboard || [],
           tournaments: msg.tournaments || []
         };
         break;

@@ -62,7 +62,7 @@ export const C2S = {
 // Server -> Client
 export const S2C = {
   HELLO_OK: "hello.ok",        // { user: {id, name, isAdmin}, chips }
-  LOBBY: "lobby",              // { tables:[LobbyTable], players:[LobbyPlayer], leaderboard:[{name,chips}] }
+  LOBBY: "lobby",              // { tables:[LobbyTable], players:[LobbyPlayer], tournaments:[…] }
   LOBBY_CHAT: "lobby.chat",    // { from, text, ts }
   TABLE_CREATED: "table.created", // { tableId } — navigate here (create / quickplay / invite-accept)
   INVITE: "invite",            // { inviteId, fromName, fromUserId, tableId, tableName } — incoming
