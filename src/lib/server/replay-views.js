@@ -10,9 +10,12 @@
 import { createHand, applyAction as pokerApply } from "./poker/engine/index.js";
 import { GAMES } from "./poker/games/registry.js";
 import { tableLayout } from "../poker/games.js";
+import { momentOfResult, momentLabel } from "../poker/moments.js";
 
 const THINK_CAP_MS = 1500;          // a long think plays at most this long (at 1×)
 const RESULT_HOLD_MS = 1200;        // the last action → the result
+const RUNOUT_MS = 1500;             // an all-in run-out: one street → the next (the board deals, the chances update)
+const STREET = { 3: "Flop", 4: "Turn", 5: "River" };
 const DEAL_MS = 900;                // the table before the deal → dealt
 
 // The live table's action labels (table.js onAction)
@@ -137,6 +140,26 @@ function holdemReplay(doc, row, { people, viewerSeat }) {
   }
   // the result: hand over, seats cleared, the result window up (table.js finishHand)
   const result = doc.final?.result ?? null;
+  // An all-in run-out (owner, 2026-09-29): live, a full-screen moment deals it street by street; a
+  // replay covers nothing, so the run-out is steps on the table itself — the hands turn up, then the
+  // flop / turn / river are dealt one step at a time, each seat's line showing its chance to win.
+  const runout = result?.runout && !result.boards && (result.revealed || []).length >= 2 ? result.runout : null;
+  let tail = 0;
+  if (runout) {
+    const shown = Object.fromEntries(result.revealed.map((h) => [h.seat, [...h.holeCards]]));
+    const board = result.board || [];
+    for (const st of runout.stages) {
+      const v = liveView(state);
+      v.board = board.slice(0, st.board);
+      v.street = st.board >= 5 ? "river" : st.board === 4 ? "turn" : st.board === 3 ? "flop" : "preflop";
+      v.toActSeat = null; v.shown = shown; v.equity = { ...st.pct };
+      v.seats = v.seats.map((s) => ({ ...s, committed: 0, isToAct: false }));
+      const odds = result.revealed.map((h) => `${people.get(h.seat)?.name || `Seat ${h.seat}`} ${st.pct[h.seat] ?? 0}%`).join(" · ");
+      steps.push({ t: 0, text: (st.board === runout.from ? "All in — hands up" : STREET[st.board] || "Board") + ` · ${odds}`, view: v });
+      tail += 1;
+    }
+  }
+  const mo = momentOfResult("holdem", { ...doc.config, tournament: row.context === "tournament" || row.context === "sprint" }, result);
   steps.push({
     t: 0, text: "Result",
     view: {
@@ -149,7 +172,8 @@ function holdemReplay(doc, row, { people, viewerSeat }) {
       })
     }
   });
-  retime(steps, raw);
+  if (mo) steps[steps.length - 1].mark = momentLabel(mo);
+  retime(steps, raw, tail);
   const mine = viewerSeat != null && holes[viewerSeat] ? { seat: viewerSeat, holeCards: holes[viewerSeat] } : null;
   // hole cards are dealt at step 1 and stay mine until the hand is over
   const privates = steps.map((_, i) => (i >= 1 && i < steps.length - 1 ? mine : null));
@@ -198,20 +222,24 @@ function moduleReplay(doc, row, { people, viewerSeat }) {
   // the result: the settled round, stacks paid (runtime.js: round = result = the settled public view)
   const result = doc.final?.result ?? game.publicView(state);
   steps.push({ t: 0, text: "Result", view: { ...base, phase: "running", toActSeat: null, seats: seatsAt(null, { settled: true, inHand: false }), round: result, result } });
+  const mo = momentOfResult(doc.mode, { ...doc.config, tournament: row.context === "tournament" || row.context === "sprint" }, result);
+  if (mo) steps[steps.length - 1].mark = momentLabel(mo);
   privates.push(null);
   retime(steps, raw);
   return { kind: "module", steps, privates };
 }
 
-// give every step its time: 0 → the deal → the recorded actions (capped thinks) → the result
-function retime(steps, raw) {
+// give every step its time: 0 → the deal → the recorded actions (capped thinks) → [an all-in's
+// run-out: `tail` steps, a street each] → the result
+function retime(steps, raw, tail = 0) {
   const acts = paced(raw);
   const dealt = steps[1].t;
   for (let i = 0; i < acts.length; i += 1) steps[2 + i].t = dealt + Math.max(400, acts[i]);
+  const last = steps.length - 1, runFrom = last - tail;
   // strictly increasing, so every step gets its moment
-  for (let i = 2; i < steps.length - 1; i += 1) steps[i].t = Math.max(steps[i].t, steps[i - 1].t + 400);
-  const last = steps.length - 1;
-  steps[last].t = steps[last - 1].t + RESULT_HOLD_MS;
+  for (let i = 2; i < runFrom; i += 1) steps[i].t = Math.max(steps[i].t, steps[i - 1].t + 400);
+  for (let i = runFrom; i < last; i += 1) steps[i].t = steps[i - 1].t + (i === runFrom ? RESULT_HOLD_MS : RUNOUT_MS);
+  steps[last].t = steps[last - 1].t + (tail ? RUNOUT_MS : RESULT_HOLD_MS);
 }
 
 /** A recording → table views for the replay page, or null if it can't be re-simulated.

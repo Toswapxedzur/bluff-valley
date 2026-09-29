@@ -83,7 +83,7 @@
   // My turn starts: one glow laps my ring (then its gems count the clock down)
   let glowKey = $state(0), wasToAct = false;
   $effect(() => {
-    const on = !!(seat?.isToAct && isMine);
+    const on = !!(seat?.isToAct && isMine && !watchOnly);   // a replay: the past, not your turn
     untrack(() => { if (on && !wasToAct) glowKey += 1; wasToAct = on; });
   });
 

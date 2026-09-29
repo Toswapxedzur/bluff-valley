@@ -9,6 +9,7 @@
   import { onMount, onDestroy } from "svelte";
   import Icon from "$lib/components/Icon.svelte";
   import TableStage from "$lib/poker/components/TableStage.svelte";
+  import ReplayTag from "$lib/poker/components/ReplayTag.svelte";
   import ReplayBar from "$lib/poker/components/ReplayBar.svelte";
   import Chip from "$lib/poker/components/Chip.svelte";
   import { ReplayPlayer } from "$lib/poker/replay-player.svelte.js";
@@ -53,8 +54,9 @@
   <div class="hud">
     <a href="/history" class="btn-icon float back" aria-label="Back to your history" title="History">‹</a>
     {#if gameIcon(gameKey)}<img class="gicon" src={gameIcon(gameKey)} alt="" width="34" height="34" />{/if}
+    <ReplayTag />
     <div class="title">
-      <b>Replay · {title}</b>
+      <b>{title}</b>
       <span class="stakes">{variantLabel(gameKey)} · {when}{#if data.archived} · from the archive{/if}</span>
     </div>
     <div class="hud-right">

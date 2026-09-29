@@ -102,3 +102,24 @@ export function detectMoment(view) {
   }
   return null;
 }
+
+/** A moment's short name — the replay slider's marker label (owner, 2026-09-29: in a replay a big
+ *  moment is a marker to jump to, never a full-screen pause). */
+export function momentLabel(mo) {
+  if (!mo) return null;
+  if (mo.kind === "allIn") return "All-in";
+  if (mo.kind === "monsterPot") return "Monster pot";
+  if (mo.kind === "rare") return mo.name || "Rare hand";
+  if (mo.kind === "jackpot") return `Jackpot ×${mo.mult}`;
+  if (mo.kind === "bigTwo") return "Big Two finish";
+  return null;
+}
+
+/** The moment of a finished recorded game, from what the recording keeps: the game key, its
+ *  config (bigBlind, tournament) and the final result (Hold'em: the showdown; the other games: the
+ *  settled round). */
+export function momentOfResult(game, config, result) {
+  if (!result) return null;
+  const view = game === "holdem" ? { game, config: config || {}, result } : { game, config: config || {}, round: result, result };
+  try { return detectMoment(view); } catch { return null; }
+}

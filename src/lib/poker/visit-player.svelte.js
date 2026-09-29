@@ -6,7 +6,8 @@
 //   the views load a few games at a time around the playhead (/api/history/steps), so a long visit
 //   opens at once; until a game's views arrive the sheet shows "Loading…"
 //   the same controls as ReplayPlayer (ReplayBar drives either): forward animates, a jump re-mounts
-//   the stage, speed only changes the pause, a full-screen moment holds the next step. ⏮ ⏭ here go
+//   the stage, speed only changes the pause (a replay plays no full-screen moments: its big moments
+//   are gold marks on the slider — owner, 2026-09-29). ⏮ ⏭ here go
 //   to the previous / next game.
 const MIN_GAP = 450;          // ms: the least time between two steps, at any speed
 const BETWEEN_GAMES = 1500;   // ms at 1×: a game's result → the next deal
@@ -36,10 +37,12 @@ export class VisitPlayer {
     this.cache = new Map();                                // replayId → { views, privates, steps, viewerId } | { missing }
     this.pending = new Set();
     this._timer = null;
-    this.marks = this.games.map((g) => ({
+    this.gameMarks = this.games.map((g) => ({
       at: g.offset + (g.k === 0 ? 1 : 0),
       label: `Game ${g.k + 1}${g.handNo ? ` (#${g.handNo})` : ""} · ${g.net > 0 ? `you won ${g.net.toLocaleString("en-US")}` : g.net < 0 ? `you lost ${(-g.net).toLocaleString("en-US")}` : "even"}`
     }));
+    // a game's big moment (the visit's API names it): a gold mark at that game's result
+    this.marks = [...this.gameMarks, ...this.games.filter((g) => g.moment).map((g) => ({ at: g.offset + g.count - 1, label: `Game ${g.k + 1} · ${g.moment}`, kind: "moment" }))];
   }
 
   gameAt(n) {
@@ -106,15 +109,15 @@ export class VisitPlayer {
   /** ⏮: to the start of this game (or the previous one when already at its start). */
   prevGame() {
     const g = this.game; if (!g) return;
-    const start = this.marks[g.k].at;
-    this.jumpTo(this.i > start || g.k === 0 ? start : this.marks[g.k - 1].at);
+    const start = this.gameMarks[g.k].at;
+    this.jumpTo(this.i > start || g.k === 0 ? start : this.gameMarks[g.k - 1].at);
   }
   /** ⏭: to the next game's deal (or the very end on the last game). */
   nextGame() {
     const g = this.game; if (!g) return;
-    this.jumpTo(g.k + 1 < this.games.length ? this.marks[g.k + 1].at : this.last);
+    this.jumpTo(g.k + 1 < this.games.length ? this.gameMarks[g.k + 1].at : this.last);
   }
-  get atFirst() { return this.i <= (this.marks[0]?.at ?? 0); }
+  get atFirst() { return this.i <= (this.gameMarks[0]?.at ?? 0); }
   get atLast() { return this.i >= this.last; }
 
   /** The clock (call inside an $effect). */
@@ -133,7 +136,6 @@ export class VisitPlayer {
     else gap = BETWEEN_GAMES / sp;
     const tick = () => {
       if (!this.playing) return;
-      if (this.motion?.moment) { this._timer = setTimeout(tick, 150); return; }
       this.forward();
     };
     this._timer = setTimeout(tick, Math.max(MIN_GAP, gap));

@@ -4,7 +4,7 @@
 //   back / start / end / scrub    → a JUMP: `jump` bumps, the page re-mounts the stage on that view,
 //                                   so nothing animates on the way (the engines baseline on it)
 //   speed 1× / 2× / 4×            → only the pause between steps; animations keep their timing
-// A full-screen moment playing on the stage holds the next step until it's done.
+// A replay's stage plays no full-screen moments (owner, 2026-09-29); its big moments are slider marks.
 export const SPEEDS = [1, 2, 4];
 const MIN_GAP = 450;   // ms: the least time between two steps, at any speed
 
@@ -20,6 +20,8 @@ export class ReplayPlayer {
     this.steps = data.steps || [];
     this.last = Math.max(0, this.steps.length - 1);
     this._timer = null;
+    // a big moment is a marker on the slider to jump to (owner, 2026-09-29), never a full-screen pause
+    this.marks = this.steps.flatMap((s, i) => (s.mark ? [{ at: i, label: s.mark, kind: "moment" }] : []));
   }
 
   get view() { return this.steps[this.i]?.view ?? null; }
@@ -52,7 +54,6 @@ export class ReplayPlayer {
     const gap = Math.max(MIN_GAP, (this.steps[at + 1].t - this.steps[at].t) / sp);
     const tick = () => {
       if (!this.playing) return;
-      if (this.motion?.moment) { this._timer = setTimeout(tick, 150); return; }
       this.forward();
     };
     this._timer = setTimeout(tick, gap);
