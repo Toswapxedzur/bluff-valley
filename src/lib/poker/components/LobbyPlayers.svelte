@@ -1,13 +1,10 @@
 <script>
-  // LobbyPlayers: a single panel with two stacked sections.
-  //
-  //  1. "Players online (N)" — one row per LobbyPlayer showing name (own
+  // LobbyPlayers: "Players online (N)" — one row per LobbyPlayer showing name (own
   //     name highlighted), chip count, and a location badge ("In lobby"
   //     when location === 'lobby', otherwise the tableName). Every player
   //     that is NOT me gets a small Invite button -> onInvite(player.id).
-  //     The list scrolls when it grows too tall.
-  //
-  //  2. "Leaderboard" — a ranked top-10 list of {name, chips} rows.
+  //     The list scrolls when it grows too tall. (The top-10 leaderboard under it was removed with
+  //     the Ranks, owner 2026-09-29.)
   //
   // Read-only: parent supplies the reactive data via props.
 
@@ -17,11 +14,9 @@
   import { d, DUR } from "$lib/motion.js";
   import Avatar from "$lib/poker/components/Avatar.svelte";
 
-  let { players = [], leaderboard = [], me = null, onInvite = () => {} } =
-    $props();
+  let { players = [], me = null, onInvite = () => {} } = $props();
 
-  const top = $derived((leaderboard ?? []).slice(0, 10));
-  // Gate so the initial online list / leaderboard don't all fly in on load.
+  // Gate so the initial online list doesn't all fly in on load.
   let ready = $state(false);
   onMount(() => { requestAnimationFrame(() => (ready = true)); });
 
@@ -45,7 +40,7 @@
           <div class="prow" class:me={mine} in:fly={{ y: d(6), duration: ready ? d(DUR.base) : 0 }} out:fade={{ duration: d(DUR.fast) }} animate:flip={{ duration: d(DUR.base) }}>
             <Avatar id={p.id} name={p.name} mediaId={p.avatarMediaId} size={26} userId={mine ? null : p.id} ring={p.ring || "default"} />
             {#if mine}
-              <span class="name" title={p.name}>{p.name}<span class="you"> (you)</span></span>
+              <span class="name" title={p.name}>{p.name}<span class="you">{" (you)"}</span></span>
             {:else}
               <a class="name name-link" href="/u/{p.id}" title="View {p.name}'s profile">{p.name}</a>
             {/if}
@@ -63,27 +58,6 @@
                 Invite
               </button>
             {/if}
-          </div>
-        {/each}
-      {/if}
-    </div>
-  </section>
-
-  <section class="section">
-    <div class="card-head">
-      <h3>Leaderboard</h3>
-    </div>
-
-    <div class="board">
-      {#if top.length === 0}
-        <div class="empty muted">No rankings yet.</div>
-      {:else}
-        {#each top as row, i (i)}
-          <div class="lrow" in:fade={{ duration: ready ? d(DUR.fast) : 0 }}>
-            <span class="rank">{i + 1}.</span>
-            <Avatar id={row.id} name={row.name} mediaId={row.avatarMediaId} size={24} userId={row.id} ring={row.ring || "default"} />
-            {#if row.id}<a class="name name-link" href="/u/{row.id}" title="View profile">{row.name}</a>{:else}<span class="name" title={row.name}>{row.name}</span>{/if}
-            <span class="chips">{fmt(row.chips)}</span>
           </div>
         {/each}
       {/if}
@@ -110,11 +84,6 @@
     padding-right: 4px;
     gap: 4px;
   }
-  .board {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-  }
 
   .prow {
     display: flex;
@@ -128,15 +97,6 @@
   }
   .prow:hover { background: var(--surface-2); }
 
-  .lrow {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 6px 8px;
-    background: var(--well);
-    border-radius: var(--r-btn);
-    font-size: 12.5px;
-  }
 
   .name {
     flex: 1 1 auto;
@@ -152,13 +112,6 @@
   .name-link:hover { color: var(--accent-ink); }
   .you { color: var(--muted); font-weight: 400; }
 
-  .rank {
-    flex: 0 0 auto;
-    width: 22px;
-    color: var(--muted);
-    font-variant-numeric: tabular-nums;
-    text-align: right;
-  }
 
   .loc {
     flex: 0 0 auto;
