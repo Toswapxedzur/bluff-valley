@@ -19,7 +19,7 @@
   {#if form?.error}<p class="err" role="alert">{form.error}</p>{/if}
 
   {#if data.banners.length === 0}
-    <p class="muted">No banners yet.</p>
+    <p class="empty-note boxed">No banners yet.</p>
   {:else}
     <div class="list">
       {#each data.banners as b (b.user_id)}

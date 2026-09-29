@@ -33,7 +33,7 @@
 
     <div class="list">
       {#if players.length === 0}
-        <div class="empty muted">No one else is around right now.</div>
+        <div class="empty-note">No one else is around right now.</div>
       {:else}
         {#each players as p (p.id)}
           {@const mine = me && p.id === me.id}
@@ -70,11 +70,6 @@
   .section { display: flex; flex-direction: column; }
   .card-head { margin-bottom: 6px; }
 
-  .empty {
-    text-align: center;
-    font-size: 12.5px;
-    padding: 18px 0;
-  }
 
   .list {
     max-height: 240px;
