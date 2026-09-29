@@ -5,6 +5,7 @@
 
 import { query, queryOne } from "./db.js";
 import { areFriends } from "./friends.js";
+import { ringOf } from "./cosmetics.js";
 
 // The viewer's relationship to the subject: 'self' | 'friends' | 'incoming'
 // (they requested me) | 'outgoing' (I requested them) | 'none'.
@@ -41,7 +42,7 @@ async function gameStats(userId) {
 export async function getProfile(userId, viewerId = null) {
   const u = await queryOne(
     "SELECT id, display_name, email, created_at, bio, status_text, avatar_media_id, "
-    + "profile_visibility, daily_streak, best_streak, chips FROM user WHERE id = ? LIMIT 1",
+    + "profile_visibility, daily_streak, best_streak, chips, ring, peak_wealth FROM user WHERE id = ? LIMIT 1",
     [userId]
   );
   if (!u) return null;
@@ -55,6 +56,7 @@ export async function getProfile(userId, viewerId = null) {
     id: u.id,
     name: u.display_name || u.email,
     avatarMediaId: u.avatar_media_id || null,
+    ring: ringOf(u),
     memberSince: Number(u.created_at),
     relationship: rel,
     isSelf,
@@ -74,15 +76,15 @@ export async function getProfile(userId, viewerId = null) {
   };
 }
 
-// Lightweight identity for lists (chat headers, seat plates): id, name, avatar.
+// Lightweight identity for lists (chat headers, seat plates): id, name, avatar, ring.
 export async function identities(userIds) {
   const uniq = [...new Set((userIds || []).filter(Boolean))];
   if (!uniq.length) return new Map();
   const rows = await query(
-    `SELECT id, display_name, email, avatar_media_id FROM user WHERE id IN (${uniq.map(() => "?").join(",")})`,
+    `SELECT id, display_name, email, avatar_media_id, ring, peak_wealth FROM user WHERE id IN (${uniq.map(() => "?").join(",")})`,
     uniq
   );
-  return new Map(rows.map((r) => [r.id, { id: r.id, name: r.display_name || r.email, avatarMediaId: r.avatar_media_id || null }]));
+  return new Map(rows.map((r) => [r.id, { id: r.id, name: r.display_name || r.email, avatarMediaId: r.avatar_media_id || null, ring: ringOf(r) }]));
 }
 
 // Update a user's editable profile fields. Only whitelisted keys are written.

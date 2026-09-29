@@ -11,7 +11,7 @@
 
 <div class="wrap">
   <div class="head">
-    <Avatar id={p.id} name={p.name} mediaId={p.avatarMediaId} size={44} />
+    <Avatar id={p.id} name={p.name} mediaId={p.avatarMediaId} size={36} ring={p.ring || "default"} />
     <div class="id">
       <h1>{p.isSelf ? "Your history" : `${p.name}'s history`}</h1>
       <span class="links">

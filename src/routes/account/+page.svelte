@@ -173,7 +173,7 @@
     </span>
   </div>
   <div class="avatar-edit">
-    <Avatar id={data.user.id} name={data.user.displayName || data.user.email} mediaId={avatarId} size={64} />
+    <Avatar id={data.user.id} name={data.user.displayName || data.user.email} mediaId={avatarId} size={52} ring={data.look?.ring || "default"} />
     <div class="avatar-controls">
       <label class="btn btn-secondary btn-sm">
         {uploadingAvatar ? "Uploading…" : "Change photo"}

@@ -193,7 +193,7 @@ export async function cancelRound(roundId, db = realDb, wallet = realWallet) {
 export async function roundResults(roundId, limit = 25, db = realDb) {
   return db.query(
     `SELECT e.user_id, e.place, e.prize, e.final_stack,
-            COALESCE(NULLIF(u.display_name, ''), u.email) AS name, u.avatar_media_id
+            COALESCE(NULLIF(u.display_name, ''), u.email) AS name, u.avatar_media_id, u.ring, u.peak_wealth
        FROM sprint_entry e JOIN user u ON u.id = e.user_id
       WHERE e.round_id = ? AND e.place IS NOT NULL
       ORDER BY e.place ASC LIMIT ?`,
