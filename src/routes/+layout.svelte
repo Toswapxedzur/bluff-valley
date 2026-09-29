@@ -143,7 +143,7 @@
     <span class="bars"></span>
   </button>
 
-  <a class="brand" href="/"><img class="mark" src="/brand.svg" alt="" width="30" height="30" /> {SITE_NAME}</a>
+  <a class="brand" href="/" aria-label={SITE_NAME}><img class="mark" src="/brand.svg" alt="" width="30" height="30" /> <span class="brand-name">{SITE_NAME}</span></a>
 
   <nav class="nav-tabs desk" aria-label="Sections" use:slidingIndicator>
     {#each links as l}
@@ -277,6 +277,11 @@
     .menu-btn { display: grid; }
     .mobile-menu { display: flex; }
     .topbar-right .nav-tab { display: none; }
+  }
+  /* phones: the logo alone, so menu · logo · theme · bell · chips · your avatar fit on one row */
+  @media (max-width: 480px) {
+    .brand-name { display: none; }
+    .topbar-right { gap: 7px; }
   }
   .nav-ico { display: inline-block; vertical-align: -4px; margin-right: 5px; }
 </style>
