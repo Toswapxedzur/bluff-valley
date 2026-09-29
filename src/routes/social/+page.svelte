@@ -265,7 +265,7 @@
   <section class="pane thread-pane">
     {#if openId && header}
       <div class="thread-head">
-        <button class="back-btn" onclick={() => (mobileThread = false)} aria-label="Back">‹</button>
+        <button class="btn-icon sm back-btn" onclick={() => (mobileThread = false)} aria-label="Back">‹</button>
         {#if header.kind === "dm" && header.other}
           <Avatar id={header.other.id} name={header.title} mediaId={header.other.avatarMediaId} size={30} userId={header.other.id} ring={header.other.ring || "default"} />
         {:else}
@@ -275,7 +275,7 @@
           {#if header.kind === "dm" && header.other}<a class="th-name-link" href="/u/{header.other.id}">{header.title}</a>{:else}{header.title}{/if}
           <span class="th-sub">{header.kind === "group" ? header.members.length + " members" : (friends.find((f) => f.id === header.other?.id)?.online ? "online" : "")}</span>
         </span>
-        {#if header.kind === "group"}<button class="gear" onclick={() => (groupPanel = !groupPanel)} aria-label="Group settings">⚙</button>{/if}
+        {#if header.kind === "group"}<button class="btn-icon sm gear" onclick={() => (groupPanel = !groupPanel)} aria-label="Group settings">⚙</button>{/if}
       </div>
       {#if me}
         {#key openId}
@@ -426,12 +426,10 @@
   /* thread pane */
   .thread-pane { min-width: 0; }
   .thread-head { display: flex; align-items: center; gap: 11px; padding: 12px 16px; box-shadow: 0 1px 0 var(--well); }
-  .back-btn { display: none; border: 0; background: var(--well); color: var(--text); width: 30px; height: 30px; border-radius: 999px; font-size: 18px; cursor: pointer; }
+  .back-btn { display: none; color: var(--text); font-size: 18px; }
   .th-title { font-weight: 700; font-size: 15px; display: flex; flex-direction: column; }
   .th-sub { font-weight: 500; font-size: 11.5px; color: var(--muted); }
-  .gear { margin-left: auto; border: 0; background: var(--well); color: var(--muted); width: 32px; height: 32px; border-radius: 999px; cursor: pointer; font-size: 15px;
-    transition: color var(--dur) var(--ease), background-color var(--dur) var(--ease); }
-  .gear:hover { color: var(--text); background: var(--surface-2); }
+  .gear { margin-left: auto; }
   .voice-strip { padding: 6px 16px 0; }
   .group-panel { padding: 12px 16px; background: var(--surface-2); display: flex; flex-direction: column; gap: 8px; }
   .gp-rename { display: flex; gap: 8px; }
@@ -482,6 +480,6 @@
     .thread-pane { display: none; }
     .social.show-thread .list-pane { display: none; }
     .social.show-thread .thread-pane { display: flex; }
-    .back-btn { display: grid; place-items: center; }
+    .back-btn { display: inline-grid; }
   }
 </style>
