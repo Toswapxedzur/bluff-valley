@@ -58,8 +58,9 @@ export const RAMPS = {
     return [m.key, { light: r.slice(0, 3), dark: r.slice(2, 5) }];
   })),
   // Obsidian's own ramp is near-black violet — on the navy site the ring vanished (backlog, 2026-09-26).
-  // Black glass with a violet sheen: brighter gems, the band lifted a step; the coin keeps its colours.
-  obsidian: { light: ["#e2d4f7", "#b596e0", "#8a68bd"], dark: ["#5a4380", "#3b2754", "#221536"] }
+  // Black glass with a violet sheen: brighter gems, the band lifted a step (still five shades, the
+  // middle one shared as for every metal); the coin keeps its colours.
+  obsidian: (() => { const r = ["#e2d4f7", "#b193dc", "#6f519e", "#3b2754", "#221536"]; return { light: r.slice(0, 3), dark: r.slice(2, 5) }; })()
 };
 
 // ------------------------------------------------------------------ the ring
