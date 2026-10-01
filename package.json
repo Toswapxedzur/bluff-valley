@@ -1,9 +1,9 @@
 {
-  "name": "statisticasino",
+  "name": "bluff-valley",
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Statistical analysis site that ingests poker captures from the casino-extension and aggregates them across uploaders.",
+  "description": "Bluff Valley poker and casino room with replays and stats.",
   "scripts": {
     "dev": "vite dev",
     "build": "npm run build:ext-zip && vite build",

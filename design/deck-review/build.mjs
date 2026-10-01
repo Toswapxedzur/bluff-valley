@@ -1,5 +1,5 @@
 // Regenerates design/deck-review/index.html from the real renderer (composer.js).
-// Run from statisticasino/: node design/deck-review/build.mjs
+// Run from bluff-valley/: node design/deck-review/build.mjs
 import { renderDeck, renderBoard, deckBand } from '../../src/lib/poker/composer.js';
 import fs from 'fs';
 const rel = (s) => s.replaceAll('href="/deck-parts/', 'href="deck-parts/');

@@ -120,6 +120,6 @@ overwrites the other.
 
 ## Questions / corrections
 
-This post lives in `statisticasino/content/blog/data-privacy.md`. If
+This post lives in `bluff-valley/content/blog/data-privacy.md`. If
 something here is wrong or has gone stale, please open an issue or DM
 me.

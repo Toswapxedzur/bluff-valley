@@ -9,7 +9,7 @@ rhombus rings + stepped plates (`cosmetics.js`), game icons (`static/games`).
 - `index.html` — the demo page: a mock table, a button per moment (+ variants), Replay, Slow 0.4×,
   and a spec card (when / length / who pauses / notes) for each.
 - `demo.js` — every moment's choreography (Web Animations); `demo.bundle.js` is its esbuild bundle.
-  Rebuild from `statisticasino/`: `sh design/moments/build.sh` (also copies the icons and deck art
+  Rebuild from `bluff-valley/`: `sh design/moments/build.sh` (also copies the icons and deck art
   into `games/` and `deck-parts/`, which are git-ignored).
 - Local preview: `.claude/launch.json` entry `moments` (port 4186). Frames for review can be
   captured with headless Chrome (the Browser pane throttles animations while hidden).

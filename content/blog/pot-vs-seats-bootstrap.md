@@ -632,7 +632,7 @@ diagnostic only and *not reported* as inference, because LINER fails
 on the raw scale.
 
 Inputs:   pot-vs-seats-data.zip (the CSV bundle exported from
-          /data/export-csv on statisticasino).
+          /data/export-csv on bluff-valley).
 Outputs:  fig-*.png in the same directory and stdout summary.
 
 Run:      python3 pot-vs-seats.py

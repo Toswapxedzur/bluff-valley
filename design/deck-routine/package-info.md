@@ -7,7 +7,7 @@ tests `deck-routine.test.js`).
 - `index.html` — the demo: Play (a fresh routine each time: new cut points, shuffle and face-up
   card), speed 1×/½×/¼×, a frame scrubber, a phase bar. Published as a private artifact.
 - `demo.js` — the demo script; `demo.bundle.js` is its esbuild bundle (`sh design/deck-routine/build.sh`
-  from `statisticasino/`), which also refreshes `deck-parts/` from `static/deck-parts/`.
+  from `bluff-valley/`), which also refreshes `deck-parts/` from `static/deck-parts/`.
 
 Owner's spec: real-game spots — face-down deck top-left, face-up used pile top-right, both just
 below the top bar. The used pile flies to the centre turning over and growing ~1.6×; three

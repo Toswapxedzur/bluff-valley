@@ -1,6 +1,6 @@
 // Filesystem-backed blog.
 //
-// Posts live under `statisticasino/content/blog/*.md`. Each file has
+// Posts live under `bluff-valley/content/blog/*.md`. Each file has
 // YAML front matter:
 //
 //   ---
@@ -50,7 +50,7 @@ marked.use(markedKatex({
 }));
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-// statisticasino/src/lib/server -> ../../.. -> statisticasino/
+// bluff-valley/src/lib/server -> ../../.. -> bluff-valley/
 const BLOG_DIR = resolve(__dirname, "../../..", "content/blog");
 
 let _cache = null;

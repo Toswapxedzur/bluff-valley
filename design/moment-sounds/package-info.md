@@ -9,7 +9,7 @@ the animation's moment.
 
 - `build.py` — builds `clips/*.mp3`, `ctx/*.mp3` (the game's sounds used in the contexts) and
   `candidates.json` (with each clip's lead, for frame-accurate playback in the game).
-  Run from `statisticasino/`: `python3 design/moment-sounds/build.py`.
+  Run from `bluff-valley/`: `python3 design/moment-sounds/build.py`.
 - `index.html` — the picker; picks stay in the browser and are copied out with "Copy my picks".
 - Published as an artifact; local preview via `.claude/launch.json` entry `moment-sounds` (port 4187).
 Once picked: copy the chosen clips into `static/sfx/table/`, add them to TABLE_SOUNDS

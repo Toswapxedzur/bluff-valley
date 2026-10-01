@@ -4,7 +4,7 @@ src/lib/poker/table-sounds.json with each file's LEAD (ms from the start of the 
 measured on the encoded file) so the game's player can start a sound early and land its hit on the
 frame. Sources are the Sound Lab picks (build_picks.py) plus "Cards deck hits" @0.2 s for a card
 played onto the centre pile (shedding games).
-Run from statisticasino/:  python3 design/sound-lab/build_game_sfx.py"""
+Run from bluff-valley/:  python3 design/sound-lab/build_game_sfx.py"""
 import json, os, subprocess, tempfile, wave, numpy as np
 LAB = os.path.dirname(os.path.abspath(__file__))
 APP = os.path.abspath(os.path.join(LAB, "..", ".."))
