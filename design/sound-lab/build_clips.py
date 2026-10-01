@@ -3,7 +3,7 @@
 
 Each clip starts on its first transient (so it plays exactly when the animation event fires),
 is capped, faded, peak-normalised, and measured for pitch (the owner's no-pitch rule).
-Run from statisticasino/:  python3 design/sound-lab/build_clips.py
+Run from bluff-valley/:  python3 design/sound-lab/build_clips.py
 Writes design/sound-lab/clips/*.wav and design/sound-lab/clips.json.
 """
 import json, subprocess, os, numpy as np, wave

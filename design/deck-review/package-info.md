@@ -6,7 +6,7 @@ Review page for the dealer's deck at rest (2026-09-25). Nothing here ships with 
   cards, at 82 px and 60 px on both table grounds, plus a 320 px close-up. Published as a
   private artifact.
 - `build.mjs` — regenerates `index.html` from composer.js (`node design/deck-review/build.mjs`
-  from `statisticasino/`).
+  from `bluff-valley/`).
 - `deck-parts/` — copies of the card art the page references by relative path.
 
 Owner's spec: one flat top card + the stack's front edge as grey/white strips, band 0.21 × card

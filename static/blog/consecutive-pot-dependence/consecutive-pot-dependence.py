@@ -22,7 +22,7 @@ A would-be Test 0 (raw Pearson r on raw pots) is computed only for
 the LINER diagnostic and is not reported as inference.
 
 Inputs:   consecutive-pot-data.zip (CSV bundle exported from
-          /data/export-csv on statisticasino, restricted to the
+          /data/export-csv on bluff-valley, restricted to the
           1/2 NL Hold'em tables).
 Outputs:  fig-*.png in the same directory and stdout summary.
 

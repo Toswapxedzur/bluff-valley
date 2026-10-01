@@ -20,7 +20,7 @@
 //
 // This module hangs `globalThis.CasinoReadable` so it's reachable
 // from both the extension's history.js and (via the
-// /replay-engine/readable.js mirror) from the statisticasino site.
+// /replay-engine/readable.js mirror) from the bluff-valley site.
 
 (function (root) {
   // Minimal seat extractor — pulls { seatId, cards? } from a player

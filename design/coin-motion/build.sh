@@ -1,5 +1,5 @@
 #!/bin/sh
-# Rebuild the coin-motion demo bundle from the real engine. Run from statisticasino/.
+# Rebuild the coin-motion demo bundle from the real engine. Run from bluff-valley/.
 set -e
 D=design/coin-motion
 mkdir -p $D/sfx

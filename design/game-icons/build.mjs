@@ -1,5 +1,5 @@
 // The game icons (icons.js) → static/games/<key>.svg, one self-contained file each (its own
-// clip-path ids, so any number can sit on one page). Run from statisticasino/:
+// clip-path ids, so any number can sit on one page). Run from bluff-valley/:
 //   node design/game-icons/build.mjs
 import { ICONS, svg } from "./icons.js";
 import { SPRINT } from "./sprint.js";

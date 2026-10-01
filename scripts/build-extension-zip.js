@@ -21,7 +21,7 @@ import { fileURLToPath } from "node:url";
 import { ZipArchive } from "archiver";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-// scripts/ lives at <repo>/statisticasino/scripts/, the extension at
+// scripts/ lives at <repo>/bluff-valley/scripts/, the extension at
 // <repo>/casinoMalwareExtension/. Two parent jumps.
 const EXT_DIR  = resolve(__dirname, "..", "..", "casinoMalwareExtension");
 const OUT_DIR  = resolve(__dirname, "..", "static", "downloads");

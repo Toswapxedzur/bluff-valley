@@ -12,7 +12,7 @@ Brief: COINS = clicky but metallic (a light natural ring allowed), 3 amount step
 plus ALL-IN; CARDS = smooth, not sharp: dealt · played onto the pile · turned face-up · thrown
 away (fold) · collected into the pile.
 
-Needs a Python with torch + transformers (the session venv). Run from statisticasino/:
+Needs a Python with torch + transformers (the session venv). Run from bluff-valley/:
   <venv>/bin/python design/sound-lab/find_sounds.py [extra-recording.mp3 ...]
 Writes design/sound-lab/found/*.wav + found.json.
 """

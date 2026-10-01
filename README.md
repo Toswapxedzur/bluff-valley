@@ -1,12 +1,12 @@
-# Statisticasino
+# Bluff Valley
 
-Companion website to the `casinoMalwareExtension` Chrome extension.
+Bluff Valley is a poker and casino room with play-money chips, bots, tournaments, replays, and stats. This repository began as a companion site for the now-legacy `casinoMalwareExtension`; the older extension and ingestion notes below are retained for reference.
 
 > **Already deployed?** See [`DEPLOYMENT.md`](./DEPLOYMENT.md) for the
-> production-specific runbook (Aliyun HK ECS + RDS Shenzhen + Cloudflare,
-> incl. the mainland-China ICP trap that pushed us off cn-shenzhen).
+> production-specific runbook. It also records the infrastructure names that
+> intentionally remain unchanged after this repository rename.
 
-Aggregates poker hand captures uploaded by many users, merges them by
+The original stats features aggregate poker hand captures uploaded by many users, merge them by
 `(tableId, handId)`, and renders the result with the same look-and-feel
 as the extension.
 
@@ -69,8 +69,8 @@ brew install node
 Then:
 
 ```bash
-cd statisticasino
-cp .env.example .env       # fill in MYSQL_* and ADMIN_* values
+cd bluff-valley
+cp .env.example .env       # fill in MYSQL_* and optional mail settings
 npm install                # installs mysql2 (pure JS) + svelte
 npm run migrate            # applies schema.sql to the configured DB
 npm run dev                # http://localhost:5273
@@ -152,7 +152,7 @@ within each bucket, newest first.
 ## File layout
 
 ```
-statisticasino/
+bluff-valley/
   package.json                  npm manifest
   svelte.config.js              SvelteKit config (node adapter)
   vite.config.js                Vite + dev port 5273
@@ -297,7 +297,7 @@ If you don't want every dev request to round-trip to Aliyun (latency,
 flaky internet, etc.), spin up MySQL in Docker:
 
 ```bash
-docker run --name statisticasino-mysql \
+docker run --name bluff-valley-mysql \
   -e MYSQL_ROOT_PASSWORD=local \
   -p 3306:3306 \
   -d mysql:8

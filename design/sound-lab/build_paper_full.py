@@ -7,7 +7,7 @@ Every sound event (active region, gaps < 150 ms merged) is measured: length, tap
 moment in the recording, brightness. Events are grouped by those shapes; the group NAMES are
 guesses from the shapes, not from listening. Up to five examples per group are cut out.
 Also finds where the 15 old split clips and the game's current card sounds sit in the recording.
-Run from statisticasino/:  python3 design/sound-lab/build_paper_full.py <preview.mp3>
+Run from bluff-valley/:  python3 design/sound-lab/build_paper_full.py <preview.mp3>
 """
 import json, os, subprocess, sys, wave, shutil, numpy as np
 ROOT = os.path.dirname(os.path.abspath(__file__))

@@ -4,7 +4,7 @@ from the clip's start to its main hit, so the lab can start it early and land th
 Cards: deal = Kenney card slide 3 · flip = Vrymaa @0.3 s · pile taps (fold + collection) = Index Card
 Flips @3.7 s · shuffle = 5ro4 riffle (its first 2.1 s continuous riffle, slowed to fill 2.6 s, no pitch
 change) · Coins (clay, all in rotation): one / few / pile tiers by coin count · all-in = clay clip 33.
-Run from statisticasino/:  python3 design/sound-lab/build_picks.py"""
+Run from bluff-valley/:  python3 design/sound-lab/build_picks.py"""
 import json, os, subprocess, wave, numpy as np
 ROOT = os.path.dirname(os.path.abspath(__file__)); SR = 44100
 def load(p):

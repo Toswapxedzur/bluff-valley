@@ -1,7 +1,7 @@
 # Voice E2E (headless Chrome x2, fake mics). Local: run-recover.sh (needs the dev server on 5273 + local test users). Prod relay check: prod-recover.sh (creates + removes voice-*@example.test users on hk). Never invoke from a shell command line that itself contains the pkill pattern.
 #!/bin/zsh
 # Mint two local sessions, create a fresh holdem table, run the voice recovery E2E. Args: [BASE]
-cd /Users/fengyue.john.zhu/Desktop/programme/web/casin/statisticasino
+cd /Users/fengyue.john.zhu/Desktop/programme/web/casin/bluff-valley
 set -a; . ./.env; set +a
 S=$(dirname "$0")
 mint() { T=$(node -e 'console.log(require("crypto").randomBytes(32).toString("hex"))'); H=$(node -e "console.log(require('crypto').createHash('sha256').update('$T').digest('hex'))"); mysql -h"$MYSQL_HOST" -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE" -e "INSERT INTO session(id,user_id,expires_at) VALUES('$H','$1',$(( $(date +%s) * 1000 + 3600000 )))" 2>/dev/null; echo $T; }

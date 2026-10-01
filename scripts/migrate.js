@@ -19,6 +19,6 @@ if (existsSync(envPath)) {
 const { ensureMigrated, shutdown } = await import("../src/lib/server/migrate.js");
 
 await ensureMigrated();
-console.log("[statisticasino] migrations applied");
+console.log("[bluff-valley] migrations applied");
 
 await shutdown();

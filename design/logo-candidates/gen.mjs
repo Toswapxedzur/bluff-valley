@@ -2,7 +2,7 @@
 // Flat colours only (no gradients): depth = extruded offset copies in darker
 // tone, lit = a clipped brighter region. Glyphs = our Aguilar parts; coins =
 // our tier palette.
-import { PARTS } from "/Users/fengyue.john.zhu/Desktop/programme/web/casin/statisticasino/src/lib/poker/deck-parts.js";
+import { PARTS } from "/Users/fengyue.john.zhu/Desktop/programme/web/casin/bluff-valley/src/lib/poker/deck-parts.js";
 import { writeFileSync } from "node:fs";
 
 const T = {

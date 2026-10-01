@@ -5,7 +5,7 @@ per material, so ceramic and clay chips aren't crowded out by coins:
   ceramic = ArtOrDie "Ceramic Chips" · clay = ArtOrDie "Clay Chips" · poker chips = every other chip
   recording (Kenney casino chips, Freesound) · metal coins.
 Slots = the owner's amount steps: 1 · a few (2–4) · a pile (5+) · all-in. Each sound in one slot only.
-Run from statisticasino/ with the torch venv:  <venv>/bin/python design/sound-lab/find_chips.py
+Run from bluff-valley/ with the torch venv:  <venv>/bin/python design/sound-lab/find_chips.py
 Writes design/sound-lab/chips/*.wav + chips.json.
 """
 import json, os, re, sys, numpy as np, torch

@@ -1,5 +1,5 @@
 #!/bin/sh
-# Rebuild the sound lab from the real engines. Run from statisticasino/.
+# Rebuild the sound lab from the real engines. Run from bluff-valley/.
 #   python3 design/sound-lab/build_clips.py   (only when the candidates change)
 set -e
 D=design/sound-lab

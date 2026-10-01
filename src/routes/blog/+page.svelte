@@ -9,7 +9,7 @@
 <section>
   <h1 style="margin:0 0 12px;font-size:22px">Investigations</h1>
   {#if data.posts.length === 0}
-    <p class="muted">No posts yet. Drop a markdown file into <code>statisticasino/content/blog/</code>.</p>
+    <p class="muted">No posts yet. Drop a markdown file into <code>bluff-valley/content/blog/</code>.</p>
   {:else}
     <ul class="blog-list">
       {#each data.posts as p (p.slug)}
