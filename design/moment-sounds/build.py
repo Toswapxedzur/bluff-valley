@@ -4,7 +4,7 @@ done in the game — and build candidates for the rest; the owner picks). Each c
 library clip or a composition of clips (incl. the sounds already chosen), normalised to -3 dBFS, no
 pitch change (time stretches use atempo). Writes clips/*.mp3 + candidates.json (with each clip's LEAD:
 ms from its start to its main hit, so the game can land the hit on the frame).
-Run from statisticasino/:  python3 design/moment-sounds/build.py"""
+Run from bluff-valley/:  python3 design/moment-sounds/build.py"""
 import json, os, subprocess, numpy as np
 HERE = os.path.dirname(os.path.abspath(__file__)); LIB = os.path.join(HERE, "..", "sfx-library", "audio")
 STATIC = os.path.join(HERE, "..", "..", "static", "sfx"); SR = 44100

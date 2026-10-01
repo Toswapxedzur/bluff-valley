@@ -1,5 +1,5 @@
 #!/bin/sh
-# Rebuild the table-moments demo bundle from the real art modules. Run from statisticasino/.
+# Rebuild the table-moments demo bundle from the real art modules. Run from bluff-valley/.
 set -e
 D=design/moments
 mkdir -p $D/games $D/deck-parts

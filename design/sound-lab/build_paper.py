@@ -2,7 +2,7 @@
 """ArtOrDie "paper cards" audition: every segment, every tap in it cut out alone, and which of
 the game's current sounds (static/sfx) each one became. Measured, not listened to: taps = onsets
 (a ≥12 dB rise within 20 ms, above −30 dB of the segment's peak).
-Run from statisticasino/:  python3 design/sound-lab/build_paper.py → design/sound-lab/paper/ + paper.json
+Run from bluff-valley/:  python3 design/sound-lab/build_paper.py → design/sound-lab/paper/ + paper.json
 """
 import json, os, subprocess, wave, numpy as np
 ROOT = os.path.dirname(os.path.abspath(__file__))

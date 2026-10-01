@@ -4,7 +4,7 @@ Every click-type clip is cut into single clicks lined up on the MAIN hit (the lo
 backed up to where it rises out of the noise), then measured: pitch share (≤0.40 unpitched), the
 number of separate hits, and decay length. Owner, 2026-09-25: "find a generic clicking sound library
 and provide me the sound" (not synthesised).
-Run from statisticasino/:  python3 design/sound-lab/build_clicks.py → clicks/*.wav + clicks.json
+Run from bluff-valley/:  python3 design/sound-lab/build_clicks.py → clicks/*.wav + clicks.json
 """
 import json, os, re, subprocess, sys, wave, numpy as np
 ROOT = os.path.dirname(os.path.abspath(__file__))

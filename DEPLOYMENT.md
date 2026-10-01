@@ -1,6 +1,6 @@
 # Deployment runbook
 
-How **Bluff Valley** (repo dir `statisticasino/`) actually runs in production
+How **Bluff Valley** (repo dir `bluff-valley/`) actually runs in production
 today, and the steps to get it back up from a blank Linux box. The generic
 "Production" section in [`README.md`](./README.md#production) covers the
 framework-level recipe; this file is the concrete, "what we shipped", warts-and-all
@@ -12,7 +12,8 @@ record.
 > `[bluffing-valley]`. **Unchanged on purpose:** OSS bucket `riverside-media`
 > (buckets can't be renamed), MySQL user `riverside`, and the mini2 archive names
 > (`~/riverside-archive`, `com.johnzhu.riverside-archive-*`). The repo folder is
-> still `statisticasino/` and the code package name is unchanged.
+> now `bluff-valley/` and the code package name is `bluff-valley`. The database
+> name remains `statisticasino` to avoid a production data migration.
 
 > ⚠️ **VPS LIFETIME — the box is a rented Aliyun SWAS instance that EXPIRES
 > `2026-09-20T16:00Z`, auto-renew OFF. OWNER DECISION 2026-09-15: LET IT LAPSE.**
@@ -117,7 +118,7 @@ SQL'
 ### 2.3 Build locally and ship
 
 ```bash
-cd statisticasino
+cd bluff-valley
 npm install
 npm run build      # produces build/ via @sveltejs/adapter-node
                    # also rebuilds static/downloads/casino-inspector.zip
@@ -331,7 +332,7 @@ curl -sS -X POST -H 'Content-Type: application/json' --data '{"_probe":true}' \
 From the repo on the laptop:
 
 ```bash
-cd statisticasino
+cd bluff-valley
 npm run build
 rsync -az --delete \
   --exclude=node_modules/ --exclude=.svelte-kit/ --exclude=.git --exclude=.git/ \
